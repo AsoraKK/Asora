@@ -7,6 +7,7 @@
 
 import { trackException } from './appInsights';
 import { originGatewayConfigurationErrors } from './security/originGatewayAuth';
+import { validateEmailTokenKeyConfiguration } from '@auth/service/emailToken';
 
 interface EnvVar {
   name: string;
@@ -40,12 +41,13 @@ const OPTIONAL_ENV_VARS: EnvVar[] = [
   { name: 'ORIGIN_GATEWAY_DUAL_UNTIL', required: false, description: 'UTC dual-mode expiry' },
   { name: 'ORIGIN_GATEWAY_LEGACY_ALLOWLIST', required: false, description: 'Strict JSON temporary legacy route allowlist' },
   { name: 'APP_ORIGIN', required: false, description: 'Canonical Lythaus application origin' },
-  { name: 'AUTH_EMAIL_LINK_ORIGIN', required: false, description: 'Exact immutable preview origin for authentication email links' },
+  { name: 'AUTH_EMAIL_PREVIEW_ORIGIN', required: false, description: 'Exact immutable preview origin for authentication email links' },
   { name: 'ACS_EMAIL_ENDPOINT', required: false, description: 'Azure Communication Services endpoint' },
   { name: 'AUTH_EMAIL_FROM_ADDRESS', required: false, description: 'Verified Lythaus email sender' },
   { name: 'AUTH_EMAIL_FROM_NAME', required: false, description: 'Email sender display name' },
   { name: 'EMAIL_VERIFICATION_TTL_MINUTES', required: false, description: 'Bounded email verification-token lifetime in minutes' },
-  { name: 'EMAIL_TOKEN_HMAC_SECRET', required: false, description: 'Email verification/reset token HMAC key' },
+  { name: 'EMAIL_TOKEN_HMAC_SECRET', required: false, description: 'Email-token HMAC root key' },
+  { name: 'EMAIL_TOKEN_HMAC_KEY_ID', required: false, description: 'Current non-secret email-token key identifier' },
   { name: 'AUTH_EMAIL_CLIENT_ID', required: false, description: 'Email authentication OAuth client audience' },
   { name: 'GOOGLE_OAUTH_CLIENT_ID', required: false, description: 'Public Google Web OAuth client ID' },
   { name: 'GOOGLE_OAUTH_CLIENT_SECRET_WEB', required: false, description: 'Google Web OAuth client secret' },
@@ -66,7 +68,7 @@ export function emailAuthConfigurationErrors(): string[] {
     errors.push('APP_ORIGIN must be https://app.lythaus.co in the MVP environment');
   }
 
-  const emailLinkOrigin = process.env.AUTH_EMAIL_LINK_ORIGIN?.trim();
+  const emailLinkOrigin = process.env.AUTH_EMAIL_PREVIEW_ORIGIN?.trim();
   if (emailLinkOrigin) {
     try {
       const parsed = new URL(emailLinkOrigin);
@@ -83,7 +85,7 @@ export function emailAuthConfigurationErrors(): string[] {
         throw new Error('invalid origin');
       }
     } catch {
-      errors.push('AUTH_EMAIL_LINK_ORIGIN must be one exact immutable Lythaus Pages HTTPS origin');
+      errors.push('AUTH_EMAIL_PREVIEW_ORIGIN must be one exact immutable Lythaus Pages HTTPS origin');
     }
   }
 
@@ -120,9 +122,8 @@ export function emailAuthConfigurationErrors(): string[] {
   ) {
     errors.push('EMAIL_VERIFICATION_TTL_MINUTES must be a whole number between 30 and 240');
   }
-  if ((process.env.EMAIL_TOKEN_HMAC_SECRET?.trim().length ?? 0) < 32) {
-    errors.push('EMAIL_TOKEN_HMAC_SECRET must contain at least 32 characters');
-  }
+  const keyError = validateEmailTokenKeyConfiguration();
+  if (keyError) errors.push(keyError);
   if (!(process.env.AUTH_EMAIL_CLIENT_ID?.trim() || process.env.JWT_AUDIENCE?.trim())) {
     errors.push('AUTH_EMAIL_CLIENT_ID or JWT_AUDIENCE is required for email token issuance');
   }

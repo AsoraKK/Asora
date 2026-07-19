@@ -5,9 +5,10 @@ import { withRateLimit } from '@http/withRateLimit';
 import { getPolicyForFunction } from '@rate-limit/policies';
 import { EmailAuthError, EmailAuthService } from '@auth/service/emailAuthService';
 
-type EmailPasswordBody = { email?: string; password?: string };
+type EmailPasswordBody = { email?: string; password?: string; action_target?: unknown };
 type TokenBody = { token?: string };
 type ResetBody = { token?: string; new_password?: string };
+type EmailOnlyBody = { email?: string; action_target?: unknown };
 
 function privateNoStore(response: ReturnType<HttpHandlerContext<unknown>['ok']>) {
   return {
@@ -24,10 +25,36 @@ function respondToError(ctx: HttpHandlerContext<unknown>, error: unknown) {
   if (error instanceof EmailAuthError) {
     if (error.status === 401) return privateNoStore(ctx.unauthorized(error.message, error.code));
     if (error.status === 403) return privateNoStore(ctx.forbidden(error.message, error.code));
+    if (error.status === 429) return privateNoStore(ctx.tooManyRequests(error.message, error.code));
+    if (error.status >= 500) {
+      return privateNoStore({
+        status: 503,
+        headers: { 'Content-Type': 'application/json' },
+        jsonBody: {
+          error: {
+            code: error.code,
+            message: error.message,
+            correlationId: ctx.correlationId,
+            retryable: true,
+          },
+        },
+      } as ReturnType<HttpHandlerContext<unknown>['ok']>);
+    }
     return privateNoStore(ctx.badRequest(error.message, error.code));
   }
   ctx.context.error('[auth/email] request failed', { correlationId: ctx.correlationId });
-  return privateNoStore(ctx.internalError('Email authentication is temporarily unavailable'));
+  return privateNoStore({
+    status: 503,
+    headers: { 'Content-Type': 'application/json' },
+    jsonBody: {
+      error: {
+        code: 'EMAIL_AUTH_TEMPORARILY_UNAVAILABLE',
+        message: 'Email authentication is temporarily unavailable',
+        correlationId: ctx.correlationId,
+        retryable: true,
+      },
+    },
+  } as ReturnType<HttpHandlerContext<unknown>['ok']>);
 }
 
 function isPreflight(ctx: HttpHandlerContext<unknown>): boolean {
@@ -39,7 +66,8 @@ const registerHandler = httpHandler<EmailPasswordBody>(async (ctx) => {
   try {
     const result = await new EmailAuthService().register(
       ctx.body?.email || '',
-      ctx.body?.password || ''
+      ctx.body?.password || '',
+      ctx.body?.action_target
     );
     return privateNoStore(ctx.ok(result, 202));
   } catch (error) {
@@ -49,6 +77,9 @@ const registerHandler = httpHandler<EmailPasswordBody>(async (ctx) => {
 
 const verifyHandler = httpHandler<TokenBody>(async (ctx) => {
   if (isPreflight(ctx)) return ctx.noContent();
+  if ('token' in ctx.query) {
+    return privateNoStore(ctx.badRequest('Verification token must be sent in the request body', 'INVALID_REQUEST'));
+  }
   try {
     return privateNoStore(ctx.ok(await new EmailAuthService().verifyEmail(ctx.body?.token || '')));
   } catch (error) {
@@ -56,11 +87,11 @@ const verifyHandler = httpHandler<TokenBody>(async (ctx) => {
   }
 });
 
-const resendHandler = httpHandler<{ email?: string }>(async (ctx) => {
+const resendHandler = httpHandler<EmailOnlyBody>(async (ctx) => {
   if (isPreflight(ctx)) return ctx.noContent();
   try {
     return privateNoStore(ctx.ok(
-      await new EmailAuthService().resendVerification(ctx.body?.email || ''),
+      await new EmailAuthService().resendVerification(ctx.body?.email || '', ctx.body?.action_target),
       202
     ));
   } catch (error) {
@@ -79,10 +110,10 @@ const loginHandler = httpHandler<EmailPasswordBody>(async (ctx) => {
   }
 });
 
-const forgotHandler = httpHandler<{ email?: string }>(async (ctx) => {
+const forgotHandler = httpHandler<EmailOnlyBody>(async (ctx) => {
   if (isPreflight(ctx)) return ctx.noContent();
   try {
-    return privateNoStore(ctx.ok(await new EmailAuthService().forgotPassword(ctx.body?.email || ''), 202));
+    return privateNoStore(ctx.ok(await new EmailAuthService().forgotPassword(ctx.body?.email || '', ctx.body?.action_target), 202));
   } catch (error) {
     return respondToError(ctx, error);
   }
@@ -90,6 +121,9 @@ const forgotHandler = httpHandler<{ email?: string }>(async (ctx) => {
 
 const resetHandler = httpHandler<ResetBody>(async (ctx) => {
   if (isPreflight(ctx)) return ctx.noContent();
+  if ('token' in ctx.query) {
+    return privateNoStore(ctx.badRequest('Reset token must be sent in the request body', 'INVALID_REQUEST'));
+  }
   try {
     return privateNoStore(ctx.ok(
       await new EmailAuthService().resetPassword(

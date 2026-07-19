@@ -11,6 +11,7 @@ Name | Type | Description | Notes
 **code** | **String** |  |
 **message** | **String** |  |
 **retryAfterSeconds** | **int** | Suggested number of seconds to wait before retrying | [optional]
-**correlationId** | **String** |  | [optional]
+**correlationId** | **String** | Opaque request correlation identifier. | [optional]
+**retryable** | **bool** | Whether the same request may be retried safely. | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

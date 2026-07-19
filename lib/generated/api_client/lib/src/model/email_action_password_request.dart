@@ -3,63 +3,74 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:asora_api_client/src/model/email_action_target.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
-part 'email_password_reset_request.g.dart';
+part 'email_action_password_request.g.dart';
 
-/// EmailPasswordResetRequest
+/// EmailActionPasswordRequest
 ///
 /// Properties:
-/// * [token]
-/// * [newPassword]
+/// * [email]
+/// * [password]
+/// * [actionTarget]
 @BuiltValue()
-abstract class EmailPasswordResetRequest implements Built<EmailPasswordResetRequest, EmailPasswordResetRequestBuilder> {
-  @BuiltValueField(wireName: r'token')
-  String get token;
+abstract class EmailActionPasswordRequest implements Built<EmailActionPasswordRequest, EmailActionPasswordRequestBuilder> {
+  @BuiltValueField(wireName: r'email')
+  String get email;
 
-  @BuiltValueField(wireName: r'new_password')
-  String get newPassword;
+  @BuiltValueField(wireName: r'password')
+  String get password;
 
-  EmailPasswordResetRequest._();
+  @BuiltValueField(wireName: r'action_target')
+  EmailActionTarget get actionTarget;
+  // enum actionTargetEnum {  production,  preview,  };
 
-  factory EmailPasswordResetRequest([void updates(EmailPasswordResetRequestBuilder b)]) = _$EmailPasswordResetRequest;
+  EmailActionPasswordRequest._();
+
+  factory EmailActionPasswordRequest([void updates(EmailActionPasswordRequestBuilder b)]) = _$EmailActionPasswordRequest;
 
   @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(EmailPasswordResetRequestBuilder b) => b;
+  static void _defaults(EmailActionPasswordRequestBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<EmailPasswordResetRequest> get serializer => _$EmailPasswordResetRequestSerializer();
+  static Serializer<EmailActionPasswordRequest> get serializer => _$EmailActionPasswordRequestSerializer();
 }
 
-class _$EmailPasswordResetRequestSerializer implements PrimitiveSerializer<EmailPasswordResetRequest> {
+class _$EmailActionPasswordRequestSerializer implements PrimitiveSerializer<EmailActionPasswordRequest> {
   @override
-  final Iterable<Type> types = const [EmailPasswordResetRequest, _$EmailPasswordResetRequest];
+  final Iterable<Type> types = const [EmailActionPasswordRequest, _$EmailActionPasswordRequest];
 
   @override
-  final String wireName = r'EmailPasswordResetRequest';
+  final String wireName = r'EmailActionPasswordRequest';
 
   Iterable<Object?> _serializeProperties(
     Serializers serializers,
-    EmailPasswordResetRequest object, {
+    EmailActionPasswordRequest object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
-    yield r'token';
+    yield r'email';
     yield serializers.serialize(
-      object.token,
+      object.email,
       specifiedType: const FullType(String),
     );
-    yield r'new_password';
+    yield r'password';
     yield serializers.serialize(
-      object.newPassword,
+      object.password,
       specifiedType: const FullType(String),
+    );
+    yield r'action_target';
+    yield serializers.serialize(
+      object.actionTarget,
+      specifiedType: const FullType(EmailActionTarget),
     );
   }
 
   @override
   Object serialize(
     Serializers serializers,
-    EmailPasswordResetRequest object, {
+    EmailActionPasswordRequest object, {
     FullType specifiedType = FullType.unspecified,
   }) {
     return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
@@ -70,26 +81,33 @@ class _$EmailPasswordResetRequestSerializer implements PrimitiveSerializer<Email
     Object serialized, {
     FullType specifiedType = FullType.unspecified,
     required List<Object?> serializedList,
-    required EmailPasswordResetRequestBuilder result,
+    required EmailActionPasswordRequestBuilder result,
     required List<Object?> unhandled,
   }) {
     for (var i = 0; i < serializedList.length; i += 2) {
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
-        case r'token':
+        case r'email':
           final valueDes = serializers.deserialize(
             value,
             specifiedType: const FullType(String),
           ) as String;
-          result.token = valueDes;
+          result.email = valueDes;
           break;
-        case r'new_password':
+        case r'password':
           final valueDes = serializers.deserialize(
             value,
             specifiedType: const FullType(String),
           ) as String;
-          result.newPassword = valueDes;
+          result.password = valueDes;
+          break;
+        case r'action_target':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(EmailActionTarget),
+          ) as EmailActionTarget;
+          result.actionTarget = valueDes;
           break;
         default:
           unhandled.add(key);
@@ -100,12 +118,12 @@ class _$EmailPasswordResetRequestSerializer implements PrimitiveSerializer<Email
   }
 
   @override
-  EmailPasswordResetRequest deserialize(
+  EmailActionPasswordRequest deserialize(
     Serializers serializers,
     Object serialized, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    final result = EmailPasswordResetRequestBuilder();
+    final result = EmailActionPasswordRequestBuilder();
     final serializedList = (serialized as Iterable<Object?>).toList();
     final unhandled = <Object?>[];
     _deserializeProperties(

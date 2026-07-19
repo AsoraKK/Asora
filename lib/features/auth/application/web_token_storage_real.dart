@@ -58,3 +58,20 @@ void clearWebCallbackQuery() {
     '${location.pathname}${location.hash}',
   );
 }
+
+String? getWebEmailActionFragmentToken() {
+  final fragment = web.window.location.hash;
+  if (fragment.isEmpty) return null;
+  try {
+    return Uri.splitQueryString(
+      fragment.startsWith('#') ? fragment.substring(1) : fragment,
+    )['token'];
+  } on FormatException {
+    return null;
+  }
+}
+
+void clearWebEmailActionUrl() {
+  final location = web.window.location;
+  web.window.history.replaceState(null, '', location.pathname);
+}

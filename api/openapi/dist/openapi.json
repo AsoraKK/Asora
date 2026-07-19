@@ -3105,7 +3105,7 @@
       "post": {
         "operationId": "authEmailRegister",
         "summary": "Register an email/password account",
-        "description": "Creates an unverified account and sends a single-use verification email. The response is deliberately neutral.",
+        "description": "Creates an unverified account and sends a verification email to a server-mapped action target. The response is deliberately neutral.",
         "tags": [
           "Auth"
         ],
@@ -3115,7 +3115,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/EmailPasswordRequest"
+                "$ref": "#/components/schemas/EmailActionPasswordRequest"
               }
             }
           }
@@ -3143,6 +3143,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Verification delivery is temporarily unavailable; retry is safe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableError"
+                }
+              }
+            }
           }
         }
       }
@@ -3151,6 +3161,7 @@
       "post": {
         "operationId": "authEmailVerify",
         "summary": "Verify an email address",
+        "description": "Redeems a token supplied only in the JSON request body. GET and query-string redemption are rejected.",
         "tags": [
           "Auth"
         ],
@@ -3170,7 +3181,7 @@
             "$ref": "#/components/responses/EmailAuthCompleted"
           },
           "400": {
-            "description": "Token is invalid, expired, or already used",
+            "description": "Token is invalid or expired",
             "content": {
               "application/json": {
                 "schema": {
@@ -3185,6 +3196,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RateLimitError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Verification is temporarily unavailable; the token was not consumed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableError"
                 }
               }
             }
@@ -3206,7 +3227,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/EmailOnlyRequest"
+                "$ref": "#/components/schemas/EmailActionEmailRequest"
               }
             }
           }
@@ -3221,6 +3242,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RateLimitError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Verification delivery is temporarily unavailable; retry is safe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableError"
                 }
               }
             }
@@ -3312,7 +3343,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/EmailOnlyRequest"
+                "$ref": "#/components/schemas/EmailActionEmailRequest"
               }
             }
           }
@@ -3327,6 +3358,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RateLimitError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Password-reset delivery is temporarily unavailable; retry is safe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableError"
                 }
               }
             }
@@ -3373,6 +3414,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RateLimitError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Password reset is temporarily unavailable; the token was not consumed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableError"
                 }
               }
             }
@@ -14330,41 +14381,77 @@
           }
         }
       },
-      "EmailOnlyRequest": {
+      "EmailPasswordRequest": {
         "type": "object",
         "additionalProperties": false,
         "required": [
-          "email"
+          "email",
+          "password"
         ],
         "properties": {
           "email": {
             "type": "string",
             "format": "email",
             "maxLength": 254
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "minLength": 12,
+            "maxLength": 128
           }
         }
       },
-      "EmailPasswordRequest": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/EmailOnlyRequest"
+      "EmailActionTarget": {
+        "type": "string",
+        "enum": [
+          "production",
+          "preview"
+        ],
+        "description": "Server-selected email action destination; raw origins are not accepted."
+      },
+      "EmailActionEmailRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "email",
+          "action_target"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254
           },
-          {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "password"
-            ],
-            "properties": {
-              "password": {
-                "type": "string",
-                "format": "password",
-                "minLength": 12,
-                "maxLength": 128
-              }
-            }
+          "action_target": {
+            "$ref": "#/components/schemas/EmailActionTarget"
           }
-        ]
+        }
+      },
+      "EmailActionPasswordRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "email",
+          "password",
+          "action_target"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "minLength": 12,
+            "maxLength": 128
+          },
+          "action_target": {
+            "$ref": "#/components/schemas/EmailActionTarget"
+          }
+        }
       },
       "EmailTokenRequest": {
         "type": "object",
@@ -14381,26 +14468,25 @@
         }
       },
       "EmailPasswordResetRequest": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/EmailTokenRequest"
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "token",
+          "new_password"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 32,
+            "maxLength": 256
           },
-          {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "new_password"
-            ],
-            "properties": {
-              "new_password": {
-                "type": "string",
-                "format": "password",
-                "minLength": 12,
-                "maxLength": 128
-              }
-            }
+          "new_password": {
+            "type": "string",
+            "format": "password",
+            "minLength": 12,
+            "maxLength": 128
           }
-        ]
+        }
       },
       "EmailAuthStatusResponse": {
         "type": "object",
@@ -14411,6 +14497,13 @@
         "properties": {
           "message": {
             "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "verified",
+              "already_verified"
+            ]
           }
         }
       },
@@ -14647,7 +14740,9 @@
                 "enum": [
                   "SERVICE_UNAVAILABLE",
                   "DEPENDENCY_UNAVAILABLE",
-                  "MAINTENANCE"
+                  "MAINTENANCE",
+                  "EMAIL_AUTH_TEMPORARILY_UNAVAILABLE",
+                  "EMAIL_DELIVERY_UNAVAILABLE"
                 ],
                 "example": "SERVICE_UNAVAILABLE"
               },
@@ -14661,7 +14756,12 @@
                 "example": 30
               },
               "correlationId": {
-                "type": "string"
+                "type": "string",
+                "description": "Opaque request correlation identifier."
+              },
+              "retryable": {
+                "type": "boolean",
+                "description": "Whether the same request may be retried safely."
               }
             }
           }

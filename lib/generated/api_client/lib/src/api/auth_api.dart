@@ -9,9 +9,10 @@ import 'package:dio/dio.dart';
 
 import 'package:asora_api_client/src/api_util.dart';
 import 'package:asora_api_client/src/model/auth_token_request.dart';
+import 'package:asora_api_client/src/model/email_action_email_request.dart';
+import 'package:asora_api_client/src/model/email_action_password_request.dart';
 import 'package:asora_api_client/src/model/email_auth_status_response.dart';
 import 'package:asora_api_client/src/model/email_login_response.dart';
-import 'package:asora_api_client/src/model/email_only_request.dart';
 import 'package:asora_api_client/src/model/email_password_request.dart';
 import 'package:asora_api_client/src/model/email_password_reset_request.dart';
 import 'package:asora_api_client/src/model/email_token_request.dart';
@@ -22,6 +23,7 @@ import 'package:asora_api_client/src/model/o_auth_token_response.dart';
 import 'package:asora_api_client/src/model/rate_limit_error.dart';
 import 'package:asora_api_client/src/model/redeem_invite_request.dart';
 import 'package:asora_api_client/src/model/redeem_invite_response.dart';
+import 'package:asora_api_client/src/model/service_unavailable_error.dart';
 import 'package:asora_api_client/src/model/unauthorized_error.dart';
 import 'package:asora_api_client/src/model/user_info_response.dart';
 import 'package:asora_api_client/src/model/validation_error_response.dart';
@@ -134,7 +136,7 @@ class AuthApi {
   /// Always returns a neutral response to resist account enumeration.
   ///
   /// Parameters:
-  /// * [emailOnlyRequest]
+  /// * [emailActionEmailRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -145,7 +147,7 @@ class AuthApi {
   /// Returns a [Future] containing a [Response] with a [EmailAuthStatusResponse] as data
   /// Throws [DioException] if API call or serialization fails
   Future<Response<EmailAuthStatusResponse>> authEmailForgotPassword({
-    required EmailOnlyRequest emailOnlyRequest,
+    required EmailActionEmailRequest emailActionEmailRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -170,8 +172,8 @@ class AuthApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(EmailOnlyRequest);
-      _bodyData = _serializers.serialize(emailOnlyRequest, specifiedType: _type);
+      const _type = FullType(EmailActionEmailRequest);
+      _bodyData = _serializers.serialize(emailActionEmailRequest, specifiedType: _type);
 
     } catch(error, stackTrace) {
       throw DioException(
@@ -321,10 +323,10 @@ class AuthApi {
   }
 
   /// Register an email/password account
-  /// Creates an unverified account and sends a single-use verification email. The response is deliberately neutral.
+  /// Creates an unverified account and sends a verification email to a server-mapped action target. The response is deliberately neutral.
   ///
   /// Parameters:
-  /// * [emailPasswordRequest]
+  /// * [emailActionPasswordRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -335,7 +337,7 @@ class AuthApi {
   /// Returns a [Future] containing a [Response] with a [EmailAuthStatusResponse] as data
   /// Throws [DioException] if API call or serialization fails
   Future<Response<EmailAuthStatusResponse>> authEmailRegister({
-    required EmailPasswordRequest emailPasswordRequest,
+    required EmailActionPasswordRequest emailActionPasswordRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -360,8 +362,8 @@ class AuthApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(EmailPasswordRequest);
-      _bodyData = _serializers.serialize(emailPasswordRequest, specifiedType: _type);
+      const _type = FullType(EmailActionPasswordRequest);
+      _bodyData = _serializers.serialize(emailActionPasswordRequest, specifiedType: _type);
 
     } catch(error, stackTrace) {
       throw DioException(
@@ -419,7 +421,7 @@ class AuthApi {
   /// Returns a neutral response whether or not the account exists.
   ///
   /// Parameters:
-  /// * [emailOnlyRequest]
+  /// * [emailActionEmailRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -430,7 +432,7 @@ class AuthApi {
   /// Returns a [Future] containing a [Response] with a [EmailAuthStatusResponse] as data
   /// Throws [DioException] if API call or serialization fails
   Future<Response<EmailAuthStatusResponse>> authEmailResend({
-    required EmailOnlyRequest emailOnlyRequest,
+    required EmailActionEmailRequest emailActionEmailRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -455,8 +457,8 @@ class AuthApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(EmailOnlyRequest);
-      _bodyData = _serializers.serialize(emailOnlyRequest, specifiedType: _type);
+      const _type = FullType(EmailActionEmailRequest);
+      _bodyData = _serializers.serialize(emailActionEmailRequest, specifiedType: _type);
 
     } catch(error, stackTrace) {
       throw DioException(
@@ -606,7 +608,7 @@ class AuthApi {
   }
 
   /// Verify an email address
-  ///
+  /// Redeems a token supplied only in the JSON request body. GET and query-string redemption are rejected.
   ///
   /// Parameters:
   /// * [emailTokenRequest]

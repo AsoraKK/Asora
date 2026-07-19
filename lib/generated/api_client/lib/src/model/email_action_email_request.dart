@@ -3,34 +3,47 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:asora_api_client/src/model/email_action_target.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
-part 'email_only_request.g.dart';
+part 'email_action_email_request.g.dart';
 
-/// EmailOnlyRequest
+/// EmailActionEmailRequest
 ///
 /// Properties:
 /// * [email]
-@BuiltValue(instantiable: false)
-abstract class EmailOnlyRequest  {
+/// * [actionTarget]
+@BuiltValue()
+abstract class EmailActionEmailRequest implements Built<EmailActionEmailRequest, EmailActionEmailRequestBuilder> {
   @BuiltValueField(wireName: r'email')
   String get email;
 
+  @BuiltValueField(wireName: r'action_target')
+  EmailActionTarget get actionTarget;
+  // enum actionTargetEnum {  production,  preview,  };
+
+  EmailActionEmailRequest._();
+
+  factory EmailActionEmailRequest([void updates(EmailActionEmailRequestBuilder b)]) = _$EmailActionEmailRequest;
+
+  @BuiltValueHook(initializeBuilder: true)
+  static void _defaults(EmailActionEmailRequestBuilder b) => b;
+
   @BuiltValueSerializer(custom: true)
-  static Serializer<EmailOnlyRequest> get serializer => _$EmailOnlyRequestSerializer();
+  static Serializer<EmailActionEmailRequest> get serializer => _$EmailActionEmailRequestSerializer();
 }
 
-class _$EmailOnlyRequestSerializer implements PrimitiveSerializer<EmailOnlyRequest> {
+class _$EmailActionEmailRequestSerializer implements PrimitiveSerializer<EmailActionEmailRequest> {
   @override
-  final Iterable<Type> types = const [EmailOnlyRequest];
+  final Iterable<Type> types = const [EmailActionEmailRequest, _$EmailActionEmailRequest];
 
   @override
-  final String wireName = r'EmailOnlyRequest';
+  final String wireName = r'EmailActionEmailRequest';
 
   Iterable<Object?> _serializeProperties(
     Serializers serializers,
-    EmailOnlyRequest object, {
+    EmailActionEmailRequest object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
     yield r'email';
@@ -38,55 +51,20 @@ class _$EmailOnlyRequestSerializer implements PrimitiveSerializer<EmailOnlyReque
       object.email,
       specifiedType: const FullType(String),
     );
+    yield r'action_target';
+    yield serializers.serialize(
+      object.actionTarget,
+      specifiedType: const FullType(EmailActionTarget),
+    );
   }
 
   @override
   Object serialize(
     Serializers serializers,
-    EmailOnlyRequest object, {
+    EmailActionEmailRequest object, {
     FullType specifiedType = FullType.unspecified,
   }) {
     return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
-  }
-
-  @override
-  EmailOnlyRequest deserialize(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    return serializers.deserialize(serialized, specifiedType: FullType($EmailOnlyRequest)) as $EmailOnlyRequest;
-  }
-}
-
-/// a concrete implementation of [EmailOnlyRequest], since [EmailOnlyRequest] is not instantiable
-@BuiltValue(instantiable: true)
-abstract class $EmailOnlyRequest implements EmailOnlyRequest, Built<$EmailOnlyRequest, $EmailOnlyRequestBuilder> {
-  $EmailOnlyRequest._();
-
-  factory $EmailOnlyRequest([void Function($EmailOnlyRequestBuilder)? updates]) = _$$EmailOnlyRequest;
-
-  @BuiltValueHook(initializeBuilder: true)
-  static void _defaults($EmailOnlyRequestBuilder b) => b;
-
-  @BuiltValueSerializer(custom: true)
-  static Serializer<$EmailOnlyRequest> get serializer => _$$EmailOnlyRequestSerializer();
-}
-
-class _$$EmailOnlyRequestSerializer implements PrimitiveSerializer<$EmailOnlyRequest> {
-  @override
-  final Iterable<Type> types = const [$EmailOnlyRequest, _$$EmailOnlyRequest];
-
-  @override
-  final String wireName = r'$EmailOnlyRequest';
-
-  @override
-  Object serialize(
-    Serializers serializers,
-    $EmailOnlyRequest object, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    return serializers.serialize(object, specifiedType: FullType(EmailOnlyRequest))!;
   }
 
   void _deserializeProperties(
@@ -94,7 +72,7 @@ class _$$EmailOnlyRequestSerializer implements PrimitiveSerializer<$EmailOnlyReq
     Object serialized, {
     FullType specifiedType = FullType.unspecified,
     required List<Object?> serializedList,
-    required EmailOnlyRequestBuilder result,
+    required EmailActionEmailRequestBuilder result,
     required List<Object?> unhandled,
   }) {
     for (var i = 0; i < serializedList.length; i += 2) {
@@ -108,6 +86,13 @@ class _$$EmailOnlyRequestSerializer implements PrimitiveSerializer<$EmailOnlyReq
           ) as String;
           result.email = valueDes;
           break;
+        case r'action_target':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(EmailActionTarget),
+          ) as EmailActionTarget;
+          result.actionTarget = valueDes;
+          break;
         default:
           unhandled.add(key);
           unhandled.add(value);
@@ -117,12 +102,12 @@ class _$$EmailOnlyRequestSerializer implements PrimitiveSerializer<$EmailOnlyReq
   }
 
   @override
-  $EmailOnlyRequest deserialize(
+  EmailActionEmailRequest deserialize(
     Serializers serializers,
     Object serialized, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    final result = $EmailOnlyRequestBuilder();
+    final result = EmailActionEmailRequestBuilder();
     final serializedList = (serialized as Iterable<Object?>).toList();
     final unhandled = <Object?>[];
     _deserializeProperties(

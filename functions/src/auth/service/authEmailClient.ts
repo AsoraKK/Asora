@@ -1,47 +1,23 @@
 import { EmailClient } from '@azure/communication-email';
 import { DefaultAzureCredential } from '@azure/identity';
 import { trackAppEvent } from '@shared/appInsights';
+import { resolveEmailActionOrigin, type EmailActionTarget } from './emailActionTarget';
 
 type AuthEmailMessageClass = 'verification' | 'password_reset';
 
 export interface AuthEmailSender {
-  sendVerification(address: string, token: string): Promise<void>;
-  sendPasswordReset(address: string, token: string): Promise<void>;
+  sendVerification(address: string, token: string, actionTarget: EmailActionTarget): Promise<AuthEmailSendReceipt>;
+  sendPasswordReset(address: string, token: string, actionTarget: EmailActionTarget): Promise<AuthEmailSendReceipt>;
+}
+
+export interface AuthEmailSendReceipt {
+  providerMessageId: string | null;
 }
 
 function requiredSetting(name: string): string {
   const value = process.env[name]?.trim();
   if (!value) throw new Error(`Missing required email setting: ${name}`);
   return value;
-}
-
-function appOrigin(): string {
-  const raw = requiredSetting('APP_ORIGIN');
-  const url = new URL(raw);
-  if (url.protocol !== 'https:' || url.username || url.password || url.hash || url.pathname !== '/') {
-    throw new Error('APP_ORIGIN must be an HTTPS origin');
-  }
-  return url.origin;
-}
-
-function emailLinkOrigin(): string {
-  const canonicalOrigin = appOrigin();
-  const raw = process.env.AUTH_EMAIL_LINK_ORIGIN?.trim();
-  if (!raw) return canonicalOrigin;
-
-  const url = new URL(raw);
-  if (
-    url.protocol !== 'https:' ||
-    url.username ||
-    url.password ||
-    url.hash ||
-    url.search ||
-    url.pathname !== '/' ||
-    !/^[a-f0-9]{8}\.lythaus-web\.pages\.dev$/.test(url.hostname)
-  ) {
-    throw new Error('AUTH_EMAIL_LINK_ORIGIN must be one exact immutable Lythaus Pages HTTPS origin');
-  }
-  return url.origin;
 }
 
 function htmlEscape(value: string): string {
@@ -57,7 +33,6 @@ export class AzureCommunicationAuthEmailSender implements AuthEmailSender {
   private readonly client: EmailClient;
   private readonly senderAddress: string;
   private readonly senderDisplayName: string;
-  private readonly origin: string;
 
   constructor() {
     this.client = new EmailClient(
@@ -66,25 +41,24 @@ export class AzureCommunicationAuthEmailSender implements AuthEmailSender {
     );
     this.senderAddress = requiredSetting('AUTH_EMAIL_FROM_ADDRESS');
     this.senderDisplayName = process.env.AUTH_EMAIL_FROM_NAME?.trim() || 'Lythaus';
-    this.origin = emailLinkOrigin();
   }
 
-  async sendVerification(address: string, token: string): Promise<void> {
-    const url = new URL('/auth/verify-email', this.origin);
-    url.searchParams.set('token', token);
-    await this.send(
+  async sendVerification(address: string, token: string, actionTarget: EmailActionTarget): Promise<AuthEmailSendReceipt> {
+    const url = new URL('/auth/verify-email', resolveEmailActionOrigin(actionTarget));
+    url.hash = new URLSearchParams({ token }).toString();
+    return this.send(
       address,
       'verification',
       'Verify your Lythaus email',
-      `Verify your Lythaus email address: ${url.toString()}\n\nThis link expires shortly and can be used once.`,
-      `<p>Verify your Lythaus email address:</p><p><a href="${htmlEscape(url.toString())}">Verify email</a></p><p>This link expires shortly and can be used once.</p>`
+      `Verify your Lythaus email address: ${url.toString()}\n\nOpen the link and choose Verify email. This link is valid for two hours.`,
+      `<p>Verify your Lythaus email address:</p><p><a href="${htmlEscape(url.toString())}">Verify email</a></p><p>Open the link and choose Verify email. This link is valid for two hours.</p>`
     );
   }
 
-  async sendPasswordReset(address: string, token: string): Promise<void> {
-    const url = new URL('/auth/reset-password', this.origin);
-    url.searchParams.set('token', token);
-    await this.send(
+  async sendPasswordReset(address: string, token: string, actionTarget: EmailActionTarget): Promise<AuthEmailSendReceipt> {
+    const url = new URL('/auth/reset-password', resolveEmailActionOrigin(actionTarget));
+    url.hash = new URLSearchParams({ token }).toString();
+    return this.send(
       address,
       'password_reset',
       'Reset your Lythaus password',
@@ -99,7 +73,7 @@ export class AzureCommunicationAuthEmailSender implements AuthEmailSender {
     subject: string,
     plainText: string,
     html: string
-  ): Promise<void> {
+  ): Promise<AuthEmailSendReceipt> {
     const recordOutcome = (outcome: 'attempted' | 'accepted' | 'failed') => {
       trackAppEvent({
         name: 'auth_email_delivery',
@@ -121,6 +95,11 @@ export class AzureCommunicationAuthEmailSender implements AuthEmailSender {
         throw new Error('Authentication email delivery was not accepted');
       }
       recordOutcome('accepted');
+      return {
+        providerMessageId: typeof (result as { id?: unknown }).id === 'string'
+          ? (result as { id: string }).id
+          : null,
+      };
     } catch (error) {
       recordOutcome('failed');
       throw error;

@@ -12,10 +12,17 @@ part 'email_token_request.g.dart';
 ///
 /// Properties:
 /// * [token]
-@BuiltValue(instantiable: false)
-abstract class EmailTokenRequest  {
+@BuiltValue()
+abstract class EmailTokenRequest implements Built<EmailTokenRequest, EmailTokenRequestBuilder> {
   @BuiltValueField(wireName: r'token')
   String get token;
+
+  EmailTokenRequest._();
+
+  factory EmailTokenRequest([void updates(EmailTokenRequestBuilder b)]) = _$EmailTokenRequest;
+
+  @BuiltValueHook(initializeBuilder: true)
+  static void _defaults(EmailTokenRequestBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
   static Serializer<EmailTokenRequest> get serializer => _$EmailTokenRequestSerializer();
@@ -23,7 +30,7 @@ abstract class EmailTokenRequest  {
 
 class _$EmailTokenRequestSerializer implements PrimitiveSerializer<EmailTokenRequest> {
   @override
-  final Iterable<Type> types = const [EmailTokenRequest];
+  final Iterable<Type> types = const [EmailTokenRequest, _$EmailTokenRequest];
 
   @override
   final String wireName = r'EmailTokenRequest';
@@ -47,46 +54,6 @@ class _$EmailTokenRequestSerializer implements PrimitiveSerializer<EmailTokenReq
     FullType specifiedType = FullType.unspecified,
   }) {
     return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
-  }
-
-  @override
-  EmailTokenRequest deserialize(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    return serializers.deserialize(serialized, specifiedType: FullType($EmailTokenRequest)) as $EmailTokenRequest;
-  }
-}
-
-/// a concrete implementation of [EmailTokenRequest], since [EmailTokenRequest] is not instantiable
-@BuiltValue(instantiable: true)
-abstract class $EmailTokenRequest implements EmailTokenRequest, Built<$EmailTokenRequest, $EmailTokenRequestBuilder> {
-  $EmailTokenRequest._();
-
-  factory $EmailTokenRequest([void Function($EmailTokenRequestBuilder)? updates]) = _$$EmailTokenRequest;
-
-  @BuiltValueHook(initializeBuilder: true)
-  static void _defaults($EmailTokenRequestBuilder b) => b;
-
-  @BuiltValueSerializer(custom: true)
-  static Serializer<$EmailTokenRequest> get serializer => _$$EmailTokenRequestSerializer();
-}
-
-class _$$EmailTokenRequestSerializer implements PrimitiveSerializer<$EmailTokenRequest> {
-  @override
-  final Iterable<Type> types = const [$EmailTokenRequest, _$$EmailTokenRequest];
-
-  @override
-  final String wireName = r'$EmailTokenRequest';
-
-  @override
-  Object serialize(
-    Serializers serializers,
-    $EmailTokenRequest object, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    return serializers.serialize(object, specifiedType: FullType(EmailTokenRequest))!;
   }
 
   void _deserializeProperties(
@@ -117,12 +84,12 @@ class _$$EmailTokenRequestSerializer implements PrimitiveSerializer<$EmailTokenR
   }
 
   @override
-  $EmailTokenRequest deserialize(
+  EmailTokenRequest deserialize(
     Serializers serializers,
     Object serialized, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    final result = $EmailTokenRequestBuilder();
+    final result = EmailTokenRequestBuilder();
     final serializedList = (serialized as Iterable<Object?>).toList();
     final unhandled = <Object?>[];
     _deserializeProperties(

@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:built_collection/built_collection.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -12,10 +13,15 @@ part 'email_auth_status_response.g.dart';
 ///
 /// Properties:
 /// * [message]
+/// * [status]
 @BuiltValue()
 abstract class EmailAuthStatusResponse implements Built<EmailAuthStatusResponse, EmailAuthStatusResponseBuilder> {
   @BuiltValueField(wireName: r'message')
   String get message;
+
+  @BuiltValueField(wireName: r'status')
+  EmailAuthStatusResponseStatusEnum? get status;
+  // enum statusEnum {  verified,  already_verified,  };
 
   EmailAuthStatusResponse._();
 
@@ -45,6 +51,13 @@ class _$EmailAuthStatusResponseSerializer implements PrimitiveSerializer<EmailAu
       object.message,
       specifiedType: const FullType(String),
     );
+    if (object.status != null) {
+      yield r'status';
+      yield serializers.serialize(
+        object.status,
+        specifiedType: const FullType(EmailAuthStatusResponseStatusEnum),
+      );
+    }
   }
 
   @override
@@ -75,6 +88,13 @@ class _$EmailAuthStatusResponseSerializer implements PrimitiveSerializer<EmailAu
           ) as String;
           result.message = valueDes;
           break;
+        case r'status':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(EmailAuthStatusResponseStatusEnum),
+          ) as EmailAuthStatusResponseStatusEnum;
+          result.status = valueDes;
+          break;
         default:
           unhandled.add(key);
           unhandled.add(value);
@@ -102,4 +122,19 @@ class _$EmailAuthStatusResponseSerializer implements PrimitiveSerializer<EmailAu
     );
     return result.build();
   }
+}
+
+class EmailAuthStatusResponseStatusEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'verified')
+  static const EmailAuthStatusResponseStatusEnum verified = _$emailAuthStatusResponseStatusEnum_verified;
+  @BuiltValueEnumConst(wireName: r'already_verified')
+  static const EmailAuthStatusResponseStatusEnum alreadyVerified = _$emailAuthStatusResponseStatusEnum_alreadyVerified;
+
+  static Serializer<EmailAuthStatusResponseStatusEnum> get serializer => _$emailAuthStatusResponseStatusEnumSerializer;
+
+  const EmailAuthStatusResponseStatusEnum._(String name): super(name);
+
+  static BuiltSet<EmailAuthStatusResponseStatusEnum> get values => _$emailAuthStatusResponseStatusEnumValues;
+  static EmailAuthStatusResponseStatusEnum valueOf(String name) => _$emailAuthStatusResponseStatusEnumValueOf(name);
 }

@@ -286,6 +286,11 @@ void main() {
         expect(jsonDecode(requests.first.body), {
           'email': 'person@example.com',
           'password': 'StrongPass!123',
+          'action_target': 'production',
+        });
+        expect(jsonDecode(requests[1].body), {
+          'email': 'person@example.com',
+          'action_target': 'production',
         });
         expect(jsonDecode(requests.last.body), {
           'token': 'reset-token',
@@ -314,7 +319,7 @@ void main() {
             isA<AuthFailure>().having(
               (failure) => failure.message,
               'message',
-              'The request could not be completed',
+          'The request could not be completed. Check the information and try again.',
             ),
           ),
         );
@@ -326,7 +331,7 @@ void main() {
             isA<AuthFailure>().having(
               (failure) => failure.message,
               'message',
-              'Email authentication is temporarily unavailable',
+          'Email authentication is temporarily unavailable. Please try again.',
             ),
           ),
         );

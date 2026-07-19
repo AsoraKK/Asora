@@ -54,8 +54,8 @@ function clientWith(results: Array<{ rowCount?: number; rows?: unknown[] }> = []
 
 function sender(): jest.Mocked<AuthEmailSender> {
   return {
-    sendVerification: jest.fn().mockResolvedValue(undefined),
-    sendPasswordReset: jest.fn().mockResolvedValue(undefined),
+    sendVerification: jest.fn().mockResolvedValue({ providerMessageId: null }),
+    sendPasswordReset: jest.fn().mockResolvedValue({ providerMessageId: null }),
   };
 }
 
@@ -115,7 +115,7 @@ describe('EmailAuthService', () => {
     const mail = sender();
     const service = new EmailAuthService({ sender: mail, now: () => NOW });
 
-    const result = await service.register('Person@Example.com', 'ValidPassword-2026');
+    const result = await service.register('Person@Example.com', 'ValidPassword-2026', 'preview');
 
     expect(result.message).not.toContain('person@example.com');
     expect(argonHash).toHaveBeenCalledWith(
@@ -123,29 +123,81 @@ describe('EmailAuthService', () => {
       expect.objectContaining({ type: 2, memoryCost: 19456 })
     );
     expect(mail.sendVerification).toHaveBeenCalledTimes(1);
-    expect(mail.sendVerification.mock.calls[0]?.[1]).toMatch(/^[A-Za-z0-9_-]{40,}$/);
+    expect(mail.sendVerification.mock.calls[0]?.[1]).toMatch(/^v1\.email-v1\.[0-9a-f-]+\.[A-Za-z0-9_-]{40,}$/);
+    expect(mail.sendVerification.mock.calls[0]?.[2]).toBe('preview');
     const insertTokenCall = db.query.mock.calls.find(([sql]) => String(sql).includes('INSERT INTO email_auth_tokens'));
     expect(insertTokenCall?.[1]?.[2]).toMatch(/^[a-f0-9]{64}$/);
     expect(insertTokenCall?.[1]?.[2]).not.toBe(mail.sendVerification.mock.calls[0]?.[1]);
-    expect(insertTokenCall?.[1]?.[3]).toEqual(new Date('2026-07-16T14:00:00.000Z'));
+    expect(insertTokenCall?.[1]?.[5]).toEqual(new Date('2026-07-16T14:00:00.000Z'));
     expect(cosmosUpsert).not.toHaveBeenCalled();
   });
 
   it('applies the configured lifetime to a resent verification token', async () => {
     process.env.EMAIL_VERIFICATION_TTL_MINUTES = '90';
-    query.mockResolvedValue({
-      rows: [{ user_id: USER_ID, email_verified_at: null, last_sent_at: new Date(NOW.getTime() - 60_001) }],
-      rowCount: 1,
-    });
     const db = clientWith();
+    db.query.mockImplementation(async (sql) => {
+      const text = String(sql);
+      if (text.includes('FROM email_auth_credentials')) {
+        return { rows: [{ user_id: USER_ID, email_verified_at: null }], rowCount: 1 };
+      }
+      if (text.includes('COUNT(*) FILTER')) {
+        return { rows: [{ active_count: 1, last_sent_at: new Date(NOW.getTime() - 60_001) }], rowCount: 1 };
+      }
+      return { rows: [], rowCount: 1 };
+    });
     connect.mockResolvedValue(db);
     const mail = sender();
 
-    await new EmailAuthService({ sender: mail, now: () => NOW }).resendVerification('person@example.com');
+    await new EmailAuthService({ sender: mail, now: () => NOW }).resendVerification('person@example.com', 'preview');
 
     const insertTokenCall = db.query.mock.calls.find(([sql]) => String(sql).includes('INSERT INTO email_auth_tokens'));
-    expect(insertTokenCall?.[1]?.[3]).toEqual(new Date('2026-07-16T13:30:00.000Z'));
+    expect(insertTokenCall?.[1]?.[5]).toEqual(new Date('2026-07-16T13:30:00.000Z'));
     expect(mail.sendVerification).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not revoke existing links or issue a third active verification link', async () => {
+    const db = clientWith();
+    db.query.mockImplementation(async (sql) => {
+      const text = String(sql);
+      if (text.includes('FROM email_auth_credentials')) {
+        return { rows: [{ user_id: USER_ID, email_verified_at: null }], rowCount: 1 };
+      }
+      if (text.includes('COUNT(*) FILTER')) {
+        return { rows: [{ active_count: 2, last_sent_at: new Date(NOW.getTime() - 60_001) }], rowCount: 1 };
+      }
+      return { rows: [], rowCount: 1 };
+    });
+    connect.mockResolvedValue(db);
+    const mail = sender();
+
+    const result = await new EmailAuthService({ sender: mail, now: () => NOW })
+      .resendVerification('person@example.com', 'preview');
+
+    expect(result.message).toContain('two most recent');
+    expect(mail.sendVerification).not.toHaveBeenCalled();
+    expect(db.query.mock.calls.some(([sql]) => String(sql).includes('INSERT INTO email_auth_tokens'))).toBe(false);
+    expect(db.query.mock.calls.some(([sql]) => String(sql).includes('SET revoked_at'))).toBe(false);
+  });
+
+  it('revokes only the newly prepared verification token when its send is rejected', async () => {
+    const db = clientWith();
+    db.query.mockImplementation(async (sql) =>
+      String(sql).includes('SELECT user_id FROM email_auth_credentials') ||
+      String(sql).includes('SELECT id FROM users WHERE primary_email')
+        ? { rows: [], rowCount: 0 }
+        : { rows: [], rowCount: 1 }
+    );
+    connect.mockResolvedValue(db);
+    const mail = sender();
+    mail.sendVerification.mockRejectedValueOnce(new Error('provider unavailable'));
+
+    await expect(
+      new EmailAuthService({ sender: mail, now: () => NOW })
+        .register('person@example.com', 'ValidPassword-2026', 'preview')
+    ).rejects.toMatchObject({ code: 'EMAIL_DELIVERY_UNAVAILABLE', status: 503 });
+
+    expect(query.mock.calls.some(([sql]) => String(sql).includes('SET revoked_at'))).toBe(true);
+    expect(query.mock.calls.some(([sql]) => String(sql).includes("state = $2"))).toBe(true);
   });
 
   it('keeps duplicate registration neutral and does not send another email', async () => {
@@ -158,7 +210,7 @@ describe('EmailAuthService', () => {
     connect.mockResolvedValue(db);
     const mail = sender();
     const result = await new EmailAuthService({ sender: mail, now: () => NOW })
-      .register('person@example.com', 'ValidPassword-2026');
+      .register('person@example.com', 'ValidPassword-2026', 'preview');
     expect(result.message).toContain('If the address');
     expect(mail.sendVerification).not.toHaveBeenCalled();
   });
@@ -179,7 +231,7 @@ describe('EmailAuthService', () => {
     const mail = sender();
 
     const result = await new EmailAuthService({ sender: mail, now: () => NOW })
-      .register('person@example.com', 'ValidPassword-2026');
+      .register('person@example.com', 'ValidPassword-2026', 'preview');
 
     expect(result.message).toContain('If the address');
     expect(mail.sendVerification).not.toHaveBeenCalled();
@@ -187,14 +239,18 @@ describe('EmailAuthService', () => {
     expect(db.query.mock.calls.some(([sql]) => String(sql).includes('INSERT INTO email_auth_credentials'))).toBe(false);
   });
 
-  it('verifies only an unexpired single-use digest and activates the user', async () => {
+  it('verifies only an unexpired single-use digest and creates a projection outbox event', async () => {
     const db = clientWith([
       {},
       {
         rows: [{
+          id: 'legacy-token-id',
           user_id: USER_ID,
-          primary_email: 'person@example.com',
-          created_at: NOW,
+          token_digest: '0'.repeat(64),
+          used_at: null,
+          revoked_at: null,
+          expires_at: new Date(NOW.getTime() + 60_000),
+          email_verified_at: null,
         }],
         rowCount: 1,
       },
@@ -203,9 +259,8 @@ describe('EmailAuthService', () => {
     await new EmailAuthService({ sender: sender(), now: () => NOW }).verifyEmail('verification-token');
     expect(db.query.mock.calls.some(([sql]) => String(sql).includes("purpose = 'verify_email'"))).toBe(true);
     expect(db.query.mock.calls.some(([sql]) => String(sql).includes('SET used_at'))).toBe(true);
-    expect(cosmosUpsert).toHaveBeenCalledWith(
-      expect.objectContaining({ id: USER_ID, isActive: true })
-    );
+    expect(db.query.mock.calls.some(([sql]) => String(sql).includes('auth_email_projection_outbox'))).toBe(true);
+    expect(cosmosUpsert).not.toHaveBeenCalled();
   });
 
   it('rejects invalid or replayed verification tokens neutrally', async () => {
@@ -214,6 +269,30 @@ describe('EmailAuthService', () => {
     await expect(
       new EmailAuthService({ sender: sender(), now: () => NOW }).verifyEmail('replayed-token')
     ).rejects.toMatchObject({ code: 'INVALID_TOKEN' });
+  });
+
+  it('returns already_verified for a remaining revoked link after any valid link succeeds', async () => {
+    const db = clientWith([
+      {},
+      {
+        rows: [{
+          id: 'remaining-token-id',
+          user_id: USER_ID,
+          token_digest: '0'.repeat(64),
+          key_id: 'legacy',
+          used_at: null,
+          revoked_at: NOW,
+          expires_at: new Date(NOW.getTime() + 60_000),
+          email_verified_at: NOW,
+        }],
+        rowCount: 1,
+      },
+    ]);
+    connect.mockResolvedValue(db);
+
+    await expect(
+      new EmailAuthService({ sender: sender(), now: () => NOW }).verifyEmail('remaining-link-token')
+    ).resolves.toMatchObject({ status: 'already_verified' });
   });
 
   it('returns the same login error for missing users and wrong passwords', async () => {
@@ -269,9 +348,23 @@ describe('EmailAuthService', () => {
     query.mockResolvedValue({ rows: [], rowCount: 0 });
     const mail = sender();
     const result = await new EmailAuthService({ sender: mail, now: () => NOW })
-      .forgotPassword('missing@example.com');
+      .forgotPassword('missing@example.com', 'preview');
     expect(result.message).toContain('If the account exists');
     expect(mail.sendPasswordReset).not.toHaveBeenCalled();
+  });
+
+  it('tracks accepted password-reset delivery separately from token issuance', async () => {
+    query.mockResolvedValue({ rows: [{ user_id: USER_ID }], rowCount: 1 });
+    const db = clientWith();
+    connect.mockResolvedValue(db);
+    const mail = sender();
+
+    await new EmailAuthService({ sender: mail, now: () => NOW })
+      .forgotPassword('person@example.com', 'preview');
+
+    expect(mail.sendPasswordReset).toHaveBeenCalledTimes(1);
+    expect(db.query.mock.calls.some(([sql]) => String(sql).includes("'password_reset'"))).toBe(true);
+    expect(query.mock.calls.some(([sql]) => String(sql).includes("state = $2"))).toBe(true);
   });
 
   it('resets the password once and revokes all refresh sessions', async () => {

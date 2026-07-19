@@ -3,7 +3,6 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:asora_api_client/src/model/email_only_request.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -15,7 +14,10 @@ part 'email_password_request.g.dart';
 /// * [email]
 /// * [password]
 @BuiltValue()
-abstract class EmailPasswordRequest implements EmailOnlyRequest, Built<EmailPasswordRequest, EmailPasswordRequestBuilder> {
+abstract class EmailPasswordRequest implements Built<EmailPasswordRequest, EmailPasswordRequestBuilder> {
+  @BuiltValueField(wireName: r'email')
+  String get email;
+
   @BuiltValueField(wireName: r'password')
   String get password;
 
@@ -42,14 +44,14 @@ class _$EmailPasswordRequestSerializer implements PrimitiveSerializer<EmailPassw
     EmailPasswordRequest object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
-    yield r'password';
-    yield serializers.serialize(
-      object.password,
-      specifiedType: const FullType(String),
-    );
     yield r'email';
     yield serializers.serialize(
       object.email,
+      specifiedType: const FullType(String),
+    );
+    yield r'password';
+    yield serializers.serialize(
+      object.password,
       specifiedType: const FullType(String),
     );
   }
@@ -75,19 +77,19 @@ class _$EmailPasswordRequestSerializer implements PrimitiveSerializer<EmailPassw
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
-        case r'password':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.password = valueDes;
-          break;
         case r'email':
           final valueDes = serializers.deserialize(
             value,
             specifiedType: const FullType(String),
           ) as String;
           result.email = valueDes;
+          break;
+        case r'password':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.password = valueDes;
           break;
         default:
           unhandled.add(key);

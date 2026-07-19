@@ -14,6 +14,7 @@ import 'package:asora/features/auth/domain/auth_failure.dart';
 import 'package:asora/features/auth/domain/user.dart';
 import 'package:asora/features/auth/application/oauth2_service.dart';
 import 'package:asora/features/auth/application/web_auth_service.dart';
+import 'package:asora/features/auth/application/web_token_storage.dart';
 import 'package:asora/core/config/web_release_guard.dart';
 
 class AuthService {
@@ -109,23 +110,38 @@ class AuthService {
     }
   }
 
+  String get _emailActionTarget {
+    if (!kIsWeb || getWebOrigin() == 'https://app.lythaus.co') {
+      return 'production';
+    }
+    return 'preview';
+  }
+
   Future<void> registerWithEmail(String email, String password) async {
     await _postEmailOperation('register', {
       'email': email.trim(),
       'password': password,
+      'action_target': _emailActionTarget,
     });
   }
 
   Future<void> resendEmailVerification(String email) async {
-    await _postEmailOperation('resend', {'email': email.trim()});
+    await _postEmailOperation('resend', {
+      'email': email.trim(),
+      'action_target': _emailActionTarget,
+    });
   }
 
   Future<void> requestPasswordReset(String email) async {
-    await _postEmailOperation('forgot-password', {'email': email.trim()});
+    await _postEmailOperation('forgot-password', {
+      'email': email.trim(),
+      'action_target': _emailActionTarget,
+    });
   }
 
-  Future<void> verifyEmailToken(String token) async {
-    await _postEmailOperation('verify', {'token': token});
+  Future<String> verifyEmailToken(String token) async {
+    final result = await _postEmailOperation('verify', {'token': token});
+    return result['status'] as String? ?? 'verified';
   }
 
   Future<void> resetEmailPassword(String token, String newPassword) async {
@@ -135,9 +151,9 @@ class AuthService {
     });
   }
 
-  Future<void> _postEmailOperation(
+  Future<Map<String, dynamic>> _postEmailOperation(
     String operation,
-    Map<String, String> body,
+    Map<String, dynamic> body,
   ) async {
     try {
       final response = await _httpClient.post(
@@ -145,13 +161,50 @@ class AuthService {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(body),
       );
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw AuthFailure.serverError(
-          response.statusCode >= 500
-              ? 'Email authentication is temporarily unavailable'
-              : 'The request could not be completed',
+      final decoded = response.body.isEmpty
+          ? const <String, dynamic>{}
+          : jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return decoded;
+      }
+      final error = decoded['error'] as Map<String, dynamic>?;
+      final code = error?['code'] as String?;
+      if (response.statusCode == 400 && code == 'INVALID_TOKEN') {
+        final action = operation == 'reset-password'
+            ? 'reset link'
+            : 'verification link';
+        throw AuthFailure.invalidCredentials(
+          'This $action is invalid or expired.',
         );
       }
+      if (response.statusCode == 400) {
+        throw AuthFailure.invalidCredentials(
+          'The request could not be completed. Check the information and try again.',
+        );
+      }
+      if (response.statusCode == 429) {
+        final action = operation == 'reset-password'
+            ? 'password reset'
+            : operation == 'verify'
+                ? 'verification'
+                : 'email authentication';
+        throw AuthFailure.serverError(
+          'Too many $action attempts. Please wait and try again.',
+          true,
+        );
+      }
+      if (response.statusCode >= 500) {
+        final action = operation == 'reset-password'
+            ? 'Password reset'
+            : operation == 'verify'
+                ? 'Verification'
+                : 'Email authentication';
+        throw AuthFailure.serverError(
+          '$action is temporarily unavailable. Please try again.',
+          true,
+        );
+      }
+      throw AuthFailure.serverError('The request could not be completed');
     } on AuthFailure {
       rethrow;
     } catch (_) {

@@ -93,10 +93,12 @@ import 'package:asora_api_client/src/model/dsr_export_response.dart';
 import 'package:asora_api_client/src/model/dsr_export_response_metadata.dart';
 import 'package:asora_api_client/src/model/dsr_request_input.dart';
 import 'package:asora_api_client/src/model/dsr_request_summary.dart';
+import 'package:asora_api_client/src/model/email_action_email_request.dart';
+import 'package:asora_api_client/src/model/email_action_password_request.dart';
+import 'package:asora_api_client/src/model/email_action_target.dart';
 import 'package:asora_api_client/src/model/email_auth_status_response.dart';
 import 'package:asora_api_client/src/model/email_auth_user.dart';
 import 'package:asora_api_client/src/model/email_login_response.dart';
-import 'package:asora_api_client/src/model/email_only_request.dart';
 import 'package:asora_api_client/src/model/email_password_request.dart';
 import 'package:asora_api_client/src/model/email_password_reset_request.dart';
 import 'package:asora_api_client/src/model/email_token_request.dart';
@@ -247,13 +249,15 @@ part 'serializers.g.dart';
   DSRExportResponseMetadata,
   DsrRequestInput,
   DsrRequestSummary,
+  EmailActionEmailRequest,
+  EmailActionPasswordRequest,
+  EmailActionTarget,
   EmailAuthStatusResponse,
   EmailAuthUser,
   EmailLoginResponse,
-  EmailOnlyRequest,$EmailOnlyRequest,
   EmailPasswordRequest,
   EmailPasswordResetRequest,
-  EmailTokenRequest,$EmailTokenRequest,
+  EmailTokenRequest,
   Error,
   ErrorResponse,
   ErrorResponseError,
@@ -326,8 +330,6 @@ Serializers serializers = (_$serializers.toBuilder()
       )
       ..add(AdminInvite.serializer)
       ..add(CursorPaginatedPostView.serializer)
-      ..add(EmailOnlyRequest.serializer)
-      ..add(EmailTokenRequest.serializer)
       ..add(Post.serializer)
       ..add(const OneOfSerializer())
       ..add(const AnyOfSerializer())

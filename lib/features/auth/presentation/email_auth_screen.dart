@@ -1,5 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -24,6 +26,19 @@ class _EmailAuthScreenState extends ConsumerState<EmailAuthScreen> {
   bool _busy = false;
   String? _message;
   String? _error;
+  DateTime? _resendAvailableAt;
+  Timer? _resendTimer;
+
+  bool get _canResend =>
+      _resendAvailableAt == null || DateTime.now().isAfter(_resendAvailableAt!);
+
+  void _startResendCooldown() {
+    _resendAvailableAt = DateTime.now().add(const Duration(seconds: 60));
+    _resendTimer?.cancel();
+    _resendTimer = Timer(const Duration(seconds: 60), () {
+      if (mounted) setState(() => _resendAvailableAt = null);
+    });
+  }
 
   @override
   void initState() {
@@ -33,6 +48,7 @@ class _EmailAuthScreenState extends ConsumerState<EmailAuthScreen> {
 
   @override
   void dispose() {
+    _resendTimer?.cancel();
     _email.dispose();
     _password.dispose();
     super.dispose();
@@ -58,6 +74,7 @@ class _EmailAuthScreenState extends ConsumerState<EmailAuthScreen> {
       if (_mode == EmailAuthMode.register) {
         await service.registerWithEmail(email, _password.text);
         _message = 'Check your email to verify your account.';
+        _startResendCooldown();
       } else {
         await service.requestPasswordReset(email);
         _message = 'If the account exists, a reset email will be sent.';
@@ -72,7 +89,7 @@ class _EmailAuthScreenState extends ConsumerState<EmailAuthScreen> {
   }
 
   Future<void> _resendVerification() async {
-    if (_busy) return;
+    if (_busy || !_canResend) return;
     setState(() {
       _busy = true;
       _error = null;
@@ -83,6 +100,7 @@ class _EmailAuthScreenState extends ConsumerState<EmailAuthScreen> {
           .resendEmailVerification(_email.text.trim());
       _message =
           'If the address is eligible, a verification email will be sent.';
+      _startResendCooldown();
     } on AuthFailure catch (error) {
       _error = error.message;
     } catch (_) {
@@ -163,10 +181,22 @@ class _EmailAuthScreenState extends ConsumerState<EmailAuthScreen> {
                       ),
                     ],
                     if (_mode == EmailAuthMode.register && _message != null)
-                      TextButton(
-                        key: const Key('email-auth-resend-verification'),
-                        onPressed: _busy ? null : _resendVerification,
-                        child: const Text('Resend verification email'),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          TextButton(
+                            key: const Key('email-auth-resend-verification'),
+                            onPressed: _busy || !_canResend
+                                ? null
+                                : _resendVerification,
+                            child: const Text('Resend verification email'),
+                          ),
+                          if (!_canResend)
+                            const Text(
+                              'You can request another verification email in one minute.',
+                              textAlign: TextAlign.center,
+                            ),
+                        ],
                       ),
                     const SizedBox(height: 24),
                     FilledButton(

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/features/auth/application/web_token_storage.dart';
 import 'package:asora/features/auth/presentation/auth_callback_screen.dart';
 import 'package:asora/features/auth/presentation/auth_choice_screen.dart';
 import 'package:asora/features/auth/presentation/email_token_screen.dart';
@@ -83,14 +84,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: AppRoutes.verifyEmail,
         path: '/auth/verify-email',
         builder: (context, state) => EmailVerificationScreen(
-          token: state.uri.queryParameters['token'] ?? '',
+          token: getWebEmailActionFragmentToken() ?? state.uri.queryParameters['token'] ?? '',
         ),
       ),
       GoRoute(
         name: AppRoutes.resetPassword,
         path: '/auth/reset-password',
         builder: (context, state) => PasswordResetScreen(
-          token: state.uri.queryParameters['token'] ?? '',
+          token: getWebEmailActionFragmentToken() ?? state.uri.queryParameters['token'] ?? '',
         ),
       ),
 

@@ -208,6 +208,7 @@ jobs:
           node tools/apply_sql_to_pg.js database/migrations/004_email_password_auth.sql
           node tools/apply_sql_to_pg.js database/migrations/005_google_provider_links.sql
           node tools/apply_sql_to_pg.js database/migrations/006_refresh_token_families.sql
+          node tools/apply_sql_to_pg.js database/migrations/007_email_verification_v2.sql
           node scripts/verify-mvp-auth-schema.mjs
 
       - name: Configure CORS allowed origins
@@ -241,7 +242,7 @@ jobs:
             --settings OAUTH_REDIRECT_URIS="$GOOGLE_OAUTH_PREVIEW_REDIRECT_URI" \
             --output none
 
-      - name: Configure exact email preview link origin
+      - name: Configure exact email preview action target
         run: |
           set -euo pipefail
           RG_CLEAN=$(echo "$RG" | tr -d '\r')
@@ -254,7 +255,7 @@ jobs:
           az functionapp config appsettings set \
             -g "$RG_CLEAN" \
             -n "$FUNC_APP_CLEAN" \
-            --settings AUTH_EMAIL_LINK_ORIGIN="$MVP_PREVIEW_APP_ORIGIN" \
+            --settings AUTH_EMAIL_PREVIEW_ORIGIN="$MVP_PREVIEW_APP_ORIGIN" \
             --output none
 
       - name: Configure bounded email verification lifetime
@@ -272,6 +273,24 @@ jobs:
             -n "$FUNC_APP_CLEAN" \
             --settings EMAIL_VERIFICATION_TTL_MINUTES="$MVP_EMAIL_VERIFICATION_TTL_MINUTES" \
             --output none
+
+      - name: Configure current email-token key identifier
+        run: |
+          set -euo pipefail
+          RG_CLEAN=$(echo "$RG" | tr -d '\r')
+          FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
+          CURRENT_KEY_ID=$(az functionapp config appsettings list \
+            -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
+            --query "[?name=='EMAIL_TOKEN_HMAC_KEY_ID'] | [0].value" -o tsv | tr -d '\r')
+          if [ -z "$CURRENT_KEY_ID" ]; then
+            CURRENT_KEY_ID='email-v1'
+            az functionapp config appsettings set \
+              -g "$RG_CLEAN" \
+              -n "$FUNC_APP_CLEAN" \
+              --settings EMAIL_TOKEN_HMAC_KEY_ID="$CURRENT_KEY_ID" \
+              --output none
+          fi
+          CURRENT_KEY_ID="$CURRENT_KEY_ID" node -e 'const value = process.env.CURRENT_KEY_ID; if (!/^[A-Za-z0-9_-]{1,64}$/.test(value)) throw new Error("EMAIL_TOKEN_HMAC_KEY_ID is invalid");'
 
       - name: Inspect CORS allowed origins
         run: |
@@ -439,6 +458,7 @@ jobs:
               "INVITE_CODE_PEPPER=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/invite-code-pepper/)" \
               "HIVE_API_KEY=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/HIVE-AI-KEY/)" \
               "CF_ACCESS_CLIENT_SECRET=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/cf-access-client-secret/)" \
+              "EMAIL_TOKEN_HMAC_SECRET=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/email-token-hmac-secret/)" \
               "GOOGLE_OAUTH_CLIENT_SECRET_WEB=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/google-oauth-client-secret-web/)" \
             --output none
 
@@ -455,7 +475,7 @@ jobs:
 
           SUBSCRIPTION_ID=$(az account show --query id -o tsv)
           REFERENCES_URI="https://management.azure.com/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG_CLEAN}/providers/Microsoft.Web/sites/${FUNC_APP_CLEAN}/config/configreferences/appsettings?api-version=2024-11-01"
-          REQUIRED_REFERENCES=(AUDIT_HMAC_KEY INVITE_CODE_PEPPER HIVE_API_KEY CF_ACCESS_CLIENT_SECRET GOOGLE_OAUTH_CLIENT_SECRET_WEB)
+          REQUIRED_REFERENCES=(AUDIT_HMAC_KEY INVITE_CODE_PEPPER HIVE_API_KEY CF_ACCESS_CLIENT_SECRET EMAIL_TOKEN_HMAC_SECRET GOOGLE_OAUTH_CLIENT_SECRET_WEB)
           for attempt in $(seq 1 12); do
             REFERENCES_JSON=$(az rest --method get --uri "$REFERENCES_URI")
             unresolved=false
@@ -539,6 +559,7 @@ jobs:
             POSTGRES_CONNECTION_STRING
             AUDIT_HMAC_KEY
             FCM_PRIVATE_KEY
+            EMAIL_TOKEN_HMAC_SECRET
             GOOGLE_OAUTH_CLIENT_SECRET_WEB
           )
           for key in "${REQUIRED_KEY_VAULT_SETTINGS[@]}"; do

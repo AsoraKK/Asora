@@ -40,6 +40,7 @@ function context(method = 'POST', body: Record<string, unknown> = {}) {
   return {
     request: { method },
     body,
+    query: {},
     correlationId: 'email-route-test',
     context: { error },
     ok: (value: unknown, status = 200) => ({ status, jsonBody: value }),
@@ -87,15 +88,22 @@ describe('email authentication routes', () => {
     mockEmailAuthService.resendVerification.mockResolvedValueOnce({ message: 'accepted' });
 
     const registration = await registerHandler(
-      context('POST', { email: 'user@example.com', password: 'Example-password-123' }) as never
+      context('POST', {
+        email: 'user@example.com',
+        password: 'Example-password-123',
+        action_target: 'preview',
+      }) as never
     );
-    const resend = await resendHandler(context('POST', { email: 'user@example.com' }) as never);
+    const resend = await resendHandler(
+      context('POST', { email: 'user@example.com', action_target: 'preview' }) as never
+    );
 
     expect(mockEmailAuthService.register).toHaveBeenCalledWith(
       'user@example.com',
-      'Example-password-123'
+      'Example-password-123',
+      'preview'
     );
-    expect(mockEmailAuthService.resendVerification).toHaveBeenCalledWith('user@example.com');
+    expect(mockEmailAuthService.resendVerification).toHaveBeenCalledWith('user@example.com', 'preview');
     expectPrivateNoStore(registration, 202);
     expectPrivateNoStore(resend, 202);
   });
@@ -110,7 +118,9 @@ describe('email authentication routes', () => {
     const login = await loginHandler(
       context('POST', { email: 'user@example.com', password: 'Example-password-123' }) as never
     );
-    const forgot = await forgotHandler(context('POST', { email: 'user@example.com' }) as never);
+    const forgot = await forgotHandler(
+      context('POST', { email: 'user@example.com', action_target: 'preview' }) as never
+    );
     const reset = await resetHandler(
       context('POST', { token: 'reset-token', new_password: 'New-password-123' }) as never
     );
@@ -120,7 +130,7 @@ describe('email authentication routes', () => {
       'user@example.com',
       'Example-password-123'
     );
-    expect(mockEmailAuthService.forgotPassword).toHaveBeenCalledWith('user@example.com');
+    expect(mockEmailAuthService.forgotPassword).toHaveBeenCalledWith('user@example.com', 'preview');
     expect(mockEmailAuthService.resetPassword).toHaveBeenCalledWith(
       'reset-token',
       'New-password-123'
@@ -128,6 +138,15 @@ describe('email authentication routes', () => {
     for (const response of [verification, login, forgot, reset]) {
       expectPrivateNoStore(response, response === forgot ? 202 : 200);
     }
+  });
+
+  it('rejects email action tokens supplied in query parameters', async () => {
+    const ctx = context('POST', { token: 'body-token' });
+    ctx.query = { token: 'query-token' };
+    const response = await verifyHandler(ctx as never);
+
+    expectPrivateNoStore(response, 400);
+    expect(mockEmailAuthService.verifyEmail).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -146,8 +165,12 @@ describe('email authentication routes', () => {
     const ctx = context();
     const response = await verifyHandler(ctx as never);
 
-    expectPrivateNoStore(response, 500);
-    expect(response.jsonBody.message).toBe('Email authentication is temporarily unavailable');
+    expectPrivateNoStore(response, 503);
+    expect(response.jsonBody.error).toMatchObject({
+      code: 'EMAIL_AUTH_TEMPORARILY_UNAVAILABLE',
+      message: 'Email authentication is temporarily unavailable',
+      retryable: true,
+    });
     expect(ctx.context.error).toHaveBeenCalledWith('[auth/email] request failed', {
       correlationId: 'email-route-test',
     });

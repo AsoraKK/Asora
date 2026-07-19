@@ -1,14 +1,19 @@
 import 'package:test/test.dart';
 import 'package:asora_api_client/asora_api_client.dart';
 
-// tests for EmailOnlyRequest
+// tests for EmailActionEmailRequest
 void main() {
-  //final instance = EmailOnlyRequestBuilder();
+  final instance = EmailActionEmailRequestBuilder();
   // TODO add properties to the builder and call build()
 
-  group(EmailOnlyRequest, () {
+  group(EmailActionEmailRequest, () {
     // String email
     test('to test the property `email`', () async {
+      // TODO
+    });
+
+    // EmailActionTarget actionTarget
+    test('to test the property `actionTarget`', () async {
       // TODO
     });
 

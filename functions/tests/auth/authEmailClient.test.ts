@@ -18,6 +18,7 @@ describe('AzureCommunicationAuthEmailSender telemetry', () => {
     process.env.AUTH_EMAIL_FROM_ADDRESS = 'no-reply@mail.lythaus.co';
     process.env.AUTH_EMAIL_FROM_NAME = 'Lythaus';
     process.env.APP_ORIGIN = 'https://app.lythaus.co';
+    process.env.AUTH_EMAIL_PREVIEW_ORIGIN = 'https://e46064a9.lythaus-web.pages.dev';
   });
 
   afterEach(() => {
@@ -25,14 +26,14 @@ describe('AzureCommunicationAuthEmailSender telemetry', () => {
     delete process.env.AUTH_EMAIL_FROM_ADDRESS;
     delete process.env.AUTH_EMAIL_FROM_NAME;
     delete process.env.APP_ORIGIN;
-    delete process.env.AUTH_EMAIL_LINK_ORIGIN;
+    delete process.env.AUTH_EMAIL_PREVIEW_ORIGIN;
   });
 
   it.each([
     ['verification', (sender: AzureCommunicationAuthEmailSender) =>
-      sender.sendVerification('person@example.test', 'fixture-verification-token')],
+      sender.sendVerification('person@example.test', 'fixture-verification-token', 'preview')],
     ['password_reset', (sender: AzureCommunicationAuthEmailSender) =>
-      sender.sendPasswordReset('person@example.test', 'fixture-reset-token')],
+      sender.sendPasswordReset('person@example.test', 'fixture-reset-token', 'preview')],
   ] as const)('records privacy-safe attempted and accepted %s events', async (messageClass, send) => {
     mockBeginSend.mockResolvedValueOnce({
       pollUntilDone: jest.fn().mockResolvedValue({ status: 'Succeeded' }),
@@ -62,7 +63,8 @@ describe('AzureCommunicationAuthEmailSender telemetry', () => {
     await expect(
       new AzureCommunicationAuthEmailSender().sendVerification(
         'person@example.test',
-        'fixture-verification-token'
+        'fixture-verification-token',
+        'preview'
       )
     ).rejects.toThrow('Authentication email delivery was not accepted');
 
@@ -77,25 +79,32 @@ describe('AzureCommunicationAuthEmailSender telemetry', () => {
   });
 
   it('uses only an exact immutable preview origin for email action links', async () => {
-    process.env.AUTH_EMAIL_LINK_ORIGIN = 'https://e46064a9.lythaus-web.pages.dev';
+    process.env.AUTH_EMAIL_PREVIEW_ORIGIN = 'https://e46064a9.lythaus-web.pages.dev';
     mockBeginSend.mockResolvedValueOnce({
       pollUntilDone: jest.fn().mockResolvedValue({ status: 'Succeeded' }),
     });
 
     await new AzureCommunicationAuthEmailSender().sendVerification(
       'person@example.test',
-      'fixture-verification-token'
+      'fixture-verification-token',
+      'preview'
     );
 
     const message = mockBeginSend.mock.calls[0][0];
     expect(message.content.plainText).toContain(
-      'https://e46064a9.lythaus-web.pages.dev/auth/verify-email?token=fixture-verification-token'
+      'https://e46064a9.lythaus-web.pages.dev/auth/verify-email#token=fixture-verification-token'
     );
   });
 
-  it('rejects a wildcard-like Pages preview origin', () => {
-    process.env.AUTH_EMAIL_LINK_ORIGIN = 'https://lythaus-web.pages.dev';
+  it('rejects a wildcard-like Pages preview origin at send time', async () => {
+    process.env.AUTH_EMAIL_PREVIEW_ORIGIN = 'https://lythaus-web.pages.dev';
 
-    expect(() => new AzureCommunicationAuthEmailSender()).toThrow(/AUTH_EMAIL_LINK_ORIGIN/);
+    await expect(
+      new AzureCommunicationAuthEmailSender().sendVerification(
+        'person@example.test',
+        'fixture-verification-token',
+        'preview'
+      )
+    ).rejects.toThrow(/AUTH_EMAIL_PREVIEW_ORIGIN/);
   });
 });

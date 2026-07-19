@@ -81,20 +81,15 @@ void main() {
         findsOneWidget,
       );
 
-      when(
-        () => service.resendEmailVerification('person@example.com'),
-      ).thenAnswer((_) async {});
-      await tester.tap(find.byKey(const Key('email-auth-resend-verification')));
-      await tester.pumpAndSettle();
-
-      verify(
-        () => service.resendEmailVerification('person@example.com'),
-      ).called(1);
       expect(
-        find.text(
-          'If the address is eligible, a verification email will be sent.',
-        ),
+        find.text('You can request another verification email in one minute.'),
         findsOneWidget,
+      );
+      expect(
+        tester.widget<TextButton>(
+          find.byKey(const Key('email-auth-resend-verification')),
+        ).onPressed,
+        isNull,
       );
     });
 
@@ -231,17 +226,21 @@ void main() {
   });
 
   group('Email token screens', () {
-    testWidgets('verification reports success', (tester) async {
+    testWidgets('verification waits for explicit confirmation before redemption', (tester) async {
       final service = _MockAuthService();
       when(
         () => service.verifyEmailToken('verification-token'),
-      ).thenAnswer((_) async {});
+      ).thenAnswer((_) async => 'verified');
 
       await _pump(
         tester,
         const EmailVerificationScreen(token: 'verification-token'),
         service: service,
       );
+      await tester.pump();
+      verifyNever(() => service.verifyEmailToken('verification-token'));
+      expect(find.text('Confirm that you want to verify this email address.'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('confirm-email-verification')));
       await tester.pumpAndSettle();
       verify(() => service.verifyEmailToken('verification-token')).called(1);
       expect(find.text('Email verified. You can now sign in.'), findsOneWidget);
@@ -253,13 +252,20 @@ void main() {
       final service = _MockAuthService();
       when(
         () => service.verifyEmailToken('invalid-token'),
-      ).thenAnswer((_) => Future<void>.error(AuthFailure.invalidCredentials()));
+      ).thenAnswer(
+        (_) => Future<String>.error(
+          AuthFailure.invalidCredentials(
+            'This verification link is invalid or expired.',
+          ),
+        ),
+      );
 
       await _pump(
         tester,
         const EmailVerificationScreen(token: 'invalid-token'),
         service: service,
       );
+      await tester.tap(find.byKey(const Key('confirm-email-verification')));
       await tester.pumpAndSettle();
       expect(
         find.text('This verification link is invalid or expired.'),

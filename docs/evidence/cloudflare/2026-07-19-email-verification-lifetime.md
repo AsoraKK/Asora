@@ -2,10 +2,9 @@
 
 ## Result
 
-**Partial remediation; public cutover remains NO-GO.** The shared MVP backend
-now uses a bounded email-verification token lifetime that can tolerate an
-observed delivery delay without weakening single-use, resend invalidation, or
-expiry controls.
+**Superseded by the v2 verification design; public cutover remains NO-GO.**
+The bounded lifetime remains in force, but it was not a complete remedy for the
+observed false-expiry failure.
 
 ## Evidence
 
@@ -26,7 +25,7 @@ expiry controls.
 | Configured range | Whole minutes from 30 through 240 |
 | Configuration name | `EMAIL_VERIFICATION_TTL_MINUTES` |
 | Deployment source | Non-secret GitHub repository variable `MVP_EMAIL_VERIFICATION_TTL_MINUTES` |
-| Old-link behaviour after resend | Invalidated before the replacement token is issued |
+| Old-link behaviour after resend | Historical v1 behavior; replaced by the v2 bounded two-active-link policy |
 | Token storage | HMAC digest only; raw token is sent only through the approved email provider |
 | Reset-token lifetime | Unchanged |
 
@@ -46,8 +45,8 @@ creates a registration or resend token.
 
 1. Deploy the exact validated backend artifact with
    `MVP_EMAIL_VERIFICATION_TTL_MINUTES=120`.
-2. Send one new verification message, wait for delivery, and open only the
-   newest link within two hours. A resend invalidates every earlier link.
+2. Deploy and validate the v2 explicit-confirmation flow described in
+   `2026-07-19-email-verification-v2-design.md`.
 3. Prove successful verification, login, refresh rotation, logout, and
    post-logout rejection through the immutable preview gateway.
 4. Add or query a privacy-safe ACS delivery-status signal before attributing

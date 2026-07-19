@@ -82,7 +82,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **authEmailForgotPassword**
-> EmailAuthStatusResponse authEmailForgotPassword(emailOnlyRequest)
+> EmailAuthStatusResponse authEmailForgotPassword(emailActionEmailRequest)
 
 Request a password-reset email
 
@@ -93,10 +93,10 @@ Always returns a neutral response to resist account enumeration.
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAuthApi();
-final EmailOnlyRequest emailOnlyRequest = ; // EmailOnlyRequest |
+final EmailActionEmailRequest emailActionEmailRequest = ; // EmailActionEmailRequest |
 
 try {
-    final response = api.authEmailForgotPassword(emailOnlyRequest);
+    final response = api.authEmailForgotPassword(emailActionEmailRequest);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling AuthApi->authEmailForgotPassword: $e\n');
@@ -107,7 +107,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **emailOnlyRequest** | [**EmailOnlyRequest**](EmailOnlyRequest.md)|  |
+ **emailActionEmailRequest** | [**EmailActionEmailRequest**](EmailActionEmailRequest.md)|  |
 
 ### Return type
 
@@ -166,21 +166,21 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **authEmailRegister**
-> EmailAuthStatusResponse authEmailRegister(emailPasswordRequest)
+> EmailAuthStatusResponse authEmailRegister(emailActionPasswordRequest)
 
 Register an email/password account
 
-Creates an unverified account and sends a single-use verification email. The response is deliberately neutral.
+Creates an unverified account and sends a verification email to a server-mapped action target. The response is deliberately neutral.
 
 ### Example
 ```dart
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAuthApi();
-final EmailPasswordRequest emailPasswordRequest = ; // EmailPasswordRequest |
+final EmailActionPasswordRequest emailActionPasswordRequest = ; // EmailActionPasswordRequest |
 
 try {
-    final response = api.authEmailRegister(emailPasswordRequest);
+    final response = api.authEmailRegister(emailActionPasswordRequest);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling AuthApi->authEmailRegister: $e\n');
@@ -191,7 +191,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **emailPasswordRequest** | [**EmailPasswordRequest**](EmailPasswordRequest.md)|  |
+ **emailActionPasswordRequest** | [**EmailActionPasswordRequest**](EmailActionPasswordRequest.md)|  |
 
 ### Return type
 
@@ -209,7 +209,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **authEmailResend**
-> EmailAuthStatusResponse authEmailResend(emailOnlyRequest)
+> EmailAuthStatusResponse authEmailResend(emailActionEmailRequest)
 
 Resend email verification
 
@@ -220,10 +220,10 @@ Returns a neutral response whether or not the account exists.
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAuthApi();
-final EmailOnlyRequest emailOnlyRequest = ; // EmailOnlyRequest |
+final EmailActionEmailRequest emailActionEmailRequest = ; // EmailActionEmailRequest |
 
 try {
-    final response = api.authEmailResend(emailOnlyRequest);
+    final response = api.authEmailResend(emailActionEmailRequest);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling AuthApi->authEmailResend: $e\n');
@@ -234,7 +234,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **emailOnlyRequest** | [**EmailOnlyRequest**](EmailOnlyRequest.md)|  |
+ **emailActionEmailRequest** | [**EmailActionEmailRequest**](EmailActionEmailRequest.md)|  |
 
 ### Return type
 
@@ -298,6 +298,8 @@ No authorization required
 > EmailAuthStatusResponse authEmailVerify(emailTokenRequest)
 
 Verify an email address
+
+Redeems a token supplied only in the JSON request body. GET and query-string redemption are rejected.
 
 ### Example
 ```dart

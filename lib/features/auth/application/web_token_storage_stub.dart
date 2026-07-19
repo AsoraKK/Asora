@@ -15,3 +15,7 @@ String getWebLocationHref() => '';
 String getWebOrigin() => '';
 
 void clearWebCallbackQuery() {}
+
+String? getWebEmailActionFragmentToken() => null;
+
+void clearWebEmailActionUrl() {}
