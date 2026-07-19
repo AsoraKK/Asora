@@ -106,7 +106,10 @@ jobs:
             "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/access/apps" > "$workdir/apps.json"
           legacy_app_id="$(jq -r '[.result[] | select(.domain == "admin-api.asora.co.za")] | if length == 1 then .[0].id else empty end' "$workdir/apps.json")"
           legacy_audience="$(jq -r '[.result[] | select(.domain == "admin-api.asora.co.za")] | if length == 1 then .[0].aud else empty end' "$workdir/apps.json")"
-          test -n "$legacy_app_id" && test -n "$legacy_audience" || { echo "::error::Expected exactly one legacy admin Access application"; exit 1; }
+          if [[ -z "$legacy_app_id" || -z "$legacy_audience" ]]; then
+            echo "::error::Expected exactly one legacy admin Access application"
+            exit 1
+          fi
           test "$backend_audience" = "$legacy_audience" || { echo "::error::Backend Access audience does not match the legacy admin application"; exit 1; }
 
           curl --fail --silent --show-error \
