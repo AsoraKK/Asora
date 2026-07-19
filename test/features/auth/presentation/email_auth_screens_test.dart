@@ -80,6 +80,22 @@ void main() {
         find.text('Check your email to verify your account.'),
         findsOneWidget,
       );
+
+      when(
+        () => service.resendEmailVerification('person@example.com'),
+      ).thenAnswer((_) async {});
+      await tester.tap(find.byKey(const Key('email-auth-resend-verification')));
+      await tester.pumpAndSettle();
+
+      verify(
+        () => service.resendEmailVerification('person@example.com'),
+      ).called(1);
+      expect(
+        find.text(
+          'If the address is eligible, a verification email will be sent.',
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('shows controlled AuthFailure and generic errors', (

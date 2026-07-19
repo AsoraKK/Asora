@@ -71,6 +71,27 @@ class _EmailAuthScreenState extends ConsumerState<EmailAuthScreen> {
     }
   }
 
+  Future<void> _resendVerification() async {
+    if (_busy) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await ref
+          .read(enhancedAuthServiceProvider)
+          .resendEmailVerification(_email.text.trim());
+      _message =
+          'If the address is eligible, a verification email will be sent.';
+    } on AuthFailure catch (error) {
+      _error = error.message;
+    } catch (_) {
+      _error = 'The request could not be completed. Please try again.';
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final title = switch (_mode) {
@@ -141,6 +162,12 @@ class _EmailAuthScreenState extends ConsumerState<EmailAuthScreen> {
                         ),
                       ),
                     ],
+                    if (_mode == EmailAuthMode.register && _message != null)
+                      TextButton(
+                        key: const Key('email-auth-resend-verification'),
+                        onPressed: _busy ? null : _resendVerification,
+                        child: const Text('Resend verification email'),
+                      ),
                     const SizedBox(height: 24),
                     FilledButton(
                       onPressed: _busy ? null : _submit,
