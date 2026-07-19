@@ -240,6 +240,22 @@ jobs:
             --settings OAUTH_REDIRECT_URIS="$GOOGLE_OAUTH_PREVIEW_REDIRECT_URI" \
             --output none
 
+      - name: Configure exact email preview link origin
+        run: |
+          set -euo pipefail
+          RG_CLEAN=$(echo "$RG" | tr -d '\r')
+          FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
+          test -n "$MVP_PREVIEW_APP_ORIGIN" || {
+            echo "::error::MVP_PREVIEW_APP_ORIGIN repository variable is required"
+            exit 1
+          }
+          node -e 'const value = process.env.MVP_PREVIEW_APP_ORIGIN; const uri = new URL(value); if (uri.protocol !== "https:" || !/^[a-f0-9]{8}\.lythaus-web\.pages\.dev$/.test(uri.hostname) || uri.username || uri.password || uri.pathname !== "/" || uri.search || uri.hash || uri.toString() !== value) throw new Error("MVP_PREVIEW_APP_ORIGIN must be one exact immutable Lythaus Pages origin");'
+          az functionapp config appsettings set \
+            -g "$RG_CLEAN" \
+            -n "$FUNC_APP_CLEAN" \
+            --settings AUTH_EMAIL_LINK_ORIGIN="$MVP_PREVIEW_APP_ORIGIN" \
+            --output none
+
       - name: Inspect CORS allowed origins
         run: |
           set -euo pipefail

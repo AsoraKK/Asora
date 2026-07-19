@@ -25,6 +25,7 @@ describe('AzureCommunicationAuthEmailSender telemetry', () => {
     delete process.env.AUTH_EMAIL_FROM_ADDRESS;
     delete process.env.AUTH_EMAIL_FROM_NAME;
     delete process.env.APP_ORIGIN;
+    delete process.env.AUTH_EMAIL_LINK_ORIGIN;
   });
 
   it.each([
@@ -73,5 +74,28 @@ describe('AzureCommunicationAuthEmailSender telemetry', () => {
     expect(telemetry).not.toContain('person@example.test');
     expect(telemetry).not.toContain('fixture-verification-token');
     expect(telemetry).not.toContain('Failed');
+  });
+
+  it('uses only an exact immutable preview origin for email action links', async () => {
+    process.env.AUTH_EMAIL_LINK_ORIGIN = 'https://e46064a9.lythaus-web.pages.dev';
+    mockBeginSend.mockResolvedValueOnce({
+      pollUntilDone: jest.fn().mockResolvedValue({ status: 'Succeeded' }),
+    });
+
+    await new AzureCommunicationAuthEmailSender().sendVerification(
+      'person@example.test',
+      'fixture-verification-token'
+    );
+
+    const message = mockBeginSend.mock.calls[0][0];
+    expect(message.content.plainText).toContain(
+      'https://e46064a9.lythaus-web.pages.dev/auth/verify-email?token=fixture-verification-token'
+    );
+  });
+
+  it('rejects a wildcard-like Pages preview origin', () => {
+    process.env.AUTH_EMAIL_LINK_ORIGIN = 'https://lythaus-web.pages.dev';
+
+    expect(() => new AzureCommunicationAuthEmailSender()).toThrow(/AUTH_EMAIL_LINK_ORIGIN/);
   });
 });

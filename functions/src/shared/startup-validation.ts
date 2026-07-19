@@ -40,6 +40,7 @@ const OPTIONAL_ENV_VARS: EnvVar[] = [
   { name: 'ORIGIN_GATEWAY_DUAL_UNTIL', required: false, description: 'UTC dual-mode expiry' },
   { name: 'ORIGIN_GATEWAY_LEGACY_ALLOWLIST', required: false, description: 'Strict JSON temporary legacy route allowlist' },
   { name: 'APP_ORIGIN', required: false, description: 'Canonical Lythaus application origin' },
+  { name: 'AUTH_EMAIL_LINK_ORIGIN', required: false, description: 'Exact immutable preview origin for authentication email links' },
   { name: 'ACS_EMAIL_ENDPOINT', required: false, description: 'Azure Communication Services endpoint' },
   { name: 'AUTH_EMAIL_FROM_ADDRESS', required: false, description: 'Verified Lythaus email sender' },
   { name: 'AUTH_EMAIL_FROM_NAME', required: false, description: 'Email sender display name' },
@@ -62,6 +63,27 @@ export function emailAuthConfigurationErrors(): string[] {
   const appOrigin = process.env.APP_ORIGIN?.trim();
   if (appOrigin !== 'https://app.lythaus.co') {
     errors.push('APP_ORIGIN must be https://app.lythaus.co in the MVP environment');
+  }
+
+  const emailLinkOrigin = process.env.AUTH_EMAIL_LINK_ORIGIN?.trim();
+  if (emailLinkOrigin) {
+    try {
+      const parsed = new URL(emailLinkOrigin);
+      if (
+        parsed.protocol !== 'https:' ||
+        parsed.username ||
+        parsed.password ||
+        parsed.pathname !== '/' ||
+        parsed.search ||
+        parsed.hash ||
+        !/^[a-f0-9]{8}\.lythaus-web\.pages\.dev$/.test(parsed.hostname) ||
+        parsed.toString() !== emailLinkOrigin
+      ) {
+        throw new Error('invalid origin');
+      }
+    } catch {
+      errors.push('AUTH_EMAIL_LINK_ORIGIN must be one exact immutable Lythaus Pages HTTPS origin');
+    }
   }
 
   const endpoint = process.env.ACS_EMAIL_ENDPOINT?.trim();

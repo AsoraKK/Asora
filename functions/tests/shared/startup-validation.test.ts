@@ -124,6 +124,7 @@ describe('startup-validation', () => {
     process.env.ORIGIN_GATEWAY_DUAL_UNTIL = '2099-01-01T00:00:00Z';
     process.env.ORIGIN_GATEWAY_LEGACY_ALLOWLIST = '[]';
     process.env.APP_ORIGIN = 'https://app.lythaus.co';
+    process.env.AUTH_EMAIL_LINK_ORIGIN = 'https://e46064a9.lythaus-web.pages.dev';
     process.env.ACS_EMAIL_ENDPOINT = 'https://test.europe.communication.azure.com/';
     process.env.AUTH_EMAIL_FROM_ADDRESS = 'no-reply@mail.lythaus.co';
     process.env.AUTH_EMAIL_FROM_NAME = 'Lythaus';

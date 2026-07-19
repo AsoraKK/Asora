@@ -24,6 +24,26 @@ function appOrigin(): string {
   return url.origin;
 }
 
+function emailLinkOrigin(): string {
+  const canonicalOrigin = appOrigin();
+  const raw = process.env.AUTH_EMAIL_LINK_ORIGIN?.trim();
+  if (!raw) return canonicalOrigin;
+
+  const url = new URL(raw);
+  if (
+    url.protocol !== 'https:' ||
+    url.username ||
+    url.password ||
+    url.hash ||
+    url.search ||
+    url.pathname !== '/' ||
+    !/^[a-f0-9]{8}\.lythaus-web\.pages\.dev$/.test(url.hostname)
+  ) {
+    throw new Error('AUTH_EMAIL_LINK_ORIGIN must be one exact immutable Lythaus Pages HTTPS origin');
+  }
+  return url.origin;
+}
+
 function htmlEscape(value: string): string {
   return value
     .replace(/&/g, '&amp;')
@@ -46,7 +66,7 @@ export class AzureCommunicationAuthEmailSender implements AuthEmailSender {
     );
     this.senderAddress = requiredSetting('AUTH_EMAIL_FROM_ADDRESS');
     this.senderDisplayName = process.env.AUTH_EMAIL_FROM_NAME?.trim() || 'Lythaus';
-    this.origin = appOrigin();
+    this.origin = emailLinkOrigin();
   }
 
   async sendVerification(address: string, token: string): Promise<void> {
