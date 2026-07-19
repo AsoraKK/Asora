@@ -29,17 +29,31 @@ search() {
 
 resolve_target_files() {
   local base="${DESIGN_SYSTEM_GATE_BASE:-}"
+  local default_branch="${DESIGN_SYSTEM_GATE_DEFAULT_BRANCH:-main}"
 
-  if [ -n "$base" ] && git cat-file -e "${base}^{commit}" 2>/dev/null; then
-    mapfile -t target_files < <(
-      git diff --name-only --diff-filter=ACMR "$base"...HEAD -- 'lib/**/*.dart' \
-        | awk '!/^lib\/(design_system|generated)\//'
-    )
-    return
+  # workflow_dispatch does not populate github.event.before or a pull-request
+  # base SHA. Resolve the repository default branch explicitly so the gate
+  # still examines only the change under review rather than failing on legacy
+  # code outside its scope.
+  if [ -z "$base" ]; then
+    local default_ref="origin/${default_branch}"
+    if ! git cat-file -e "${default_ref}^{commit}" 2>/dev/null; then
+      echo "Design system gate could not resolve ${default_ref}." >&2
+      exit 2
+    fi
+    base="$(git merge-base "$default_ref" HEAD)" || {
+      echo "Design system gate could not determine a merge base for ${default_ref}." >&2
+      exit 2
+    }
+  fi
+
+  if ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
+    echo "Design system gate base is not an available commit." >&2
+    exit 2
   fi
 
   mapfile -t target_files < <(
-    git ls-files 'lib/**/*.dart' \
+    git diff --name-only --diff-filter=ACMR "$base"...HEAD -- 'lib/**/*.dart' \
       | awk '!/^lib\/(design_system|generated)\//'
   )
 }
