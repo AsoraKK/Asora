@@ -178,7 +178,7 @@ jobs:
     secrets: inherit
 
   auth-preview-gateway:
-    if: ${{ inputs.auth_preview && (inputs.reuse_auth_preview_origin || needs.auth-preview-web.result == 'success') }}
+    if: ${{ always() && inputs.auth_preview && (inputs.reuse_auth_preview_origin || needs.auth-preview-web.result == 'success') }}
     needs: auth-preview-web
     uses: ./.github/workflows/deploy-lythaus-gateway-preview.yml
     with:
