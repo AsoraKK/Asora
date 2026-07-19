@@ -122,6 +122,10 @@ export function emailAuthConfigurationErrors(): string[] {
   ) {
     errors.push('EMAIL_VERIFICATION_TTL_MINUTES must be a whole number between 30 and 240');
   }
+  const verificationIssuanceEnabled = process.env.EMAIL_VERIFICATION_V2_ISSUANCE_ENABLED?.trim().toLowerCase();
+  if (verificationIssuanceEnabled && verificationIssuanceEnabled !== 'true' && verificationIssuanceEnabled !== 'false') {
+    errors.push('EMAIL_VERIFICATION_V2_ISSUANCE_ENABLED must be true or false');
+  }
   const keyError = validateEmailTokenKeyConfiguration();
   if (keyError) errors.push(keyError);
   if (!(process.env.AUTH_EMAIL_CLIENT_ID?.trim() || process.env.JWT_AUDIENCE?.trim())) {

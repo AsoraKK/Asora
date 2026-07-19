@@ -94,6 +94,7 @@ env:
   MVP_CORS_ALLOWED_ORIGINS: ${{ vars.MVP_CORS_ALLOWED_ORIGINS }}
   MVP_PREVIEW_APP_ORIGIN: ${{ vars.MVP_PREVIEW_APP_ORIGIN }}
   MVP_EMAIL_VERIFICATION_TTL_MINUTES: ${{ vars.MVP_EMAIL_VERIFICATION_TTL_MINUTES }}
+  MVP_EMAIL_VERIFICATION_V2_ISSUANCE_ENABLED: ${{ vars.MVP_EMAIL_VERIFICATION_V2_ISSUANCE_ENABLED || 'false' }}
   GOOGLE_OAUTH_PREVIEW_REDIRECT_URI: ${{ vars.GOOGLE_OAUTH_PREVIEW_REDIRECT_URI }}
   MVP_PUBLIC_API_BASE_URL: ${{ vars.MVP_PUBLIC_API_BASE_URL }}
   MVP_ADMIN_API_BASE_URL: ${{ vars.MVP_ADMIN_API_BASE_URL }}
@@ -272,6 +273,18 @@ jobs:
             -g "$RG_CLEAN" \
             -n "$FUNC_APP_CLEAN" \
             --settings EMAIL_VERIFICATION_TTL_MINUTES="$MVP_EMAIL_VERIFICATION_TTL_MINUTES" \
+            --output none
+
+      - name: Configure verification-v2 issuance release gate
+        run: |
+          set -euo pipefail
+          RG_CLEAN=$(echo "$RG" | tr -d '\r')
+          FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
+          node -e 'const value = process.env.MVP_EMAIL_VERIFICATION_V2_ISSUANCE_ENABLED; if (value !== "true" && value !== "false") throw new Error("MVP_EMAIL_VERIFICATION_V2_ISSUANCE_ENABLED must be true or false");'
+          az functionapp config appsettings set \
+            -g "$RG_CLEAN" \
+            -n "$FUNC_APP_CLEAN" \
+            --settings EMAIL_VERIFICATION_V2_ISSUANCE_ENABLED="$MVP_EMAIL_VERIFICATION_V2_ISSUANCE_ENABLED" \
             --output none
 
       - name: Configure current email-token key identifier

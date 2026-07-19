@@ -20,6 +20,11 @@ idempotent outbox projection after verification succeeds.
   each new token. `EMAIL_TOKEN_HMAC_SECRET_PREVIOUS` and
   `EMAIL_TOKEN_HMAC_PREVIOUS_KEY_ID` are optional and retained only through the
   maximum active-token lifetime during rotation.
+- `EMAIL_VERIFICATION_V2_ISSUANCE_ENABLED` is an explicit non-secret release
+  gate. It defaults to `false` in the deployment workflow. When false, new
+  registration and resend requests return a retryable response before an
+  account, token, or delivery row is created; v1 and v2 redemption remain
+  available.
 
 ## Key promotion
 
@@ -68,6 +73,7 @@ tokens, or credentials.
 
 ## Rollback
 
-Disable v2 link issuance only after preserving v1/v2 redemption support. Do
+Set `EMAIL_VERIFICATION_V2_ISSUANCE_ENABLED=false` to disable v2 link issuance
+only after preserving v1/v2 redemption support. Do
 not restore automatic redemption. Keep the schema, Event Grid subscription, and
 outbox processor until every v1 token has exceeded its 120-minute lifetime.

@@ -35,6 +35,7 @@ jest.mock('argon2', () => ({
 import {
   EmailAuthError,
   EmailAuthService,
+  emailVerificationV2IssuanceEnabled,
   normalizeEmailAddress,
   validatePassword,
   verificationTokenTtlMs,
@@ -63,6 +64,7 @@ describe('EmailAuthService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     process.env.EMAIL_TOKEN_HMAC_SECRET = 'test-only-hmac-secret-with-sufficient-length';
+    process.env.EMAIL_VERIFICATION_V2_ISSUANCE_ENABLED = 'true';
     process.env.AUTH_EMAIL_CLIENT_ID = 'lythaus-test-client';
     delete process.env.EMAIL_VERIFICATION_TTL_MINUTES;
     argonHash.mockResolvedValue('$argon2id$test-hash');
@@ -101,6 +103,21 @@ describe('EmailAuthService', () => {
 
     process.env.EMAIL_VERIFICATION_TTL_MINUTES = '120.5';
     expect(() => verificationTokenTtlMs()).toThrow(/whole number/);
+  });
+
+  it('fails closed before creating accounts or tokens when verification-v2 issuance is disabled', async () => {
+    process.env.EMAIL_VERIFICATION_V2_ISSUANCE_ENABLED = 'false';
+    const mail = sender();
+
+    expect(emailVerificationV2IssuanceEnabled()).toBe(false);
+    await expect(
+      new EmailAuthService({ sender: mail, now: () => NOW })
+        .register('person@example.com', 'ValidPassword-2026', 'preview')
+    ).rejects.toMatchObject({ code: 'EMAIL_VERIFICATION_UNAVAILABLE', status: 503 });
+
+    expect(connect).not.toHaveBeenCalled();
+    expect(argonHash).not.toHaveBeenCalled();
+    expect(mail.sendVerification).not.toHaveBeenCalled();
   });
 
   it('registers with Argon2id, hashed verification token, and neutral response', async () => {

@@ -76,6 +76,20 @@ export function verificationTokenTtlMs(): number {
   return minutes * 60 * 1000;
 }
 
+export function emailVerificationV2IssuanceEnabled(): boolean {
+  return process.env.EMAIL_VERIFICATION_V2_ISSUANCE_ENABLED?.trim().toLowerCase() === 'true';
+}
+
+function requireEmailVerificationV2Issuance(): void {
+  if (!emailVerificationV2IssuanceEnabled()) {
+    throw new EmailAuthError(
+      'EMAIL_VERIFICATION_UNAVAILABLE',
+      'Email verification is temporarily unavailable. Please try again shortly.',
+      503
+    );
+  }
+}
+
 function clientAudience(): string {
   const value = process.env.AUTH_EMAIL_CLIENT_ID?.trim() || process.env.JWT_AUDIENCE?.trim();
   if (!value) throw new Error('Missing AUTH_EMAIL_CLIENT_ID or JWT_AUDIENCE');
@@ -182,6 +196,7 @@ export class EmailAuthService {
   }
 
   async register(email: string, password: string, actionTargetValue: unknown): Promise<EmailAuthAccepted> {
+    requireEmailVerificationV2Issuance();
     const normalizedEmail = normalizeEmailAddress(email);
     validatePassword(password);
     const actionTarget = this.actionTarget(actionTargetValue);
@@ -259,6 +274,7 @@ export class EmailAuthService {
   }
 
   async resendVerification(email: string, actionTargetValue: unknown): Promise<EmailAuthAccepted> {
+    requireEmailVerificationV2Issuance();
     const normalizedEmail = normalizeEmailAddress(email);
     const actionTarget = this.actionTarget(actionTargetValue);
     const verificationTtlMs = verificationTokenTtlMs();
