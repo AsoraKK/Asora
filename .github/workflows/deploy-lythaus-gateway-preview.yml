@@ -160,14 +160,27 @@ jobs:
             exit 1
           fi
 
-          preflight_status="$(curl --silent --show-error --max-time 30 \
-            --request OPTIONS \
-            --header "Origin: ${CORS_ALLOWED_ORIGIN}" \
-            --header 'Access-Control-Request-Method: POST' \
-            --dump-header gateway-proof/preflight-headers.txt \
-            --output /dev/null \
-            --write-out '%{http_code}' "$WORKER_URL/api/auth/token")"
-          test "$preflight_status" = 204
+          # Worker deployment and the first edge request can be briefly out of
+          # sync. Bound the readiness wait so a stale CORS configuration cannot
+          # produce a false-negative preview result.
+          preflight_ready=false
+          for attempt in {1..12}; do
+            preflight_status="$(curl --silent --show-error --max-time 30 \
+              --request OPTIONS \
+              --header "Origin: ${CORS_ALLOWED_ORIGIN}" \
+              --header 'Access-Control-Request-Method: POST' \
+              --dump-header gateway-proof/preflight-headers.txt \
+              --output /dev/null \
+              --write-out '%{http_code}' "$WORKER_URL/api/auth/token")"
+            if [[ "$preflight_status" = 204 ]] \
+              && grep -F -i -q "access-control-allow-origin: ${CORS_ALLOWED_ORIGIN}" gateway-proof/preflight-headers.txt \
+              && grep -E -i -q '^vary:.*origin' gateway-proof/preflight-headers.txt; then
+              preflight_ready=true
+              break
+            fi
+            sleep 5
+          done
+          test "$preflight_ready" = true
           grep -F -i "access-control-allow-origin: ${CORS_ALLOWED_ORIGIN}" gateway-proof/preflight-headers.txt
           grep -E -i '^vary:.*origin' gateway-proof/preflight-headers.txt
 
