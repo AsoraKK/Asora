@@ -16,6 +16,9 @@ concurrency:
 jobs:
   report:
     runs-on: ubuntu-latest
+    # Reuse the protected deployment environment so the existing Azure OIDC
+    # federated credential is used instead of a branch-specific subject.
+    environment: dev
     steps:
       - uses: actions/checkout@v5
 
