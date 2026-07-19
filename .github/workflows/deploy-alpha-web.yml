@@ -48,6 +48,11 @@ on:
         required: true
         default: https://lythaus-api-gateway-preview.asora.workers.dev/api
         type: string
+      reuse_auth_preview_origin:
+        description: Existing exact immutable Pages origin for gateway-only retry
+        required: false
+        default: ''
+        type: string
 
 permissions:
   actions: read
@@ -164,7 +169,7 @@ jobs:
           if-no-files-found: warn
 
   auth-preview-web:
-    if: ${{ inputs.auth_preview }}
+    if: ${{ inputs.auth_preview && !inputs.reuse_auth_preview_origin }}
     uses: ./.github/workflows/deploy-flutter-auth-preview.yml
     with:
       release_sha: ${{ inputs.release_sha }}
@@ -173,11 +178,11 @@ jobs:
     secrets: inherit
 
   auth-preview-gateway:
-    if: ${{ inputs.auth_preview }}
+    if: ${{ inputs.auth_preview && (inputs.reuse_auth_preview_origin || needs.auth-preview-web.result == 'success') }}
     needs: auth-preview-web
     uses: ./.github/workflows/deploy-lythaus-gateway-preview.yml
     with:
       release_sha: ${{ inputs.release_sha }}
       ci_run_id: ${{ inputs.ci_run_id }}
-      cors_allowed_origin: ${{ needs.auth-preview-web.outputs.preview_url }}
+      cors_allowed_origin: ${{ inputs.reuse_auth_preview_origin || needs.auth-preview-web.outputs.preview_url }}
     secrets: inherit

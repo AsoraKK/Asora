@@ -92,6 +92,7 @@ jobs:
             const value = process.env.CORS_ALLOWED_ORIGIN || "";
             const url = new URL(value);
             if (url.protocol !== "https:" || url.username || url.password || url.pathname !== "/" || url.search || url.hash) process.exit(1);
+            if (!/^[a-f0-9]{8}\.lythaus-web\.pages\.dev$/.test(url.hostname)) process.exit(1);
             if (value.includes("*")) process.exit(1);
           '
 
