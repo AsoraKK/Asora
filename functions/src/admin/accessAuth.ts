@@ -170,13 +170,26 @@ function identifiersMatch(left: string, right: string): boolean {
   return timingSafeEqual(leftHash, rightHash);
 }
 
+function isAccessServiceToken(claims: Partial<CloudflareAccessClaims>): boolean {
+  // Cloudflare service-token JWTs use an empty subject and the service client
+  // ID as common_name. service_token_status is available in some Access
+  // identity responses but is not guaranteed in the application JWT, so an
+  // explicit false value rejects while an omitted value remains compatible.
+  return (
+    claims.sub === '' &&
+    typeof claims.common_name === 'string' &&
+    claims.service_token_status !== false
+  );
+}
+
 function getOperationsReaderRole(claims: Partial<CloudflareAccessClaims>): AccessBackendRole | undefined {
-  if (claims.service_token_status !== true || typeof claims.common_name !== 'string') {
+  const commonName = claims.common_name;
+  if (!isAccessServiceToken(claims) || typeof commonName !== 'string') {
     return undefined;
   }
 
   const configuredClientId = process.env.CF_ACCESS_OPERATIONS_SERVICE_TOKEN_CLIENT_ID?.trim();
-  if (!configuredClientId || !identifiersMatch(claims.common_name, configuredClientId)) {
+  if (!configuredClientId || !identifiersMatch(commonName, configuredClientId)) {
     return undefined;
   }
 
@@ -266,7 +279,7 @@ export async function verifyCloudflareAccess(
     const role = getOperationsReaderRole(claims);
     const actor = claims.email || claims.sub || claims.common_name || 'unknown';
 
-    if (claims.service_token_status === true && options.allowOperationsReader && !role) {
+    if (isAccessServiceToken(claims) && options.allowOperationsReader && !role) {
       return {
         authenticated: false,
         error: 'Access service identity is not approved for operations reads',
