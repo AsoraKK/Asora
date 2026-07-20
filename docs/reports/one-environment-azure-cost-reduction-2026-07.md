@@ -154,19 +154,41 @@ Target after a controlled alert drill:
 2. One once-daily operational summary for warning/stuck conditions.
 3. Activity Log alerts for resource deletion or critical configuration change, plus native queue metric alert only if it is materially useful.
 
-No active DSR rule is deleted in this pass because a fresh controlled DSR failure/poison validation has not yet been run.
+The active DSR rules remain unchanged at five-minute cadence. Their source is emitted by `privacyDsrQueueMonitor` on an eight-hour schedule, so the requested 15/30/60-minute cadence must be paired with query-window redesign and a controlled alert drill; changing cadence alone would weaken detection. The two disabled legacy rules were deleted on 2026-07-20 after confirming no workflow applies this Terraform module.
+
+## Controlled live execution on 2026-07-20
+
+### Deployment and rollback
+
+- PR #463 merged as `8e96f102748818549c41bfad13ffd48999e3cdf9`; exact-main CI run `29729568384` succeeded.
+- Canonical deployment run `29730234889` published the `8e96f102` artifact, resolved Key Vault references, recorded deployment metadata, passed Flex settings validation, and passed direct-origin health.
+- Its acceptance job failed because the Flex `admin/functions` registration endpoint returned no function list, despite direct and public gateway health returning 200. No live contract, DSR, or release-manifest gate ran after that failure.
+- The canonical rollback run `29730640513` restored `DEPLOYMENT_SHA=63b0064d060d4004cbb58a2bc775cc2bb6dc5dd6`, passed its deploy job and direct-origin health, and reproduced the same registration assertion failure. Public gateway health was 200 and unauthenticated auth returned 401 after restoration.
+- Rollback command: dispatch `deploy-asora-function-mvp.yml` on `main` with the recorded prior release SHA, its successful CI run ID, `technical_alpha`, and `["apple_auth","world_id"]`. The workflow publishes the retained versioned package and records the restored SHA.
+
+### Observability and storage
+
+- The seven complete-day billed-ingestion baseline was 2.884037 GB (0.412005 GB/day): AppTraces 2.585198 GB, AppMetrics 0.188016 GB, AppPerformanceCounters 0.085756 GB, AppRequests 0.024915 GB, AppExceptions 0.000152 GB, and AppDependencies 0 GB.
+- The calculated daily-cap candidate was 0.824011 GB/day. It exceeds the approved 0.25-GB ceiling, so no cap or cap-warning alert was created.
+- AppTraces, AppMetrics, AppPerformanceCounters, AppRequests, AppDependencies, and AppExceptions were changed from 90 to 30 days. Rollback is an ARM PATCH of each table with `retentionInDays=90` and `totalRetentionInDays=90`; already-expired data cannot be restored.
+- `asorapsqlflex8fa9` entered a 72-hour quarantine at `2026-07-20T09:21:21Z` through `lythausCostQuarantine=active` and `lythausQuarantineStartedUtc` tags. It has no blob objects or repository references. Data-plane queue/table enumeration is unavailable without Storage data-plane RBAC, and no account key was requested or used.
+
+### Deferred safety-critical actions
+
+- `asora-function-flex` and `asora-function-consumption` remain running: the required authenticated write, moderation, and DSR-enqueue verification is unavailable while the canonical deployment acceptance gate fails.
+- `function:privacyDsrProcessor=1` remains configured. The six-request scale-to-zero test was not started because it needs the same isolated DSR test identity and terminal-state verification that the failed acceptance gate prevented.
 
 ## Retirement matrix
 
 | Resource | Historical cost context | Evidence | Action | Saving | Risk / rollback | Approval |
 |---|---:|---|---|---:|---|---|
-| Host Azure.Core Information tracing | Included in July Log Analytics $3.19 | 0.379 GB/day; 197,981 Azure.Core request/response traces/day | Deploy this branch through canonical workflow | Estimated only | Revert exact release artifact / restore `host.json` | Standard release approval |
+| Host Azure.Core Information tracing | Included in July Log Analytics $3.19 | 0.379 GB/day; 197,981 Azure.Core request/response traces/day | Deployment attempted then rolled back after acceptance failure | Estimated only | Restore retained prior artifact through canonical workflow | Acceptance-gate repair required |
 | Five active DSR scheduled rules | July rules total $4.66 including disabled rules | All query current canonical component every five minutes | Replace only after alert drill | Unknown | Restore exported rule JSON | Kyle approval for alert change |
-| Two disabled legacy rules | Included above | Disabled and source component has zero events | Delete after review | Unknown | Recreate from exported definition | Kyle approval recorded in deletion table |
+| Two disabled legacy rules | Included above | Disabled and source component has zero events | Deleted 2026-07-20 | Estimated only | Recreate only from reviewed Terraform reconciliation | Completed |
 | `asora-function-flex` and plan | Part of July Web/sites $10.56 | No functions, zero telemetry, legacy vault refs | Observe, export, stop, then review delete | Unknown | Start app / retain exported config | Stop may proceed only after seven-day proof; delete requires Kyle approval |
 | `asora-function-consumption` and plan | Part of July Web/sites $10.56 | One health function, zero telemetry | Observe, export, stop, then review delete | Unknown | Start app / retain exported config | Stop may proceed only after seven-day proof; delete requires Kyle approval |
 | Four legacy Insights components + default workspace | Unknown | Zero aggregate events; no active alert scope | Observe then retire together | Unknown | Recreate/export dashboard queries | Delete requires Kyle approval |
-| `asorapsqlflex8fa9` | Near-zero historical storage | 19 MB, three transactions, no runtime reference | Quarantine and inspect state/rollback use | Near zero | Restore retained artifact before delete | Kyle approval |
+| `asorapsqlflex8fa9` | Near-zero historical storage | No blob objects or repository references; data-plane listing requires RBAC | 72-hour quarantine started | Near zero | Remove quarantine tags / retain account | Observation through 2026-07-23 |
 | `mi-asora-cicd` | $0 | No role assignments; federated credential not yet verified | Quarantine | $0 | Recreate identity/assignment if needed | Kyle approval |
 | `vnet-asora-dev` | $0 | Current PostgreSQL metadata conflicts with historical delegated-subnet evidence | Quarantine | $0 | Security/network review required | Explicit security approval |
 | DSR always-ready | Included in July Web/sites $10.56 | One allocation; DSR proof incomplete | Keep | Unknown | Exact pre-change `functionAppConfig` restoration | Separate maintenance-window approval |
@@ -206,13 +228,17 @@ No active DSR rule is deleted in this pass because a fresh controlled DSR failur
 
 | Timestamp | Mutation | Before / after | Verification | Rollback | Saving |
 |---|---|---|---|---|---:|
-| 2026-07-20 | None | Read-only Azure inventory and repository-only patch | Azure configuration remains unchanged | Not applicable | $0 confirmed |
+| 2026-07-20 09:07Z | Exact merged artifact deployment | `63b0064` to `8e96f10` | Deploy job and health passed; acceptance registration check failed | Canonical workflow run `29730640513` | $0 confirmed |
+| 2026-07-20 09:14Z | Canonical package rollback | `8e96f10` to `63b0064` | Deploy job, direct health, public health, and controlled auth verified | Re-dispatch `8e96f10` only after acceptance repair | $0 confirmed |
+| 2026-07-20 09:21Z | Legacy storage quarantine | Untagged to active quarantine tags | Tags read back; no repository references | Remove the two quarantine tags | $0 confirmed |
+| 2026-07-20 | Six operational table retentions | 90 to 30 days | ARM GET readback for every table | PATCH both retention properties to 90 | Estimated only |
+| 2026-07-20 | Two disabled legacy scheduled-query rules | Present and disabled to absent | Rule-list absence verified | Recreate only from reviewed desired-state source | Estimated only |
 
 ## Next validation sequence
 
-1. Merge the reviewed telemetry patch through the canonical exact-artifact workflow.
-2. Verify DSR monitor, enqueue, completion, failure, and poison signals on the canonical component.
-3. Compare 24 hours and seven days of table ingestion against the 0.379-GB/day baseline.
-4. Run the five-drill DSR scale-from-zero procedure before considering removal of always-ready.
-5. Export duplicate resources' sanitized configuration and observe traffic/routes for seven days.
-6. Present the populated approval table before any destructive Azure operation.
+1. Repair the Flex registration acceptance assertion, merge that limited workflow correction, and re-run the exact-artifact deployment.
+2. Verify DSR monitor, enqueue, completion, failure, and poison signals on the canonical component with the approved isolated test identity.
+3. Compare 24 hours and seven days of table ingestion against the 0.412005-GB/day baseline before reassessing the daily cap.
+4. Rework active DSR alert query windows to match the eight-hour monitor cadence, validate them with a controlled alert drill, then apply the approved 15/30/60-minute cadence.
+5. Stop duplicate apps only after authenticated write, moderation, and DSR validation succeeds; retain them through the required 72-hour observation.
+6. Complete storage quarantine observation through 2026-07-23 before preparing its deletion command.
