@@ -20,7 +20,7 @@ locals {
   targets = {
     for k, v in var.alert_targets : k => merge(v, {
       app_insights_name = coalesce(v.app_insights_name, k)
-    })
+    }) if k == "asora-function-dev"
   }
 }
 
@@ -66,7 +66,7 @@ resource "azurerm_monitor_action_group" "health_alerts" {
 # Alert: 5xx error rate > 1% over 5 minutes (per target)
 # ──────────────────────────────────────────────────────────────
 resource "azurerm_monitor_scheduled_query_rules_alert_v2" "error_rate" {
-  for_each            = local.targets
+  for_each            = {}
   name                = "alert-${each.key}-5xx-rate"
   resource_group_name = var.resource_group_name
   location            = data.azurerm_application_insights.target[each.key].location
@@ -114,7 +114,7 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "error_rate" {
 # Alert: Health endpoint failures (per target)
 # ──────────────────────────────────────────────────────────────
 resource "azurerm_monitor_scheduled_query_rules_alert_v2" "health_failure" {
-  for_each            = local.targets
+  for_each            = {}
   name                = "alert-${each.key}-health-fail"
   resource_group_name = var.resource_group_name
   location            = data.azurerm_application_insights.target[each.key].location
@@ -163,7 +163,7 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "health_failure" {
 # Detects: brute-force attempts, token expiry storms, config issues
 # ──────────────────────────────────────────────────────────────
 resource "azurerm_monitor_scheduled_query_rules_alert_v2" "auth_401_spike" {
-  for_each            = local.targets
+  for_each            = {}
   name                = "alert-${each.key}-auth-401-spike"
   resource_group_name = var.resource_group_name
   location            = data.azurerm_application_insights.target[each.key].location
@@ -211,7 +211,7 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "auth_401_spike" {
 # Severity: Critical — indicates possible credential theft.
 # ──────────────────────────────────────────────────────────────
 resource "azurerm_monitor_scheduled_query_rules_alert_v2" "auth_token_reuse" {
-  for_each            = local.targets
+  for_each            = {}
   name                = "alert-${each.key}-token-reuse"
   resource_group_name = var.resource_group_name
   location            = data.azurerm_application_insights.target[each.key].location
@@ -260,7 +260,7 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "auth_token_reuse" {
 # Detects: misconfigured clients, JWT secret rotation issues.
 # ──────────────────────────────────────────────────────────────
 resource "azurerm_monitor_scheduled_query_rules_alert_v2" "auth_failure_rate" {
-  for_each            = local.targets
+  for_each            = {}
   name                = "alert-${each.key}-auth-fail-rate"
   resource_group_name = var.resource_group_name
   location            = data.azurerm_application_insights.target[each.key].location
@@ -571,7 +571,7 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "dsr_missing_completio
 resource "azurerm_portal_dashboard" "health_dashboard" {
   name                = "dash-lythaus-health"
   resource_group_name = var.resource_group_name
-  location            = data.azurerm_application_insights.target["asora-function-flex"].location
+  location            = data.azurerm_application_insights.target["asora-function-dev"].location
 
   dashboard_properties = jsonencode({
     lenses = {
@@ -638,11 +638,6 @@ output "alert_ids" {
   description = "IDs of created alert rules, keyed by target"
   value = {
     for k in keys(local.targets) : k => {
-      error_rate             = azurerm_monitor_scheduled_query_rules_alert_v2.error_rate[k].id
-      health_fail            = azurerm_monitor_scheduled_query_rules_alert_v2.health_failure[k].id
-      auth_401_spike         = azurerm_monitor_scheduled_query_rules_alert_v2.auth_401_spike[k].id
-      token_reuse            = azurerm_monitor_scheduled_query_rules_alert_v2.auth_token_reuse[k].id
-      auth_fail_rate         = azurerm_monitor_scheduled_query_rules_alert_v2.auth_failure_rate[k].id
       dsr_stuck_queued       = azurerm_monitor_scheduled_query_rules_alert_v2.dsr_stuck_queued[k].id
       dsr_queue_depth        = azurerm_monitor_scheduled_query_rules_alert_v2.dsr_queue_depth[k].id
       dsr_failures           = azurerm_monitor_scheduled_query_rules_alert_v2.dsr_failures[k].id
