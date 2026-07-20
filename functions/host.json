@@ -14,17 +14,26 @@
     "applicationInsights": {
       "samplingSettings": {
         "isEnabled": true,
-        "maxTelemetryItemsPerSecond": 20,
-        "excludedTypes": "Request;Dependency"
+        "maxTelemetryItemsPerSecond": 5,
+        "excludedTypes": "Exception;Trace;Event"
       },
       "enableLiveMetrics": true,
       "enableDependencyTracking": true,
       "enablePerformanceCountersCollection": true
     },
     "logLevel": {
-      "default": "Information",
+      "default": "Warning",
       "Microsoft": "Warning",
-      "Microsoft.Hosting.Lifetime": "Information"
+      "Microsoft.Hosting.Lifetime": "Warning",
+      "Azure.Core": "Warning",
+      "Azure.Core.1": "Warning",
+      "Azure.Identity": "Warning",
+      "Host.Function.Console": "Warning",
+      "Host.Startup": "Warning",
+      "Function.privacyDsrQueueMonitor.User": "Information",
+      "Function.privacyDsrProcessor.User": "Information",
+      "Function.privacy-admin-dsr-enqueue-export.User": "Information",
+      "Function.privacy-admin-dsr-enqueue-delete.User": "Information"
     }
   }
 }
