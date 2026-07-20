@@ -480,34 +480,24 @@ jobs:
             exit 1
           fi
           
-          # Gate 2: Azure host-admin is an infrastructure diagnostic, not an
-          # application traffic path.
-          # Note: Programmatic model registers multiple functions
-          ADMIN_KEY=$(az functionapp keys list -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --query masterKey -o tsv | tr -d '\r')
-          FUNCTIONS=$(curl -s -H "x-functions-key: $ADMIN_KEY" "https://${FUNC_APP_CLEAN}.azurewebsites.net/admin/functions" || echo "[]")
-          FUNC_COUNT=$(echo "$FUNCTIONS" | jq -r '. | length')
-          FUNC_NAMES=$(echo "$FUNCTIONS" | jq -r '.[].name' | tr '\n' ' ')
-          echo "Gate 3 - indexed functions count: $FUNC_COUNT"
-          echo "Gate 3 - indexed function names: $FUNC_NAMES"
-          
-          # V4 programmatic: expect at least health + ready + other handlers
-          if [ "$FUNC_COUNT" -lt 1 ]; then
-            echo "::error::Gate 3 FAILED: Expected at least 1 function, found $FUNC_COUNT"
-            echo "Full admin response: $FUNCTIONS"
-            exit 1
-          fi
-          
-          if ! echo "$FUNC_NAMES" | grep -qw "health"; then
-            echo "::error::Gate 3 FAILED: 'health' not found in indexed functions: $FUNC_NAMES"
-            exit 1
-          fi
+          # Gate 2: Azure's supported management-plane inventory verifies
+          # registration without assuming a public gateway admin route.
+          FUNCTION_NAMES=$(az functionapp function list -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --query '[].name' -o tsv)
+          FUNC_COUNT=$(printf '%s\n' "$FUNCTION_NAMES" | sed '/^$/d' | wc -l | tr -d ' ')
+          echo "Gate 2 - Azure management-plane function count: $FUNC_COUNT"
+          for expected in health privacyDsrProcessor privacyDsrQueueMonitor; do
+            if ! printf '%s\n' "$FUNCTION_NAMES" | grep -Eq "/${expected}$"; then
+              echo "::error::Gate 2 FAILED: expected function '$expected' is absent from Azure management inventory"
+              exit 1
+            fi
+          done
           
           echo "✅ Gate 3 PASSED: health function is indexed (total: $FUNC_COUNT functions)"
           echo ""
           echo "🎉 All 3 runtime gates PASSED!"
           echo "   - Health endpoint: 200 OK"
           echo "   - Host routing: functional (404 for bogus)"
-          echo "   - Functions registered: $FUNC_COUNT (including health)"
+          echo "   - Azure management inventory: $FUNC_COUNT registered functions"
 
       - name: Diagnostic logs on failure
         if: failure()
@@ -672,20 +662,76 @@ jobs:
 
           echo "✅ Notification endpoints properly reject unauthenticated requests"
 
-          # 4) At least health is registered (v4 programmatic model)
+          # 4) Azure management-plane inventory is the registration authority.
           echo "🔍 Checking function registration"
-          ADMIN_KEY=$(az functionapp keys list -g "$RG" -n "$FUNC_APP" --query 'masterKey' -o tsv)
-          FUNCTIONS=$(curl -s "$BASE/admin/functions" -H "x-functions-key: $ADMIN_KEY")
+          FUNCTIONS=$(az functionapp function list -g "$RG" -n "$FUNC_APP" -o json)
           echo "   Functions registered:"
           echo "$FUNCTIONS" | jq -r '.[].name' | sed 's/^/     - /'
           FUNC_COUNT=$(echo "$FUNCTIONS" | jq -r '. | length')
           echo "   Total function count: $FUNC_COUNT"
-          HEALTH_COUNT=$(echo "$FUNCTIONS" | jq -r '.[].name' | grep -cx 'health' || echo 0)
+          HEALTH_COUNT=$(echo "$FUNCTIONS" | jq -r '.[].name' | grep -Ec '/health$' || echo 0)
           if [ "$HEALTH_COUNT" != "1" ]; then
             echo "❌ Function registration check failed: health function not found"
             exit 1
           fi
           echo "✅ Function registration passed ($FUNC_COUNT functions including health)"
+
+          # 5) A public feed route proves normal gateway routing independently
+          # of health and auth-control probes.
+          DISCOVER_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/feed/discover?limit=1")
+          echo "Public discovery feed status: $DISCOVER_STATUS"
+          if [ "$DISCOVER_STATUS" != "200" ]; then
+            echo "::error::Discover feed failed: expected 200, got $DISCOVER_STATUS"
+            exit 1
+          fi
+
+          # 6) The non-secret deployment marker must equal the immutable
+          # release input before downstream live contracts run.
+          DEPLOYED_SHA=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
+            --query "[?name=='DEPLOYMENT_SHA'].value | [0]" -o tsv | tr -d '\r')
+          if [ "$DEPLOYED_SHA" != "$RELEASE_SHA" ]; then
+            echo "::error::Exact deployment SHA mismatch: expected $RELEASE_SHA, found ${DEPLOYED_SHA:-NOT_SET}"
+            exit 1
+          fi
+          echo "Exact deployment SHA matches release input"
+
+          # 7) Host status uses the direct Function origin. Cloudflare only
+          # exposes customer API routes and must not proxy host-admin traffic.
+          ADMIN_KEY=$(az functionapp keys list -g "$RG" -n "$FUNC_APP" --query 'masterKey' -o tsv | tr -d '\r')
+          test -n "$ADMIN_KEY" || { echo "::error::Unable to retrieve Function host admin key"; exit 1; }
+          HOST_STATUS=$(curl --fail-with-body --silent --show-error \
+            -H "x-functions-key: $ADMIN_KEY" "https://${FUNC_APP}.azurewebsites.net/admin/host/status")
+          HOST_STATE=$(echo "$HOST_STATUS" | jq -r '.state // empty')
+          if [ "$HOST_STATE" != "Running" ]; then
+            echo "::error::Function host is not running: ${HOST_STATE:-UNKNOWN}"
+            exit 1
+          fi
+          echo "Direct Function host status is Running"
+
+          # 8) Require one HTTP, one DSR queue, and one DSR timer handler in
+          # Azure's supported function inventory.
+          FUNCTION_NAMES=$(az functionapp function list -g "$RG" -n "$FUNC_APP" --query '[].name' -o tsv)
+          for expected in health privacyDsrProcessor privacyDsrQueueMonitor; do
+            if ! printf '%s\n' "$FUNCTION_NAMES" | grep -Eq "/${expected}$"; then
+              echo "::error::Function registration check failed: '$expected' is absent from Azure management inventory"
+              exit 1
+            fi
+          done
+          echo "Azure inventory includes HTTP, DSR queue, and DSR timer functions"
+
+          # 9) Fail only on current startup exceptions. Ordinary historical
+          # application errors must not mask a successful host initialization.
+          STARTUP_EXCEPTION_COUNT=$(az monitor app-insights query \
+            --app appi-asora-function-dev-dsr \
+            --resource-group "$RG" \
+            --analytics-query "exceptions | where timestamp > ago(30m) | where outerMessage has_any ('Worker was unable to load', 'Error loading', 'startup') or type has 'Worker' | summarize startupExceptionCount=count()" \
+            --offset 30m \
+            --query 'tables[0].rows[0][0]' -o tsv)
+          if [ "${STARTUP_EXCEPTION_COUNT:-0}" != "0" ]; then
+            echo "::error::Startup exception telemetry detected in the last 30 minutes"
+            exit 1
+          fi
+          echo "No startup exception telemetry detected in the last 30 minutes"
 
       - name: Required live OpenAPI contracts
         env:
