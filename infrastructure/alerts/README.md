@@ -60,8 +60,8 @@ terraform apply \
 
 ## DSR Alert Telemetry
 
-The DSR alerts depend on `privacyDsrQueueMonitor`, which emits a `dsr.queue.monitor`
-trace every 5 minutes with:
+The monitor-derived DSR alerts depend on `privacyDsrQueueMonitor`, which emits a
+`dsr.queue.monitor` trace every eight hours with:
 
 - `approximateMessageCount`
 - `poisonQueueExists`
@@ -71,6 +71,14 @@ trace every 5 minutes with:
 
 Queue completion alerts also use `dsr.export.enqueued`, `dsr.delete.enqueued`,
 and `dsr.queue.completed` App Insights traces from the DSR worker path.
+
+The processor-failure rule evaluates immediate structured failure events every 15
+minutes over 30 minutes. Poison queue, depth, and stuck-queue rules evaluate the
+latest monitor snapshot hourly over one day. The provider supports no 12-hour
+window, so one day is deliberately used to cover the eight-hour source interval.
+The missing-completion check is a stateless daily operational summary over 24
+hours. Do not restore a five-minute cadence without changing the monitor source
+and revalidating the alert design.
 
 Dev DSR alerts target `appi-asora-function-dev-dsr`, a workspace-based component
 created after the legacy `asora-function-dev` component stopped ingesting telemetry.
