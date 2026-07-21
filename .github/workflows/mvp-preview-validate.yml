@@ -28,6 +28,7 @@ jobs:
           RUNTIME_AUTH_PASSWORD: ${{ secrets.MVP_SMOKE_PASSWORD }}
         run: |
           set -euo pipefail
+          # shellcheck disable=SC2016 -- expanded by the authenticated child shell.
           node scripts/release/runtime-authenticated-command.mjs \
             --token-env LYTHAUS_RUNTIME_ACCESS_TOKEN -- bash -lc \
             'export AUTH_HDR="Authorization: Bearer $LYTHAUS_RUNTIME_ACCESS_TOKEN"; bash ./scripts/validate_edge_cache.sh'

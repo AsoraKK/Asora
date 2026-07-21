@@ -866,6 +866,7 @@ jobs:
           test -n "$RUNTIME_AUTH_PASSWORD" || { echo "::error::MVP_PRIVACY_ADMIN_PASSWORD is required"; exit 1; }
           test -n "$MVP_ADMIN_API_BASE_URL" || { echo "::error::MVP_ADMIN_API_BASE_URL must point to the Access-protected admin gateway"; exit 1; }
           node -e 'const value = process.env.MVP_ADMIN_API_BASE_URL; const url = new URL(value); if (url.protocol !== "https:" || url.hostname.endsWith(".azurewebsites.net") || !url.pathname.endsWith("/api")) throw new Error("MVP_ADMIN_API_BASE_URL must be an HTTPS admin gateway ending in /api");'
+          # shellcheck disable=SC2016 -- expanded by the authenticated child shell.
           node scripts/release/runtime-authenticated-command.mjs \
             --token-env LYTHAUS_RUNTIME_ADMIN_TOKEN -- bash -lc \
             'curl --fail-with-body --silent --show-error --max-time 30 --header "Authorization: Bearer $LYTHAUS_RUNTIME_ADMIN_TOKEN" "${MVP_ADMIN_API_BASE_URL%/}/_admin/ops/metrics?window=24h" > alpha-ops-preflight.json'
