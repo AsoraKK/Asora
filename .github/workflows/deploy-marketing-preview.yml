@@ -18,7 +18,7 @@ jobs:
       PAGES_PROJECT: lythaus-marketing
       PAGES_BRANCH: codex/lythaus-domain-migration
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v5
         with:

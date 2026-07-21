@@ -38,7 +38,7 @@ jobs:
       TF_VAR_environment: development
       INFRASTRUCTURE_CHANGE_PATH: ${{ inputs.apply && 'approved' || 'plan-only' }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Validate approval metadata
         shell: bash
