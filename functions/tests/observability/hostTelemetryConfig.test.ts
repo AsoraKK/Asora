@@ -20,6 +20,11 @@ describe('Functions host telemetry configuration', () => {
     expect(sampling.excludedTypes).toContain('Trace');
   });
 
+  it('disables non-actionable live metrics and performance counters on Flex', () => {
+    expect(hostConfig.logging.applicationInsights.enableLiveMetrics).toBe(false);
+    expect(hostConfig.logging.applicationInsights.enablePerformanceCountersCollection).toBe(false);
+  });
+
   it('suppresses routine host information logs while retaining DSR alert signals', () => {
     expect(logLevel.default).toBe('Warning');
     expect(logLevel['Azure.Core']).toBe('Warning');

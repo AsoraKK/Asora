@@ -17,9 +17,9 @@
         "maxTelemetryItemsPerSecond": 5,
         "excludedTypes": "Exception;Trace;Event"
       },
-      "enableLiveMetrics": true,
+      "enableLiveMetrics": false,
       "enableDependencyTracking": true,
-      "enablePerformanceCountersCollection": true
+      "enablePerformanceCountersCollection": false
     },
     "logLevel": {
       "default": "Warning",

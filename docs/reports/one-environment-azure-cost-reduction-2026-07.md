@@ -4,7 +4,7 @@
 
 Lythaus (formerly Asora) has **one live Azure environment**. Local development, pull requests, CI, and ephemeral Cloudflare previews do not justify additional Azure estates. Legacy resource names are historical identifiers, not lifecycle decisions.
 
-This is a sanitized, read-only inventory followed by repository-only remediation. No connection string, token, key, secret value, SAS, or publishing credential was read into this report. No Azure resource, alert, retention setting, plan, deployment package, or data was changed during this pass.
+This is a sanitized inventory followed by controlled, reversible live optimisation. No connection string, token, key, secret value, SAS, or publishing credential was read into this report. The exact live mutations and rollback commands are recorded below; no data, database, canonical app, canonical plan, canonical workspace, or canonical Insights component was deleted.
 
 Common subscription scope:
 
@@ -35,14 +35,14 @@ Therefore, the June/July figures supplied for this operation are retained as his
 |---|---|---|---|
 | `S/resourceGroups/asora-psql-flex/providers/Microsoft.Web/sites/asora-function-dev` | Function App / North Europe / Flex Consumption | Running, HTTPS-only, Node 22, 2,048 MB, max 100, complete function set, active telemetry, canonical workflow target | **CANONICAL** |
 | `S/resourceGroups/asora-psql-flex/providers/Microsoft.Web/serverfarms/asora-flex-plan-new` | Hosting plan / North Europe / FC1 | Bound to canonical Function App | **CANONICAL** |
-| `S/resourceGroups/asora-psql-flex/providers/Microsoft.Web/sites/asora-function-flex` | Function App / North Europe / Flex Consumption | Running, HTTP allowed, Node 20, 2,048 MB, no functions, zero telemetry; retains legacy Key Vault references | **MIGRATE-THEN-RETIRE** |
+| `S/resourceGroups/asora-psql-flex/providers/Microsoft.Web/sites/asora-function-flex` | Function App / North Europe / Flex Consumption | **Stopped 2026-07-20** after sanitized configuration export; Node 20, no functions, no custom domain, no active workflow target or telemetry | **MIGRATE-THEN-RETIRE** |
 | `S/resourceGroups/asora-psql-flex/providers/Microsoft.Web/serverfarms/ASP-asorapsqlflex-4a5f` | Hosting plan / North Europe / FC1 | Bound only to `asora-function-flex` | **MIGRATE-THEN-RETIRE** |
-| `S/resourceGroups/asora-psql-flex/providers/Microsoft.Web/sites/asora-function-consumption` | Function App / North Europe / Y1 | Running, HTTP allowed, one legacy health function, zero telemetry | **MIGRATE-THEN-RETIRE** |
+| `S/resourceGroups/asora-psql-flex/providers/Microsoft.Web/sites/asora-function-consumption` | Function App / North Europe / Y1 | **Stopped 2026-07-20** after sanitized configuration export; one legacy health function, no custom domain, no active workflow target | **MIGRATE-THEN-RETIRE** |
 | `S/resourceGroups/asora-psql-flex/providers/Microsoft.Web/serverfarms/NorthEuropeLinuxDynamicPlan` | Hosting plan / North Europe / Y1 | Bound only to `asora-function-consumption` | **MIGRATE-THEN-RETIRE** |
 | `S/resourceGroups/asora-psql-flex/providers/Microsoft.DBforPostgreSQL/flexibleServers/asora-pg-dev-ne` | PostgreSQL Flexible Server / North Europe / Standard_B1ms | Ready, PostgreSQL 16, 32 GB Premium LRS P4, HA off, seven-day backup, public endpoint restricted by application policy | **CANONICAL** |
 | `S/resourceGroups/asora-psql-flex/providers/Microsoft.DocumentDB/databaseAccounts/asora-cosmos-dev` | Cosmos DB / North Europe / serverless | One-region serverless account, Session consistency | **CANONICAL** |
 | `S/resourceGroups/asora-psql-flex/providers/microsoft.insights/components/appi-asora-function-dev-dsr` | Application Insights / North Europe / workspace-based | Only component with current telemetry; linked to canonical workspace | **OPTIMISE** |
-| `S/resourceGroups/asora-psql-flex/providers/Microsoft.OperationalInsights/workspaces/law-asora-dsr-dev-neu` | Log Analytics / North Europe / PerGB2018 | Canonical workspace; 30-day workspace setting but principal tables retain 90 days; no daily cap | **OPTIMISE** |
+| `S/resourceGroups/asora-psql-flex/providers/Microsoft.OperationalInsights/workspaces/law-asora-dsr-dev-neu` | Log Analytics / North Europe / PerGB2018 | Canonical workspace; six operational tables retain 30 days; no daily cap because measured ingestion exceeds the approved cap ceiling | **OPTIMISE** |
 | `S/resourceGroups/DefaultResourceGroup-NEU/providers/Microsoft.OperationalInsights/workspaces/DefaultWorkspace-99df7ef7-776a-4235-84a4-c77899b2bb04-NEU` | Log Analytics / North Europe / PerGB2018 | Linked only to four legacy Insights components; their aggregate query returned zero events | **MIGRATE-THEN-RETIRE** |
 | `S/resourceGroups/asora-psql-flex/providers/microsoft.insights/components/appi-asora-dev` | Application Insights / North Europe | Zero events; linked to default workspace | **MIGRATE-THEN-RETIRE** |
 | `S/resourceGroups/asora-psql-flex/providers/microsoft.insights/components/asora-function-dev` | Application Insights / North Europe | Zero events; linked to default workspace | **MIGRATE-THEN-RETIRE** |
@@ -62,11 +62,11 @@ Therefore, the June/July figures supplied for this operation are retained as his
 | `S/resourceGroups/asora-psql-flex/providers/Microsoft.Web/certificates/www.asora.co.za-asora-function-dev` | App Service certificate / North Europe | Bound to legacy compatibility hostname | **KEEP-SEPARATE** |
 | `S/resourceGroups/asora-psql-flex/providers/Microsoft.Insights/scheduledQueryRules/alert-asora-function-dev-health-fail` | Scheduled query rule / North Europe | Disabled; targets zero-telemetry legacy Insights component | **RETIRE** |
 | `S/resourceGroups/asora-psql-flex/providers/Microsoft.Insights/scheduledQueryRules/alert-asora-function-dev-5xx-rate` | Scheduled query rule / North Europe | Disabled; targets zero-telemetry legacy Insights component | **RETIRE** |
-| `S/resourceGroups/asora-psql-flex/providers/Microsoft.Insights/scheduledQueryRules/alert-asora-function-dev-dsr-stuck-queued` | Scheduled query rule / North Europe | Enabled every five minutes against canonical component | **OPTIMISE** |
-| `S/resourceGroups/asora-psql-flex/providers/Microsoft.Insights/scheduledQueryRules/alert-asora-function-dev-dsr-queue-depth` | Scheduled query rule / North Europe | Enabled every five minutes against canonical component | **OPTIMISE** |
-| `S/resourceGroups/asora-psql-flex/providers/Microsoft.Insights/scheduledQueryRules/alert-asora-function-dev-dsr-failures` | Scheduled query rule / North Europe | Enabled every five minutes against canonical component | **OPTIMISE** |
-| `S/resourceGroups/asora-psql-flex/providers/Microsoft.Insights/scheduledQueryRules/alert-asora-function-dev-dsr-poison-queue` | Scheduled query rule / North Europe | Enabled every five minutes against canonical component | **OPTIMISE** |
-| `S/resourceGroups/asora-psql-flex/providers/Microsoft.Insights/scheduledQueryRules/alert-asora-function-dev-dsr-missing-completion` | Scheduled query rule / North Europe | Enabled every five minutes against canonical component | **OPTIMISE** |
+| `S/resourceGroups/asora-psql-flex/providers/Microsoft.Insights/scheduledQueryRules/alert-asora-function-dev-dsr-stuck-queued` | Scheduled query rule / North Europe | Enabled hourly with a one-day monitor-aligned window against the canonical component | **OPTIMISE** |
+| `S/resourceGroups/asora-psql-flex/providers/Microsoft.Insights/scheduledQueryRules/alert-asora-function-dev-dsr-queue-depth` | Scheduled query rule / North Europe | Enabled hourly with a one-day monitor-aligned window against the canonical component | **OPTIMISE** |
+| `S/resourceGroups/asora-psql-flex/providers/Microsoft.Insights/scheduledQueryRules/alert-asora-function-dev-dsr-failures` | Scheduled query rule / North Europe | Enabled every 15 minutes with a 30-minute immediate-failure window against the canonical component | **OPTIMISE** |
+| `S/resourceGroups/asora-psql-flex/providers/Microsoft.Insights/scheduledQueryRules/alert-asora-function-dev-dsr-poison-queue` | Scheduled query rule / North Europe | Enabled hourly with a one-day monitor-aligned window against the canonical component | **OPTIMISE** |
+| `S/resourceGroups/asora-psql-flex/providers/Microsoft.Insights/scheduledQueryRules/alert-asora-function-dev-dsr-missing-completion` | Scheduled query rule / North Europe | Enabled as a stateless daily 24-hour operational summary against the canonical component | **OPTIMISE** |
 
 Creation dates and per-resource last-request data are not consistently exposed by the ARM schemas. Where available, the inventory uses function telemetry and Activity Log aggregate evidence instead. No cloud mutation is inferred from a resource name.
 
@@ -125,16 +125,17 @@ The one-day trace total came from the canonical Function host. `Azure.Core` prod
 
 The current workspace has no daily cap. Its principal Application Insights tables each retain 90 days despite a 30-day workspace retention setting.
 
-### Repository remediation in this branch
+### Telemetry controls
 
-- Set host default logging to `Warning` and explicit Azure SDK/host framework categories to `Warning`.
+- Set host default logging and explicit Azure SDK/host framework categories to `Warning`.
 - Retain DSR monitor, queue processor, export enqueue, and deletion enqueue categories at `Information` so the existing alert queries retain their inputs.
-- Change host sampling from 20 to five telemetry items per second for sampled successful requests/dependencies. Exceptions, structured events, and DSR traces are excluded from sampling.
-- Preserve the existing Node SDK rule: automatic console, request, dependency, performance, exception, and live-metric collectors remain disabled so host instrumentation is authoritative.
+- Set host sampling to five telemetry items per second for successful requests and dependencies. Exceptions, structured events, and DSR traces remain unsampled; the Warning filters suppress routine Azure SDK and host traces before sampling.
+- Disable host live metrics and performance-counter collection. The Node SDK also has automatic console, request, dependency, performance, exception, and live-metric collectors disabled, so host instrumentation remains authoritative.
+- Live app settings now explicitly mirror the source values. The rollback is to delete only these non-secret overrides: `AzureFunctionsJobHost__logging__logLevel__default`, `AzureFunctionsJobHost__logging__logLevel__Azure.Core`, `AzureFunctionsJobHost__logging__logLevel__Azure.Core.1`, `AzureFunctionsJobHost__logging__applicationInsights__samplingSettings__isEnabled`, `AzureFunctionsJobHost__logging__applicationInsights__samplingSettings__maxTelemetryItemsPerSecond`, `AzureFunctionsJobHost__logging__applicationInsights__samplingSettings__excludedTypes`, `AzureFunctionsJobHost__logging__applicationInsights__enablePerformanceCountersCollection`, and `AzureFunctionsJobHost__logging__applicationInsights__enableLiveMetrics`.
 
 ### Pending live configuration decision
 
-Do not set a workspace daily cap or reduce table retention until seven post-deployment days establish normal and failure-spike ingestion. Initial cap candidate: **0.15 GB/day**, with an Activity/operational warning before a cap blind spot. Set table retention to 30 days only after Kyle approves the resulting expiration of the older 60-day window. Basic/Auxiliary table migration is not justified before measured savings and alert-query compatibility are demonstrated.
+The calculated cap candidate is **0.824011 GB/day** (twice the seven-day average) and exceeds the approved 0.25-GB ceiling. No cap was applied. Six operational tables were already reduced from 90 to 30 days; Basic/Auxiliary table migration is not justified before measured savings and alert-query compatibility are demonstrated.
 
 ## Alert analysis
 
@@ -142,19 +143,13 @@ Do not set a workspace daily cap or reduce table retention until seven post-depl
 |---|---|---|---|
 | `health-fail` | Disabled; legacy source | 5 minutes | Delete after approval; no active source telemetry |
 | `5xx-rate` | Disabled; legacy source | 5 minutes | Delete after approval; no active source telemetry |
-| `dsr-stuck-queued` | Enabled | 5 minutes / 10-minute window | Consolidate after failure-query validation |
-| `dsr-queue-depth` | Enabled | 5 minutes / 10-minute window | Consolidate after failure-query validation |
-| `dsr-failures` | Enabled | 5 minutes / 10-minute window | Retain condition in one critical rule |
-| `dsr-poison-queue` | Enabled | 5 minutes / 10-minute window | Retain condition in one critical rule or native queue metric |
-| `dsr-missing-completion` | Enabled | 5 minutes / 10-minute window | Retain condition in one critical rule |
+| `dsr-stuck-queued` | Enabled | 60 minutes / one-day window | Latest monitor snapshot; action group preserved |
+| `dsr-queue-depth` | Enabled | 60 minutes / one-day window | Latest monitor snapshot; action group preserved |
+| `dsr-failures` | Enabled | 15 minutes / 30-minute window | Immediate processor or monitor failure event |
+| `dsr-poison-queue` | Enabled | 60 minutes / one-day window | Latest monitor snapshot; native queue metric unavailable in this account |
+| `dsr-missing-completion` | Enabled, stateless | Daily / 24-hour window | Low-priority lifecycle summary; Azure requires daily rules to be stateless |
 
-Target after a controlled alert drill:
-
-1. One critical, canonical-workspace DSR/security failure rule at 15 minutes, combining failed handler, poison, stuck, depth, and missing-completion conditions with a structured failure dimension.
-2. One once-daily operational summary for warning/stuck conditions.
-3. Activity Log alerts for resource deletion or critical configuration change, plus native queue metric alert only if it is materially useful.
-
-The active DSR rules remain unchanged at five-minute cadence. Their source is emitted by `privacyDsrQueueMonitor` on an eight-hour schedule, so the requested 15/30/60-minute cadence must be paired with query-window redesign and a controlled alert drill; changing cadence alone would weaken detection. The two disabled legacy rules were deleted on 2026-07-20 after confirming no workflow applies this Terraform module.
+The five rules were previously evaluated 1,440 times per day. The current schedule is 169 evaluations per day: 96 processor-failure, 24 poison, 24 depth, 24 stuck-queue, and one daily lifecycle summary. That is an **88.3% reduction in evaluation volume**, not a realised invoice saving. The monitor-derived rules use one-day windows because `privacyDsrQueueMonitor` emits every eight hours and the AzureRM provider cannot represent a 12-hour window; only processor/monitor failure events retain 15-minute detection. The two disabled legacy rules were deleted on 2026-07-20 after confirming no workflow applies this Terraform module.
 
 ## Controlled live execution on 2026-07-20
 
@@ -173,20 +168,23 @@ The active DSR rules remain unchanged at five-minute cadence. Their source is em
 - AppTraces, AppMetrics, AppPerformanceCounters, AppRequests, AppDependencies, and AppExceptions were changed from 90 to 30 days. Rollback is an ARM PATCH of each table with `retentionInDays=90` and `totalRetentionInDays=90`; already-expired data cannot be restored.
 - `asorapsqlflex8fa9` entered a 72-hour quarantine at `2026-07-20T09:21:21Z` through `lythausCostQuarantine=active` and `lythausQuarantineStartedUtc` tags. It has no blob objects or repository references. Data-plane queue/table enumeration is unavailable without Storage data-plane RBAC, and no account key was requested or used.
 
-### Deferred safety-critical actions
+### Phase 2 live optimisation
 
-- `asora-function-flex` and `asora-function-consumption` remain running: the required authenticated write, moderation, and DSR-enqueue verification is unavailable while the canonical deployment acceptance gate fails.
-- `function:privacyDsrProcessor=1` remains configured. The six-request scale-to-zero test was not started because it needs the same isolated DSR test identity and terminal-state verification that the failed acceptance gate prevented.
+- `asora-function-flex` and `asora-function-consumption` were stopped after canonical direct host status, Cloudflare gateway health, public discovery, and controlled unauthenticated auth/write/moderation checks passed. Neither app has a custom domain; their restart commands are `az functionapp start --resource-group asora-psql-flex --name asora-function-flex` and `az functionapp start --resource-group asora-psql-flex --name asora-function-consumption`.
+- Authenticated DSR enqueue, authenticated write, and authenticated moderation mutation were not run because no isolated test identity was available in this session. The public control paths returned expected `401` without creating data.
+- `function:privacyDsrProcessor=1` remains configured. The six-request scale-to-zero test was not started because it requires the isolated DSR identity and terminal-state verification.
+- AppTraces was the primary seven-day contributor: 2.585198 GB of 2.884037 GB total billed ingestion. `Azure.Core` and `Azure.Core.1` information traces accounted for approximately 2.409 GB of that AppTraces volume. The live logging and sampling overrides above were applied before the next deployment; post-change 24-hour ingestion is not yet available.
+- Every replacement KQL query was validated directly against the canonical component. A safe synthetic processor-failure or poison event was not injected because no isolated DSR identity or non-production event injection path was available.
 
 ## Retirement matrix
 
 | Resource | Historical cost context | Evidence | Action | Saving | Risk / rollback | Approval |
 |---|---:|---|---|---:|---|---|
-| Host Azure.Core Information tracing | Included in July Log Analytics $3.19 | 0.379 GB/day; 197,981 Azure.Core request/response traces/day | Deployment attempted then rolled back after acceptance failure | Estimated only | Restore retained prior artifact through canonical workflow | Acceptance-gate repair required |
-| Five active DSR scheduled rules | July rules total $4.66 including disabled rules | All query current canonical component every five minutes | Replace only after alert drill | Unknown | Restore exported rule JSON | Kyle approval for alert change |
+| Host Azure.Core Information tracing | Included in July Log Analytics $3.19 | 2.409 GB of the seven-day AppTraces baseline | Live Warning/sampling override applied; source reconciliation pending deployment | Estimated only | Delete only the listed non-secret app-setting overrides | Post-change 24-hour measurement required |
+| Five active DSR scheduled rules | July rules total $4.66 including disabled rules | All target current canonical component; 1,440 evaluations/day before | Rescheduled to 169 evaluations/day with validated source-aligned queries | Estimated only | Restore prior frequency/window/query from this report | Completed |
 | Two disabled legacy rules | Included above | Disabled and source component has zero events | Deleted 2026-07-20 | Estimated only | Recreate only from reviewed Terraform reconciliation | Completed |
-| `asora-function-flex` and plan | Part of July Web/sites $10.56 | No functions, zero telemetry, legacy vault refs | Observe, export, stop, then review delete | Unknown | Start app / retain exported config | Stop may proceed only after seven-day proof; delete requires Kyle approval |
-| `asora-function-consumption` and plan | Part of July Web/sites $10.56 | One health function, zero telemetry | Observe, export, stop, then review delete | Unknown | Start app / retain exported config | Stop may proceed only after seven-day proof; delete requires Kyle approval |
+| `asora-function-flex` and plan | Part of July Web/sites $10.56 | No functions, zero telemetry, legacy vault refs; stopped | Observe 72 hours, then review delete | Unknown | `az functionapp start --resource-group asora-psql-flex --name asora-function-flex` | Delete requires Kyle approval after observation |
+| `asora-function-consumption` and plan | Part of July Web/sites $10.56 | One health function, zero telemetry; stopped | Observe 72 hours, then review delete | Unknown | `az functionapp start --resource-group asora-psql-flex --name asora-function-consumption` | Delete requires Kyle approval after observation |
 | Four legacy Insights components + default workspace | Unknown | Zero aggregate events; no active alert scope | Observe then retire together | Unknown | Recreate/export dashboard queries | Delete requires Kyle approval |
 | `asorapsqlflex8fa9` | Near-zero historical storage | No blob objects or repository references; data-plane listing requires RBAC | 72-hour quarantine started | Near zero | Remove quarantine tags / retain account | Observation through 2026-07-23 |
 | `mi-asora-cicd` | $0 | No role assignments; federated credential not yet verified | Quarantine | $0 | Recreate identity/assignment if needed | Kyle approval |
@@ -197,7 +195,7 @@ The active DSR rules remain unchanged at five-minute cadence. Their source is em
 
 | Proposed operation | Current status | Evidence required before execution |
 |---|---|---|
-| Stop either duplicate Function App | Not approved | Seven-day no-traffic/no-DNS/no-workflow/no-rollback proof, sanitized settings export, canonical health check |
+| Stop either duplicate Function App | Completed 2026-07-20 | Sanitized settings export, no custom domain/workflow target, canonical health and public control-path checks passed; 72-hour observation now active |
 | Delete duplicate app/plan, Insights/default workspace, storage, identity, or network | Not approved | Kyle approval naming exact resource IDs, rollback material, and post-stop validation |
 | Remove DSR always-ready | Not approved | Five cold DSR drills, sixth verification, zero poison/duplicates, latency, and tested restoration |
 | Reduce Function memory | Not approved | 512-MB cold start/auth/feed/post/moderation/Hive/DSR/concurrency/package test with 25% headroom |
@@ -233,12 +231,13 @@ The active DSR rules remain unchanged at five-minute cadence. Their source is em
 | 2026-07-20 09:21Z | Legacy storage quarantine | Untagged to active quarantine tags | Tags read back; no repository references | Remove the two quarantine tags | $0 confirmed |
 | 2026-07-20 | Six operational table retentions | 90 to 30 days | ARM GET readback for every table | PATCH both retention properties to 90 | Estimated only |
 | 2026-07-20 | Two disabled legacy scheduled-query rules | Present and disabled to absent | Rule-list absence verified | Recreate only from reviewed desired-state source | Estimated only |
+| 2026-07-20 | Duplicate Function App stops | Both running to `Stopped` | Canonical direct host status, Cloudflare health, discovery, and unauthenticated control paths passed after each stop | Start the named affected app using the retirement-matrix command | Estimated only |
+| 2026-07-20 | Canonical Function telemetry controls | Eight absent non-secret host overrides to explicit Warning/sampling and disabled live-metric/performance-counter values | Direct host status, gateway health, and discovery passed after configuration recycle | Delete the eight named overrides in Telemetry controls | Estimated only |
+| 2026-07-20 | Five canonical DSR scheduled-query rules | 5 minutes / 10 minutes to 15 minutes / 30 minutes, three 60 minutes / 24 hours, and daily / 24 hours | Query validation and rule readback; action groups and thresholds preserved | Restore each prior 5-minute / 10-minute query definition from version control evidence | Estimated only |
 
 ## Next validation sequence
 
-1. Repair the Flex registration acceptance assertion, merge that limited workflow correction, and re-run the exact-artifact deployment.
-2. Verify DSR monitor, enqueue, completion, failure, and poison signals on the canonical component with the approved isolated test identity.
-3. Compare 24 hours and seven days of table ingestion against the 0.412005-GB/day baseline before reassessing the daily cap.
-4. Rework active DSR alert query windows to match the eight-hour monitor cadence, validate them with a controlled alert drill, then apply the approved 15/30/60-minute cadence.
-5. Stop duplicate apps only after authenticated write, moderation, and DSR validation succeeds; retain them through the required 72-hour observation.
-6. Complete storage quarantine observation through 2026-07-23 before preparing its deletion command.
+1. Merge and deploy the focused Flex registration-gate repair, then run its multi-signal acceptance checks on the exact artifact.
+2. Verify DSR monitor, enqueue, completion, failure, and poison signals with an approved isolated test identity; run the six-request scale-from-zero test separately before removing always-ready.
+3. Compare the next 24 hours and seven days of ingestion against the 0.412005-GB/day baseline before reassessing a daily cap.
+4. Observe the stopped duplicate apps and quarantined storage through 2026-07-23, then seek explicit deletion approval for exact resource IDs if still unused.

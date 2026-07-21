@@ -308,7 +308,9 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "auth_failure_rate" {
 
 # ──────────────────────────────────────────────────────────────
 # Alert: DSR requests stuck queued > 5 minutes (per target)
-# Uses privacyDsrQueueMonitor telemetry.
+# Uses the latest privacyDsrQueueMonitor telemetry emitted every eight hours.
+# The AzureRM provider cannot represent a 12-hour window; a one-day window
+# safely covers the source interval without restoring a five-minute cadence.
 # ──────────────────────────────────────────────────────────────
 resource "azurerm_monitor_scheduled_query_rules_alert_v2" "dsr_stuck_queued" {
   for_each            = local.targets
@@ -316,18 +318,18 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "dsr_stuck_queued" {
   resource_group_name = var.resource_group_name
   location            = data.azurerm_application_insights.target[each.key].location
 
-  evaluation_frequency = "PT5M"
-  window_duration      = "PT10M"
+  evaluation_frequency = "PT1H"
+  window_duration      = "P1D"
   scopes               = [data.azurerm_application_insights.target[each.key].id]
   severity             = max(each.value.severity - 1, 1)
 
   criteria {
     query = <<-QUERY
       traces
-      | where timestamp > ago(10m)
-      | where operation_Name == "privacyDsrQueueMonitor"
-      | where message startswith "dsr.queue.monitor"
-      | extend stuckQueuedCount = toint(extract(@"stuckQueuedCount:\s*(\d+)", 1, message))
+      | where timestamp > ago(24h)
+      | where operation_Name == 'privacyDsrQueueMonitor'
+      | where message startswith 'dsr.queue.monitor'
+      | extend stuckQueuedCount = toint(extract(@'stuckQueuedCount:\s*(\d+)', 1, message))
       | summarize arg_max(timestamp, stuckQueuedCount)
       | where stuckQueuedCount > 0
     QUERY
@@ -344,7 +346,7 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "dsr_stuck_queued" {
 
   auto_mitigation_enabled          = true
   workspace_alerts_storage_enabled = false
-  description                      = "Triggers when privacy_requests has queued DSR requests older than 5 minutes on ${each.key}"
+  description                      = "Triggers from the latest eight-hour DSR monitor snapshot when queued DSR requests are older than 5 minutes on ${each.key}"
   display_name                     = "${each.key} - DSR Stuck Queued"
   enabled                          = true
   skip_query_validation            = false
@@ -355,8 +357,10 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "dsr_stuck_queued" {
 }
 
 # ──────────────────────────────────────────────────────────────
-# Alert: DSR queue depth > 0 for more than 5 minutes (per target)
-# Uses privacyDsrQueueMonitor telemetry.
+# Alert: DSR queue depth > 0 (per target)
+# Uses the latest privacyDsrQueueMonitor telemetry emitted every eight hours.
+# The AzureRM provider cannot represent a 12-hour window; a one-day window
+# safely covers the source interval without restoring a five-minute cadence.
 # ──────────────────────────────────────────────────────────────
 resource "azurerm_monitor_scheduled_query_rules_alert_v2" "dsr_queue_depth" {
   for_each            = local.targets
@@ -364,20 +368,20 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "dsr_queue_depth" {
   resource_group_name = var.resource_group_name
   location            = data.azurerm_application_insights.target[each.key].location
 
-  evaluation_frequency = "PT5M"
-  window_duration      = "PT10M"
+  evaluation_frequency = "PT1H"
+  window_duration      = "P1D"
   scopes               = [data.azurerm_application_insights.target[each.key].id]
   severity             = max(each.value.severity - 1, 1)
 
   criteria {
     query = <<-QUERY
       traces
-      | where timestamp > ago(10m)
-      | where operation_Name == "privacyDsrQueueMonitor"
-      | where message startswith "dsr.queue.monitor"
-      | extend approximateMessageCount = toint(extract(@"approximateMessageCount:\s*(\d+)", 1, message))
-      | summarize samples=count(), positiveSamples=countif(approximateMessageCount > 0)
-      | where samples >= 2 and positiveSamples >= 2
+      | where timestamp > ago(24h)
+      | where operation_Name == 'privacyDsrQueueMonitor'
+      | where message startswith 'dsr.queue.monitor'
+      | extend approximateMessageCount = toint(extract(@'approximateMessageCount:\s*(\d+)', 1, message))
+      | summarize arg_max(timestamp, approximateMessageCount)
+      | where approximateMessageCount > 0
     QUERY
 
     time_aggregation_method = "Count"
@@ -392,7 +396,7 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "dsr_queue_depth" {
 
   auto_mitigation_enabled          = true
   workspace_alerts_storage_enabled = false
-  description                      = "Triggers when DSR queue depth is greater than 0 across two monitor samples on ${each.key}"
+  description                      = "Triggers from the latest eight-hour DSR monitor snapshot when queue depth is greater than 0 on ${each.key}"
   display_name                     = "${each.key} - DSR Queue Depth"
   enabled                          = true
   skip_query_validation            = false
@@ -403,8 +407,8 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "dsr_queue_depth" {
 }
 
 # ──────────────────────────────────────────────────────────────
-# Alert: DSR failures > 0 (per target)
-# Covers failed queue handler events and persisted failed DSR requests.
+# Alert: DSR processor or monitor failures > 0 (per target)
+# Uses immediate structured failure telemetry.
 # ──────────────────────────────────────────────────────────────
 resource "azurerm_monitor_scheduled_query_rules_alert_v2" "dsr_failures" {
   for_each            = local.targets
@@ -412,30 +416,18 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "dsr_failures" {
   resource_group_name = var.resource_group_name
   location            = data.azurerm_application_insights.target[each.key].location
 
-  evaluation_frequency = "PT5M"
-  window_duration      = "PT10M"
+  evaluation_frequency = "PT15M"
+  window_duration      = "PT30M"
   scopes               = [data.azurerm_application_insights.target[each.key].id]
   severity             = max(each.value.severity - 1, 1)
 
   criteria {
     query = <<-QUERY
-      let failedHandlerEvents =
-        traces
-        | where timestamp > ago(10m)
-        | where message startswith "dsr.queue.failed"
-        | summarize failedHandlerCount = count();
-      let failedRequestSnapshots =
-        traces
-        | where timestamp > ago(10m)
-        | where operation_Name == "privacyDsrQueueMonitor"
-        | where message startswith "dsr.queue.monitor"
-        | extend failedRequestCount = toint(extract(@"failedRequestCount:\s*(\d+)", 1, message))
-        | summarize arg_max(timestamp, failedRequestCount);
-      failedHandlerEvents
-      | extend joinKey = 1
-      | join kind=fullouter (failedRequestSnapshots | extend joinKey = 1) on joinKey
-      | extend totalFailures = coalesce(failedHandlerCount, 0) + coalesce(failedRequestCount, 0)
-      | where totalFailures > 0
+      traces
+      | where timestamp > ago(30m)
+      | where message startswith 'dsr.queue.failed' or message startswith 'dsr.queue.monitor.failed'
+      | summarize failureCount = count()
+      | where failureCount > 0
     QUERY
 
     time_aggregation_method = "Count"
@@ -450,7 +442,7 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "dsr_failures" {
 
   auto_mitigation_enabled          = true
   workspace_alerts_storage_enabled = false
-  description                      = "Triggers when DSR queue failures or persisted failed DSR requests are detected on ${each.key}"
+  description                      = "Triggers when immediate DSR processor or monitor failure telemetry is detected on ${each.key} within 30 minutes"
   display_name                     = "${each.key} - DSR Failures"
   enabled                          = true
   skip_query_validation            = false
@@ -462,7 +454,9 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "dsr_failures" {
 
 # ──────────────────────────────────────────────────────────────
 # Alert: DSR poison queue exists or has messages (per target)
-# Uses privacyDsrQueueMonitor telemetry.
+# Uses the latest privacyDsrQueueMonitor telemetry emitted every eight hours.
+# The AzureRM provider cannot represent a 12-hour window; a one-day window
+# safely covers the source interval without restoring a five-minute cadence.
 # ──────────────────────────────────────────────────────────────
 resource "azurerm_monitor_scheduled_query_rules_alert_v2" "dsr_poison_queue" {
   for_each            = local.targets
@@ -470,19 +464,19 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "dsr_poison_queue" {
   resource_group_name = var.resource_group_name
   location            = data.azurerm_application_insights.target[each.key].location
 
-  evaluation_frequency = "PT5M"
-  window_duration      = "PT10M"
+  evaluation_frequency = "PT1H"
+  window_duration      = "P1D"
   scopes               = [data.azurerm_application_insights.target[each.key].id]
   severity             = 1
 
   criteria {
     query = <<-QUERY
       traces
-      | where timestamp > ago(10m)
-      | where operation_Name == "privacyDsrQueueMonitor"
-      | where message startswith "dsr.queue.monitor"
-      | extend poisonQueueExists = tobool(extract(@"poisonQueueExists:\s*(true|false)", 1, message))
-      | extend poisonApproximateMessageCount = toint(extract(@"poisonApproximateMessageCount:\s*(\d+)", 1, message))
+      | where timestamp > ago(24h)
+      | where operation_Name == 'privacyDsrQueueMonitor'
+      | where message startswith 'dsr.queue.monitor'
+      | extend poisonQueueExists = tobool(extract(@'poisonQueueExists:\s*(true|false)', 1, message))
+      | extend poisonApproximateMessageCount = toint(extract(@'poisonApproximateMessageCount:\s*(\d+)', 1, message))
       | summarize arg_max(timestamp, poisonQueueExists, poisonApproximateMessageCount)
       | where poisonQueueExists == true or poisonApproximateMessageCount > 0
     QUERY
@@ -499,7 +493,7 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "dsr_poison_queue" {
 
   auto_mitigation_enabled          = true
   workspace_alerts_storage_enabled = false
-  description                      = "CRITICAL: DSR poison queue exists or contains messages on ${each.key}"
+  description                      = "CRITICAL: triggers from the latest eight-hour DSR monitor snapshot when the poison queue exists or contains messages on ${each.key}"
   display_name                     = "${each.key} - DSR Poison Queue"
   enabled                          = true
   skip_query_validation            = false
@@ -511,7 +505,7 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "dsr_poison_queue" {
 
 # ──────────────────────────────────────────────────────────────
 # Alert: DSR enqueue without completion telemetry (per target)
-# Detects queue work that was accepted but did not produce dsr.queue.completed.
+# Runs as a stateless daily operational summary because Azure stateful rules cannot run daily.
 # ──────────────────────────────────────────────────────────────
 resource "azurerm_monitor_scheduled_query_rules_alert_v2" "dsr_missing_completion" {
   for_each            = local.targets
@@ -519,30 +513,22 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "dsr_missing_completio
   resource_group_name = var.resource_group_name
   location            = data.azurerm_application_insights.target[each.key].location
 
-  evaluation_frequency = "PT5M"
-  window_duration      = "PT10M"
+  evaluation_frequency = "P1D"
+  window_duration      = "P1D"
   scopes               = [data.azurerm_application_insights.target[each.key].id]
   severity             = max(each.value.severity - 1, 1)
 
   criteria {
     query = <<-QUERY
-      let enqueued =
-        traces
-        | where timestamp > ago(10m)
-        | where message startswith "dsr.export.enqueued" or message startswith "dsr.delete.enqueued"
-        | extend requestId = tostring(extract(@"id:\s*'([^']+)'", 1, message))
-        | where isnotempty(requestId)
-        | where timestamp < ago(5m)
-        | project requestId, enqueueTimestamp = timestamp;
-      let completed =
-        traces
-        | where timestamp > ago(10m)
-        | where message startswith "dsr.queue.completed"
-        | extend requestId = tostring(extract(@"requestId:\s*'([^']+)'", 1, message))
-        | where isnotempty(requestId)
-        | project requestId;
-      enqueued
-      | join kind=leftanti completed on requestId
+      traces
+      | where timestamp > ago(24h)
+      | where message startswith 'dsr.export.enqueued' or message startswith 'dsr.delete.enqueued' or message startswith 'dsr.queue.completed'
+      | extend eventKind = iff(message startswith 'dsr.queue.completed', 'completed', 'enqueued')
+      | extend requestId = iff(eventKind == 'completed', extract(@'requestId:\s*''([^'']+)''', 1, message), extract(@'id:\s*''([^'']+)''', 1, message))
+      | where isnotempty(requestId)
+      | summarize oldestEnqueue = minif(timestamp, eventKind == 'enqueued'), latestCompletion = maxif(timestamp, eventKind == 'completed') by requestId
+      | where oldestEnqueue < ago(12h)
+      | where isnull(latestCompletion) or latestCompletion < oldestEnqueue
       | summarize missingCompletionCount = count()
       | where missingCompletionCount > 0
     QUERY
@@ -557,9 +543,9 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "dsr_missing_completio
     }
   }
 
-  auto_mitigation_enabled          = true
+  auto_mitigation_enabled          = false
   workspace_alerts_storage_enabled = false
-  description                      = "Triggers when a DSR enqueue has no dsr.queue.completed telemetry after 5 minutes on ${each.key}"
+  description                      = "Daily operational summary for DSR requests without completion telemetry after 12 hours on ${each.key}"
   display_name                     = "${each.key} - DSR Missing Completion"
   enabled                          = true
   skip_query_validation            = false
