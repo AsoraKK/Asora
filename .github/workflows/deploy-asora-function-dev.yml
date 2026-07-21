@@ -361,12 +361,13 @@ jobs:
               "AUDIT_HMAC_KEY=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/audit-hmac-key/)" \
               "INVITE_CODE_PEPPER=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/invite-code-pepper/)" \
               "HIVE_API_KEY=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/HIVE-AI-KEY/)" \
+              "GOOGLE_IDENTITY_PLATFORM_API_KEY=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/google-identity-platform-api-key/)" \
               "CF_ACCESS_CLIENT_SECRET=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/cf-access-client-secret/)" \
             --output none
 
           SUBSCRIPTION_ID=$(az account show --query id -o tsv)
           REFERENCES_URI="https://management.azure.com/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG_CLEAN}/providers/Microsoft.Web/sites/${FUNC_APP_CLEAN}/config/configreferences/appsettings?api-version=2024-11-01"
-          REQUIRED_REFERENCES=(AUDIT_HMAC_KEY INVITE_CODE_PEPPER HIVE_API_KEY CF_ACCESS_CLIENT_SECRET)
+          REQUIRED_REFERENCES=(AUDIT_HMAC_KEY INVITE_CODE_PEPPER HIVE_API_KEY GOOGLE_IDENTITY_PLATFORM_API_KEY CF_ACCESS_CLIENT_SECRET)
           for attempt in $(seq 1 12); do
             REFERENCES_JSON=$(az rest --method get --uri "$REFERENCES_URI")
             unresolved=false
@@ -430,6 +431,7 @@ jobs:
             JWT_SECRET
             INVITE_CODE_PEPPER
             HIVE_API_KEY
+            GOOGLE_IDENTITY_PLATFORM_API_KEY
             COSMOS_CONNECTION_STRING
             POSTGRES_CONNECTION_STRING
             AUDIT_HMAC_KEY
@@ -736,14 +738,18 @@ jobs:
       - name: Required live OpenAPI contracts
         env:
           ALPHA_API_BASE_URL: ${{ vars.MVP_PUBLIC_API_BASE_URL }}
-          STAGING_SMOKE_TOKEN: ${{ secrets.MVP_SMOKE_TOKEN || secrets.STAGING_SMOKE_TOKEN }}
+          RUNTIME_AUTH_API_BASE_URL: ${{ vars.MVP_PUBLIC_API_BASE_URL }}
+          RUNTIME_AUTH_EMAIL: ${{ secrets.MVP_SMOKE_EMAIL }}
+          RUNTIME_AUTH_PASSWORD: ${{ secrets.MVP_SMOKE_PASSWORD }}
           REQUIRE_LIVE_CONTRACTS: 'true'
           CONTRACT_TIMEOUT_MS: '15000'
         run: |
           set -euo pipefail
-          test -n "$STAGING_SMOKE_TOKEN" || { echo "::error::MVP_SMOKE_TOKEN is required"; exit 1; }
+          test -n "$RUNTIME_AUTH_EMAIL" || { echo "::error::MVP_SMOKE_EMAIL is required"; exit 1; }
+          test -n "$RUNTIME_AUTH_PASSWORD" || { echo "::error::MVP_SMOKE_PASSWORD is required"; exit 1; }
           test -n "$ALPHA_API_BASE_URL" || { echo "::error::MVP_PUBLIC_API_BASE_URL is required for public API contracts"; exit 1; }
-          npm run openapi:test:contract
+          node scripts/release/runtime-authenticated-command.mjs \
+            --token-env LYTHAUS_RUNTIME_ACCESS_TOKEN -- npm run openapi:test:contract
 
       - name: Verify DSR export storage configuration
         run: |
@@ -851,16 +857,18 @@ jobs:
 
       - name: Verify Alpha cohort schema and capacity snapshot
         env:
-          ALPHA_RELEASE_ADMIN_TOKEN: ${{ secrets.ALPHA_RELEASE_ADMIN_TOKEN }}
+          RUNTIME_AUTH_API_BASE_URL: ${{ vars.MVP_PUBLIC_API_BASE_URL }}
+          RUNTIME_AUTH_EMAIL: ${{ secrets.MVP_PRIVACY_ADMIN_EMAIL }}
+          RUNTIME_AUTH_PASSWORD: ${{ secrets.MVP_PRIVACY_ADMIN_PASSWORD }}
         run: |
           set -euo pipefail
-          test -n "$ALPHA_RELEASE_ADMIN_TOKEN" || { echo "::error::ALPHA_RELEASE_ADMIN_TOKEN is required"; exit 1; }
+          test -n "$RUNTIME_AUTH_EMAIL" || { echo "::error::MVP_PRIVACY_ADMIN_EMAIL is required"; exit 1; }
+          test -n "$RUNTIME_AUTH_PASSWORD" || { echo "::error::MVP_PRIVACY_ADMIN_PASSWORD is required"; exit 1; }
           test -n "$MVP_ADMIN_API_BASE_URL" || { echo "::error::MVP_ADMIN_API_BASE_URL must point to the Access-protected admin gateway"; exit 1; }
           node -e 'const value = process.env.MVP_ADMIN_API_BASE_URL; const url = new URL(value); if (url.protocol !== "https:" || url.hostname.endsWith(".azurewebsites.net") || !url.pathname.endsWith("/api")) throw new Error("MVP_ADMIN_API_BASE_URL must be an HTTPS admin gateway ending in /api");'
-          curl --fail-with-body --silent --show-error --max-time 30 \
-            --header "Authorization: Bearer $ALPHA_RELEASE_ADMIN_TOKEN" \
-            "${MVP_ADMIN_API_BASE_URL%/}/_admin/ops/metrics?window=24h" \
-            > alpha-ops-preflight.json
+          node scripts/release/runtime-authenticated-command.mjs \
+            --token-env LYTHAUS_RUNTIME_ADMIN_TOKEN -- bash -lc \
+            'curl --fail-with-body --silent --show-error --max-time 30 --header "Authorization: Bearer $LYTHAUS_RUNTIME_ADMIN_TOKEN" "${MVP_ADMIN_API_BASE_URL%/}/_admin/ops/metrics?window=24h" > alpha-ops-preflight.json'
           jq --arg stage "$APPROVED_ALPHA_STAGE" -e \
             '.success == true and .data.partial == false and .data.cohort != null and .data.cohort.stage == $stage' \
             alpha-ops-preflight.json >/dev/null || {
@@ -870,7 +878,9 @@ jobs:
 
       - name: Run live DSR queue regression
         env:
-          DSR_DRILL_BEARER_TOKEN: ${{ secrets.ALPHA_RELEASE_ADMIN_TOKEN }}
+          RUNTIME_AUTH_API_BASE_URL: ${{ vars.MVP_PUBLIC_API_BASE_URL }}
+          RUNTIME_AUTH_EMAIL: ${{ secrets.MVP_PRIVACY_ADMIN_EMAIL }}
+          RUNTIME_AUTH_PASSWORD: ${{ secrets.MVP_PRIVACY_ADMIN_PASSWORD }}
           DSR_DRILL_API_BASE_URL: ${{ vars.MVP_ADMIN_API_BASE_URL }}
           DSR_DRILL_REPORT_PATH: release-evidence/dsr-live-drill-report.json
           DSR_DRILL_EXPORT_USER_ID: ${{ vars.ALPHA_SMOKE_USER_ID }}
@@ -879,8 +889,15 @@ jobs:
           DSR_DRILL_QUEUE_ACCOUNT=$(az storage account list -g "$RG" --query "[?tags.purpose=='dsr-storage'].name | [0]" -o tsv)
           test -n "$DSR_DRILL_QUEUE_ACCOUNT" || { echo "::error::DSR storage account is required"; exit 1; }
           export DSR_DRILL_QUEUE_ACCOUNT
-          node scripts/dsr-drills/live-dsr-queue-drill.mjs
+          node scripts/release/runtime-authenticated-command.mjs \
+            --token-env DSR_DRILL_BEARER_TOKEN -- node scripts/dsr-drills/live-dsr-queue-drill.mjs
           jq -e '.result == "passed"' release-evidence/dsr-live-drill-report.json >/dev/null
+
+      - name: Clear runtime authentication state
+        if: always()
+        run: |
+          unset LYTHAUS_RUNTIME_ACCESS_TOKEN LYTHAUS_RUNTIME_ADMIN_TOKEN DSR_DRILL_BEARER_TOKEN
+          find "$RUNNER_TEMP" -maxdepth 1 -type f -name 'lythaus-auth-*' -delete
 
       - name: Write exact-SHA release manifest
         env:

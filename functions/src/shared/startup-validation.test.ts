@@ -17,6 +17,7 @@ const baseEnv: Record<string, string> = {
   FCM_PROJECT_ID: 'project-id',
   FCM_CLIENT_EMAIL: 'fcm@example.com',
   FCM_PRIVATE_KEY: '-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----',
+  GOOGLE_IDENTITY_PLATFORM_API_KEY: 'test-api-key',
   APPLICATIONINSIGHTS_CONNECTION_STRING: 'InstrumentationKey=test',
   COSMOS_DATABASE_NAME: 'asora',
   CORS_ALLOWED_ORIGINS: 'https://lythaus.co',

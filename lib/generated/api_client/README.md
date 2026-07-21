@@ -121,6 +121,7 @@ Class | Method | HTTP request | Description
 [*AppealsApi*](doc/AppealsApi.md) | [**appealsGet**](doc/AppealsApi.md#appealsget) | **GET** /appeals/{id} | Get appeal detail
 [*AppealsApi*](doc/AppealsApi.md) | [**appealsVote**](doc/AppealsApi.md#appealsvote) | **POST** /appeals/{id}/votes | Cast a community vote on an appeal
 [*AuthApi*](doc/AuthApi.md) | [**authAuthorize**](doc/AuthApi.md#authauthorize) | **GET** /auth/authorize | OAuth2 authorization endpoint
+[*AuthApi*](doc/AuthApi.md) | [**authEmailLogin**](doc/AuthApi.md#authemaillogin) | **POST** /auth/email | Sign in with a verified email identity
 [*AuthApi*](doc/AuthApi.md) | [**authInviteValidate**](doc/AuthApi.md#authinvitevalidate) | **GET** /auth/invite/validate | Validate an invite code
 [*AuthApi*](doc/AuthApi.md) | [**authPing**](doc/AuthApi.md#authping) | **GET** /auth/ping | Verify authentication token is valid
 [*AuthApi*](doc/AuthApi.md) | [**authRedeemInvite**](doc/AuthApi.md#authredeeminvite) | **POST** /auth/redeem-invite | Redeem an invite code to activate account
@@ -287,6 +288,7 @@ Class | Method | HTTP request | Description
  - [DSRExportResponseMetadata](doc/DSRExportResponseMetadata.md)
  - [DsrRequestInput](doc/DsrRequestInput.md)
  - [DsrRequestSummary](doc/DsrRequestSummary.md)
+ - [EmailLoginRequest](doc/EmailLoginRequest.md)
  - [Error](doc/Error.md)
  - [ErrorResponse](doc/ErrorResponse.md)
  - [ErrorResponseError](doc/ErrorResponseError.md)

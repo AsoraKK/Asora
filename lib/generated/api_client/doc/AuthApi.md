@@ -10,6 +10,7 @@ All URIs are relative to *https://api.lythaus.co/api*
 Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**authAuthorize**](AuthApi.md#authauthorize) | **GET** /auth/authorize | OAuth2 authorization endpoint
+[**authEmailLogin**](AuthApi.md#authemaillogin) | **POST** /auth/email | Sign in with a verified email identity
 [**authInviteValidate**](AuthApi.md#authinvitevalidate) | **GET** /auth/invite/validate | Validate an invite code
 [**authPing**](AuthApi.md#authping) | **GET** /auth/ping | Verify authentication token is valid
 [**authRedeemInvite**](AuthApi.md#authredeeminvite) | **POST** /auth/redeem-invite | Redeem an invite code to activate account
@@ -72,6 +73,49 @@ No authorization required
 
  - **Content-Type**: Not defined
  - **Accept**: text/html, application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **authEmailLogin**
+> OAuthTokenResponse authEmailLogin(emailLoginRequest)
+
+Sign in with a verified email identity
+
+Verifies email/password credentials with Google Identity Platform, requires a verified provider email and an existing invited Lythaus account, then returns short-lived Lythaus access and rotating refresh tokens. The endpoint never creates an uninvited account.
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAuthApi();
+final EmailLoginRequest emailLoginRequest = ; // EmailLoginRequest |
+
+try {
+    final response = api.authEmailLogin(emailLoginRequest);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AuthApi->authEmailLogin: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **emailLoginRequest** | [**EmailLoginRequest**](EmailLoginRequest.md)|  |
+
+### Return type
+
+[**OAuthTokenResponse**](OAuthTokenResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 

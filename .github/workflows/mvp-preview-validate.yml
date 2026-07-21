@@ -14,6 +14,7 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    environment: dev
     steps:
       - uses: actions/checkout@v5
       - name: Run validation against explicit preview
@@ -22,9 +23,11 @@ jobs:
           PATH_FEED: /api/feed/discover
           QS1: limit=20&cursor=first&includeTopics=tech
           QS2: limit=21&cursor=first&includeTopics=tech
-          MVP_SMOKE_TOKEN: ${{ secrets.MVP_SMOKE_TOKEN || secrets.STAGING_SMOKE_TOKEN }}
+          RUNTIME_AUTH_API_BASE_URL: https://${{ inputs.domain }}/api
+          RUNTIME_AUTH_EMAIL: ${{ secrets.MVP_SMOKE_EMAIL }}
+          RUNTIME_AUTH_PASSWORD: ${{ secrets.MVP_SMOKE_PASSWORD }}
         run: |
           set -euo pipefail
-          test -n "$MVP_SMOKE_TOKEN" || { echo "MVP_SMOKE_TOKEN is required"; exit 1; }
-          export AUTH_HDR="Authorization: Bearer $MVP_SMOKE_TOKEN"
-          bash ./scripts/validate_edge_cache.sh
+          node scripts/release/runtime-authenticated-command.mjs \
+            --token-env LYTHAUS_RUNTIME_ACCESS_TOKEN -- bash -lc \
+            'export AUTH_HDR="Authorization: Bearer $LYTHAUS_RUNTIME_ACCESS_TOKEN"; bash ./scripts/validate_edge_cache.sh'

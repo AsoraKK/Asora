@@ -85,6 +85,7 @@ doc/DSRExportResponse.md
 doc/DSRExportResponseMetadata.md
 doc/DsrRequestInput.md
 doc/DsrRequestSummary.md
+doc/EmailLoginRequest.md
 doc/Error.md
 doc/ErrorResponse.md
 doc/ErrorResponseError.md
@@ -269,6 +270,7 @@ lib/src/model/dsr_export_response.dart
 lib/src/model/dsr_export_response_metadata.dart
 lib/src/model/dsr_request_input.dart
 lib/src/model/dsr_request_summary.dart
+lib/src/model/email_login_request.dart
 lib/src/model/error.dart
 lib/src/model/error_response.dart
 lib/src/model/error_response_error.dart

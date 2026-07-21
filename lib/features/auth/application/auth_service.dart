@@ -55,7 +55,7 @@ class AuthService {
       );
 
       final response = await _httpClient.post(
-        Uri.parse('$_authUrl/authEmail'),
+        Uri.parse('$_authUrl/email'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email.trim(), 'password': password}),
       );
@@ -64,13 +64,14 @@ class AuthService {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
 
         // Extract JWT token
-        final token = data['token'] as String?;
+        final payload = data['data'] as Map<String, dynamic>?;
+        final token = payload?['access_token'] as String?;
         if (token == null) {
           throw AuthFailure.serverError('Invalid response: missing token');
         }
 
         // Extract user data
-        final userData = data['user'] as Map<String, dynamic>?;
+        final userData = payload?['user'] as Map<String, dynamic>?;
         if (userData == null) {
           throw AuthFailure.serverError('Invalid response: missing user data');
         }
