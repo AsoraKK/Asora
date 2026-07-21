@@ -9,6 +9,7 @@ import 'package:dio/dio.dart';
 
 import 'package:asora_api_client/src/api_util.dart';
 import 'package:asora_api_client/src/model/auth_token_request.dart';
+import 'package:asora_api_client/src/model/email_login_request.dart';
 import 'package:asora_api_client/src/model/error.dart';
 import 'package:asora_api_client/src/model/invite_validation_response.dart';
 import 'package:asora_api_client/src/model/o_auth_token_response.dart';
@@ -112,6 +113,101 @@ class AuthApi {
     }
 
     return Response<String>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Sign in with a verified email identity
+  /// Verifies email/password credentials with Google Identity Platform, requires a verified provider email and an existing invited Lythaus account, then returns short-lived Lythaus access and rotating refresh tokens. The endpoint never creates an uninvited account.
+  ///
+  /// Parameters:
+  /// * [emailLoginRequest]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [OAuthTokenResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<OAuthTokenResponse>> authEmailLogin({
+    required EmailLoginRequest emailLoginRequest,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/auth/email';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(EmailLoginRequest);
+      _bodyData = _serializers.serialize(emailLoginRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    OAuthTokenResponse? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(OAuthTokenResponse),
+      ) as OAuthTokenResponse;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<OAuthTokenResponse>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
