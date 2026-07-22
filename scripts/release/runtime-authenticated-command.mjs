@@ -41,7 +41,7 @@ const clientId = process.env.RUNTIME_AUTH_CLIENT_ID?.trim();
 let accessToken = '';
 let refreshToken = '';
 try {
-  const response = await fetch(`${apiBase}/auth/email`, {
+  const response = await fetch(`${apiBase}/auth/email/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password, ...(clientId ? { client_id: clientId } : {}) }),
