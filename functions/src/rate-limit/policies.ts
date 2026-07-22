@@ -505,6 +505,7 @@ export function getPolicyForRoute(req: HttpRequest): RateLimitPolicy {
     case 'user/delete':
       return createAdminMutationPolicy('user/delete');
     case 'auth/token':
+    case 'auth/email':
     case 'auth/refresh':
     case 'auth/authorize':
     case 'auth/redeem-invite':
@@ -584,6 +585,7 @@ export function getPolicyForFunction(routeId: string): RateLimitPolicy {
     case 'privacy-delete-user':
       return createAdminMutationPolicy('user/delete');
     case 'auth-token':
+    case 'auth-email-login':
     case 'auth-token-refresh':
     case 'auth-authorize':
     case 'auth-email-register':

@@ -26,7 +26,7 @@ const server = process.env.ALPHA_API_BASE_URL
   : requireLiveContracts
   ? spec.servers?.[0]?.url
   : undefined;
-const jwt = process.env.STAGING_SMOKE_TOKEN;
+const jwt = process.env.LYTHAUS_RUNTIME_ACCESS_TOKEN;
 
 test('OpenAPI spec omits legacy auth config path', () => {
   expect(spec.paths?.['/auth/b2c-config']).toBeUndefined();

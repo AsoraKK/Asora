@@ -173,7 +173,7 @@ jobs:
             --config alpha-config.json \
             --ops alpha-ops.json \
             --deployment-sha "${{ steps.deployment.outputs.sha }}" \
-            --environment staging \
+            --environment mvp \
             --output alpha-daily-report.json \
             --markdown-output alpha-daily-report.md
 

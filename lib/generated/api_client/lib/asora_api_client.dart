@@ -115,6 +115,7 @@ export 'package:asora_api_client/src/model/email_auth_user.dart';
 export 'package:asora_api_client/src/model/email_login_response.dart';
 export 'package:asora_api_client/src/model/email_password_request.dart';
 export 'package:asora_api_client/src/model/email_password_reset_request.dart';
+export 'package:asora_api_client/src/model/email_provider_login_request.dart';
 export 'package:asora_api_client/src/model/email_token_request.dart';
 export 'package:asora_api_client/src/model/error.dart';
 export 'package:asora_api_client/src/model/error_response.dart';

@@ -3101,6 +3101,89 @@
         }
       }
     },
+    "/auth/email": {
+      "post": {
+        "operationId": "authEmailProviderLogin",
+        "summary": "Sign in with a verified provider-managed email identity",
+        "description": "Compatibility endpoint retained from the shared-MVP runtime. It verifies\nemail/password credentials with Google Identity Platform, requires a\nverified provider email and an existing invited Lythaus account, then\nreturns short-lived Lythaus access and rotating refresh tokens. It never\ncreates an uninvited account.\n",
+        "tags": [
+          "Auth"
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailProviderLoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authenticated token response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthTokenResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials or unverified email",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Verified identity is not an invited Lythaus account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit enforced",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Email authentication provider unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/auth/email/register": {
       "post": {
         "operationId": "authEmailRegister",
@@ -14378,6 +14461,34 @@
           "timestamp": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "EmailProviderLoginRequest": {
+        "description": "Verified provider-managed email login request.",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "email",
+          "password"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 256,
+            "writeOnly": true
+          },
+          "client_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "Optional registered audience; defaults to the server's first configured JWT audience."
           }
         }
       },

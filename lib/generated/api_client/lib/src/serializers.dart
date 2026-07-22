@@ -101,6 +101,7 @@ import 'package:asora_api_client/src/model/email_auth_user.dart';
 import 'package:asora_api_client/src/model/email_login_response.dart';
 import 'package:asora_api_client/src/model/email_password_request.dart';
 import 'package:asora_api_client/src/model/email_password_reset_request.dart';
+import 'package:asora_api_client/src/model/email_provider_login_request.dart';
 import 'package:asora_api_client/src/model/email_token_request.dart';
 import 'package:asora_api_client/src/model/error.dart';
 import 'package:asora_api_client/src/model/error_response.dart';
@@ -257,6 +258,7 @@ part 'serializers.g.dart';
   EmailLoginResponse,
   EmailPasswordRequest,
   EmailPasswordResetRequest,
+  EmailProviderLoginRequest,
   EmailTokenRequest,
   Error,
   ErrorResponse,

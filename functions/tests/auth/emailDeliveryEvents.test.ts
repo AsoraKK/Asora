@@ -74,4 +74,69 @@ describe('ACS email delivery events', () => {
     expect(query).toHaveBeenCalledTimes(1);
     expect(query.mock.calls[0]?.[1]).toContain('unknown');
   });
+
+  it('treats a duplicate Event Grid event id as idempotent', async () => {
+    query.mockResolvedValueOnce({ rowCount: 0, rows: [] });
+
+    await handleEmailDeliveryEvent({
+      id: 'event-duplicate',
+      topic: '/subscriptions/test/resourceGroups/test/providers/Microsoft.Communication/communicationServices/test',
+      subject: 'recipient',
+      eventType: 'Microsoft.Communication.EmailDeliveryReportReceived',
+      eventTime: '2026-07-19T12:00:00.000Z',
+      dataVersion: '1',
+      metadataVersion: '1',
+      data: { messageId: 'provider-message', recipient: 'person@example.test', deliveryStatus: 'Delivered' },
+    } as never, context);
+
+    expect(query).toHaveBeenCalledTimes(1);
+    expect(query.mock.calls[0]?.[0]).toContain('ON CONFLICT (event_id) DO NOTHING');
+  });
+
+  it('prevents an older out-of-order event from replacing a newer terminal state', async () => {
+    await handleEmailDeliveryEvent({
+      id: 'event-out-of-order',
+      topic: '/subscriptions/test/resourceGroups/test/providers/Microsoft.Communication/communicationServices/test',
+      subject: 'recipient',
+      eventType: 'Microsoft.Communication.EmailDeliveryReportReceived',
+      eventTime: '2026-07-19T11:59:00.000Z',
+      dataVersion: '1',
+      metadataVersion: '1',
+      data: { messageId: 'provider-message', recipient: 'person@example.test', deliveryStatus: 'Delivered' },
+    } as never, context);
+
+    expect(query.mock.calls[1]?.[0]).toContain('terminal_at IS NULL OR terminal_at <= $3');
+    expect(query.mock.calls[1]?.[1]).toEqual([
+      'provider-message',
+      'delivered',
+      new Date('2026-07-19T11:59:00.000Z'),
+    ]);
+  });
+
+  it('never writes raw provider payload fields to warning telemetry', async () => {
+    process.env.ACS_EMAIL_EVENT_SOURCE = '/subscriptions/expected';
+    await handleEmailDeliveryEvent({
+      id: 'event-private',
+      topic: '/subscriptions/unexpected',
+      subject: 'person@example.test',
+      eventType: 'Microsoft.Communication.EmailDeliveryReportReceived',
+      eventTime: '2026-07-19T12:00:00.000Z',
+      dataVersion: '1',
+      metadataVersion: '1',
+      data: {
+        messageId: 'provider-message',
+        recipient: 'person@example.test',
+        deliveryStatus: 'Failed',
+        body: 'secret email body',
+        token: 'secret verification token',
+        password: 'secret password',
+      },
+    } as never, context);
+
+    const serializedWarnings = JSON.stringify(context.warn.mock.calls);
+    expect(serializedWarnings).not.toContain('person@example.test');
+    expect(serializedWarnings).not.toContain('secret email body');
+    expect(serializedWarnings).not.toContain('secret verification token');
+    expect(serializedWarnings).not.toContain('secret password');
+  });
 });

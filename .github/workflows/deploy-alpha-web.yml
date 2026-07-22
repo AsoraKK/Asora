@@ -125,14 +125,17 @@ jobs:
           WEB_BASE_URL: ${{ inputs.web_base_url }}
           API_BASE_URL: ${{ inputs.api_base_url }}
           ADMIN_API_URL: ${{ inputs.admin_api_url }}
-          BETA_SMOKE_TOKEN: ${{ secrets.MVP_SMOKE_TOKEN || secrets.STAGING_SMOKE_TOKEN }}
+          RUNTIME_AUTH_API_BASE_URL: ${{ inputs.api_base_url }}
+          RUNTIME_AUTH_EMAIL: ${{ secrets.MVP_SMOKE_EMAIL }}
+          RUNTIME_AUTH_PASSWORD: ${{ secrets.MVP_SMOKE_PASSWORD }}
           CF_ACCESS_CLIENT_ID: ${{ secrets.CF_Access_Client_Id }}
           CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_Access_Client_Secret }}
           BETA_SMOKE_REPORT_PATH: ${{ runner.temp }}/alpha-web-smoke-report.json
         run: |
           set -euo pipefail
           curl -fsSIL --max-time 20 "$WEB_BASE_URL"
-          node scripts/beta-smoke.mjs
+          node scripts/release/runtime-authenticated-command.mjs \
+            --token-env LYTHAUS_RUNTIME_ACCESS_TOKEN -- node scripts/beta-smoke.mjs
 
       - name: Write web deployment evidence
         if: success()

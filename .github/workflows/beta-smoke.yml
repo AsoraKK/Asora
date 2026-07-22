@@ -22,13 +22,13 @@ permissions:
 jobs:
   smoke:
     runs-on: ubuntu-latest
+    environment: dev
     timeout-minutes: 30
 
     env:
       WEB_BASE_URL: ${{ inputs.web_base_url }}
       API_BASE_URL: ${{ inputs.api_base_url }}
       ADMIN_API_URL: ${{ inputs.admin_api_url }}
-      BETA_SMOKE_TOKEN: ${{ secrets.MVP_SMOKE_TOKEN || secrets.STAGING_SMOKE_TOKEN }}
       CF_ACCESS_CLIENT_ID: ${{ secrets.CF_Access_Client_Id }}
       CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_Access_Client_Secret }}
 
@@ -52,7 +52,13 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run beta browser smoke
-        run: node scripts/beta-smoke.mjs
+        env:
+          RUNTIME_AUTH_API_BASE_URL: ${{ inputs.api_base_url }}
+          RUNTIME_AUTH_EMAIL: ${{ secrets.MVP_SMOKE_EMAIL }}
+          RUNTIME_AUTH_PASSWORD: ${{ secrets.MVP_SMOKE_PASSWORD }}
+        run: |
+          node scripts/release/runtime-authenticated-command.mjs \
+            --token-env LYTHAUS_RUNTIME_ACCESS_TOKEN -- node scripts/beta-smoke.mjs
 
       - name: Upload smoke report
         if: always()

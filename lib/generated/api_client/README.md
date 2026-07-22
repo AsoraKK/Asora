@@ -123,6 +123,7 @@ Class | Method | HTTP request | Description
 [*AuthApi*](doc/AuthApi.md) | [**authAuthorize**](doc/AuthApi.md#authauthorize) | **GET** /auth/authorize | OAuth2 authorization endpoint
 [*AuthApi*](doc/AuthApi.md) | [**authEmailForgotPassword**](doc/AuthApi.md#authemailforgotpassword) | **POST** /auth/email/forgot-password | Request a password-reset email
 [*AuthApi*](doc/AuthApi.md) | [**authEmailLogin**](doc/AuthApi.md#authemaillogin) | **POST** /auth/email/login | Sign in with email and password
+[*AuthApi*](doc/AuthApi.md) | [**authEmailProviderLogin**](doc/AuthApi.md#authemailproviderlogin) | **POST** /auth/email | Sign in with a verified provider-managed email identity
 [*AuthApi*](doc/AuthApi.md) | [**authEmailRegister**](doc/AuthApi.md#authemailregister) | **POST** /auth/email/register | Register an email/password account
 [*AuthApi*](doc/AuthApi.md) | [**authEmailResend**](doc/AuthApi.md#authemailresend) | **POST** /auth/email/resend | Resend email verification
 [*AuthApi*](doc/AuthApi.md) | [**authEmailResetPassword**](doc/AuthApi.md#authemailresetpassword) | **POST** /auth/email/reset-password | Complete a password reset
@@ -301,6 +302,7 @@ Class | Method | HTTP request | Description
  - [EmailLoginResponse](doc/EmailLoginResponse.md)
  - [EmailPasswordRequest](doc/EmailPasswordRequest.md)
  - [EmailPasswordResetRequest](doc/EmailPasswordResetRequest.md)
+ - [EmailProviderLoginRequest](doc/EmailProviderLoginRequest.md)
  - [EmailTokenRequest](doc/EmailTokenRequest.md)
  - [Error](doc/Error.md)
  - [ErrorResponse](doc/ErrorResponse.md)

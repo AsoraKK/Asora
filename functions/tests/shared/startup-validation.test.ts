@@ -38,6 +38,7 @@ describe('startup-validation', () => {
     delete process.env.FCM_PROJECT_ID;
     delete process.env.FCM_CLIENT_EMAIL;
     delete process.env.FCM_PRIVATE_KEY;
+    delete process.env.GOOGLE_IDENTITY_PLATFORM_API_KEY;
 
     const errorSpy = jest.spyOn(console, 'error').mockImplementation();
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
@@ -69,6 +70,7 @@ describe('startup-validation', () => {
     process.env.FCM_PROJECT_ID = 'test';
     process.env.FCM_CLIENT_EMAIL = 'test';
     process.env.FCM_PRIVATE_KEY = 'test';
+    process.env.GOOGLE_IDENTITY_PLATFORM_API_KEY = 'test';
     // Clear optional vars
     delete process.env.APPLICATIONINSIGHTS_CONNECTION_STRING;
     delete process.env.COSMOS_DATABASE_NAME;
@@ -111,6 +113,7 @@ describe('startup-validation', () => {
     process.env.FCM_PROJECT_ID = 'test';
     process.env.FCM_CLIENT_EMAIL = 'test';
     process.env.FCM_PRIVATE_KEY = 'test';
+    process.env.GOOGLE_IDENTITY_PLATFORM_API_KEY = 'test';
     process.env.APPLICATIONINSIGHTS_CONNECTION_STRING = 'test';
     process.env.COSMOS_DATABASE_NAME = 'test';
     process.env.CORS_ALLOWED_ORIGINS = 'test';

@@ -112,13 +112,13 @@ const adminApiUrl = normalizeOrigin(
   requirePublicHttpsOrigin('ADMIN_API_URL', process.env.ADMIN_API_URL),
 );
 
-const smokeToken = (process.env.BETA_SMOKE_TOKEN || process.env.MVP_SMOKE_TOKEN || '').trim();
+const smokeToken = (process.env.LYTHAUS_RUNTIME_ACCESS_TOKEN || '').trim();
 const accessClientId = (process.env.CF_ACCESS_CLIENT_ID || process.env.CF_Access_Client_Id || '').trim();
 const accessClientSecret = (process.env.CF_ACCESS_CLIENT_SECRET || process.env.CF_Access_Client_Secret || '').trim();
 const reportPath = (process.env.BETA_SMOKE_REPORT_PATH || '').trim();
 
 if (!smokeToken) {
-  throw new Error('BETA_SMOKE_TOKEN or MVP_SMOKE_TOKEN is required for authenticated API smoke checks');
+  throw new Error('LYTHAUS_RUNTIME_ACCESS_TOKEN is required for authenticated API smoke checks');
 }
 
 if (!accessClientId || !accessClientSecret) {

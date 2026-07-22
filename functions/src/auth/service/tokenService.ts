@@ -24,7 +24,7 @@ import {
 } from './authAuditService';
 import { getClientIp } from '@rate-limit/keys';
 import { exchangeAndVerifyGoogleCode } from './googleOAuthService';
-import { ProviderAccountLinkRequiredError, usersService } from './usersService';
+import { ProviderAccountLinkRequiredError, usersService, type PGUser } from './usersService';
 
 const logger = getAzureLogger('auth/token');
 
@@ -172,6 +172,28 @@ export async function issueTokenPairForUser(
       lastLoginAt,
     },
   };
+}
+
+export async function issueTokensForPgUser(
+  user: PGUser,
+  clientId: string,
+  requestId: string
+): Promise<IssuedTokenPair> {
+  const tokens = await issueTokenPairForUser(
+    {
+      id: user.id,
+      email: user.primary_email,
+      roles: user.roles,
+      tier: user.tier,
+      reputationScore: user.reputation_score,
+      createdAt: user.created_at,
+      lastLoginAt: user.updated_at,
+    },
+    clientId
+  );
+  logAuthAttempt(logger, true, user.id, 'Email token issuance successful', requestId);
+  auditTokenExchange(user.id, requestId).catch(() => {});
+  return tokens;
 }
 
 
