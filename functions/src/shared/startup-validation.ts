@@ -25,7 +25,6 @@ const REQUIRED_ENV_VARS: EnvVar[] = [
   { name: 'FCM_PROJECT_ID', required: true, description: 'Firebase project id' },
   { name: 'FCM_CLIENT_EMAIL', required: true, description: 'Firebase service account email' },
   { name: 'FCM_PRIVATE_KEY', required: true, description: 'Firebase service account private key' },
-  { name: 'GOOGLE_IDENTITY_PLATFORM_API_KEY', required: true, description: 'Identity Platform password sign-in API key' },
 ];
 
 const OPTIONAL_ENV_VARS: EnvVar[] = [
@@ -52,6 +51,7 @@ const OPTIONAL_ENV_VARS: EnvVar[] = [
   { name: 'AUTH_EMAIL_CLIENT_ID', required: false, description: 'Email authentication OAuth client audience' },
   { name: 'GOOGLE_OAUTH_CLIENT_ID', required: false, description: 'Public Google Web OAuth client ID' },
   { name: 'GOOGLE_OAUTH_CLIENT_SECRET_WEB', required: false, description: 'Google Web OAuth client secret' },
+  { name: 'GOOGLE_IDENTITY_PLATFORM_API_KEY', required: false, description: 'Legacy Identity Platform password sign-in compatibility key' },
 ];
 
 function isMvpEnvironment(): boolean {

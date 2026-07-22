@@ -470,7 +470,6 @@ jobs:
               "AUDIT_HMAC_KEY=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/audit-hmac-key/)" \
               "INVITE_CODE_PEPPER=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/invite-code-pepper/)" \
               "HIVE_API_KEY=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/HIVE-AI-KEY/)" \
-              "GOOGLE_IDENTITY_PLATFORM_API_KEY=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/google-identity-platform-api-key/)" \
               "CF_ACCESS_CLIENT_SECRET=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/cf-access-client-secret/)" \
               "EMAIL_TOKEN_HMAC_SECRET=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/email-token-hmac-secret/)" \
               "GOOGLE_OAUTH_CLIENT_SECRET_WEB=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/google-oauth-client-secret-web/)" \
@@ -489,7 +488,11 @@ jobs:
 
           SUBSCRIPTION_ID=$(az account show --query id -o tsv)
           REFERENCES_URI="https://management.azure.com/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG_CLEAN}/providers/Microsoft.Web/sites/${FUNC_APP_CLEAN}/config/configreferences/appsettings?api-version=2024-11-01"
-          REQUIRED_REFERENCES=(AUDIT_HMAC_KEY INVITE_CODE_PEPPER HIVE_API_KEY GOOGLE_IDENTITY_PLATFORM_API_KEY CF_ACCESS_CLIENT_SECRET EMAIL_TOKEN_HMAC_SECRET GOOGLE_OAUTH_CLIENT_SECRET_WEB)
+          az functionapp config appsettings delete -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
+            --setting-names GOOGLE_IDENTITY_PLATFORM_API_KEY \
+            --output none
+
+          REQUIRED_REFERENCES=(AUDIT_HMAC_KEY INVITE_CODE_PEPPER HIVE_API_KEY CF_ACCESS_CLIENT_SECRET EMAIL_TOKEN_HMAC_SECRET GOOGLE_OAUTH_CLIENT_SECRET_WEB)
           for attempt in $(seq 1 12); do
             REFERENCES_JSON=$(az rest --method get --uri "$REFERENCES_URI")
             unresolved=false
@@ -569,7 +572,6 @@ jobs:
             JWT_SECRET
             INVITE_CODE_PEPPER
             HIVE_API_KEY
-            GOOGLE_IDENTITY_PLATFORM_API_KEY
             COSMOS_CONNECTION_STRING
             POSTGRES_CONNECTION_STRING
             AUDIT_HMAC_KEY
