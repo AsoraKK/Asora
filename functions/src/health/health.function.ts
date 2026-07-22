@@ -110,7 +110,7 @@ async function healthCheck(
 
 // Register HTTP trigger
 app.http('health', {
-  methods: ['GET'],
+  methods: ['GET', 'HEAD'],
   authLevel: 'anonymous',
   route: 'health',
   handler: healthCheck

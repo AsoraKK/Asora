@@ -1,4 +1,7 @@
-import { validateStartupEnvironment, validateEasyAuthPresence } from '../../src/shared/startup-validation';
+import {
+  validateStartupEnvironment,
+  validateEasyAuthPresence,
+} from '../../src/shared/startup-validation';
 import { trackException } from '../../src/shared/appInsights';
 
 jest.mock('../../src/shared/appInsights', () => ({
@@ -43,12 +46,8 @@ describe('startup-validation', () => {
 
     validateStartupEnvironment();
 
-    expect(errorSpy).toHaveBeenCalledWith(
-      expect.stringContaining('[STARTUP] CRITICAL')
-    );
-    expect(errorSpy).toHaveBeenCalledWith(
-      expect.stringContaining('COSMOS_CONNECTION_STRING')
-    );
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('[STARTUP] CRITICAL'));
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('COSMOS_CONNECTION_STRING'));
     expect(logSpy).toHaveBeenCalledWith('[STARTUP] Environment validation complete');
 
     errorSpy.mockRestore();
@@ -127,6 +126,17 @@ describe('startup-validation', () => {
     process.env.ORIGIN_OPERATIONAL_TOKEN = 'test-operational-token';
     process.env.ORIGIN_GATEWAY_DUAL_UNTIL = '2099-01-01T00:00:00Z';
     process.env.ORIGIN_GATEWAY_LEGACY_ALLOWLIST = '[]';
+    process.env.APP_ORIGIN = 'https://app.lythaus.co';
+    process.env.AUTH_EMAIL_PREVIEW_ORIGIN = 'https://e46064a9.lythaus-web.pages.dev';
+    process.env.ACS_EMAIL_ENDPOINT = 'https://test.europe.communication.azure.com/';
+    process.env.AUTH_EMAIL_FROM_ADDRESS = 'no-reply@mail.lythaus.co';
+    process.env.AUTH_EMAIL_FROM_NAME = 'Lythaus';
+    process.env.EMAIL_VERIFICATION_TTL_MINUTES = '120';
+    process.env.EMAIL_TOKEN_HMAC_SECRET = 'test-email-token-hmac-secret-0123456789';
+    process.env.EMAIL_TOKEN_HMAC_KEY_ID = 'email-2026-07';
+    process.env.AUTH_EMAIL_CLIENT_ID = 'asora-mobile-app';
+    process.env.GOOGLE_OAUTH_CLIENT_ID = 'test-client.apps.googleusercontent.com';
+    process.env.GOOGLE_OAUTH_CLIENT_SECRET_WEB = 'test-google-web-client-secret';
 
     const errorSpy = jest.spyOn(console, 'error').mockImplementation();
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
@@ -221,9 +231,7 @@ describe('validateEasyAuthPresence', () => {
     const errorSpy = jest.spyOn(console, 'error').mockImplementation();
     validateEasyAuthPresence();
 
-    expect(errorSpy).toHaveBeenCalledWith(
-      expect.stringContaining('WEBSITE_AUTH_ENABLED')
-    );
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('WEBSITE_AUTH_ENABLED'));
     expect(mockTrackException).toHaveBeenCalledWith(
       expect.any(Error),
       expect.objectContaining({
@@ -241,9 +249,7 @@ describe('validateEasyAuthPresence', () => {
     const errorSpy = jest.spyOn(console, 'error').mockImplementation();
     validateEasyAuthPresence();
 
-    expect(errorSpy).toHaveBeenCalledWith(
-      expect.stringContaining('WEBSITE_AUTH_ENABLED')
-    );
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('WEBSITE_AUTH_ENABLED'));
     errorSpy.mockRestore();
   });
 
@@ -255,9 +261,7 @@ describe('validateEasyAuthPresence', () => {
     const errorSpy = jest.spyOn(console, 'error').mockImplementation();
     validateEasyAuthPresence();
 
-    expect(errorSpy).toHaveBeenCalledWith(
-      expect.stringContaining('WEBSITE_AUTH_ENABLED')
-    );
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('WEBSITE_AUTH_ENABLED'));
     errorSpy.mockRestore();
   });
 

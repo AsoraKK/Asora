@@ -17,6 +17,8 @@ test('canonical deployment obtains fresh runtime tokens without static access-to
 });
 
 test('runtime authentication masks tokens and revokes sessions without writing token artifacts', () => {
+  assert.match(runner, /\$\{apiBase\}\/auth\/email\/login/);
+  assert.doesNotMatch(runner, /\$\{apiBase\}\/auth\/email`/);
   assert.match(runner, /::add-mask::\$\{accessToken\}/);
   assert.match(runner, /::add-mask::\$\{refreshToken\}/);
   assert.match(runner, /auth\/sessions\/revoke/);

@@ -52,22 +52,20 @@ export const users_get_by_id = httpHandler<void, PublicUserProfile>(async (ctx) 
       throw cosmosError;
     }
 
-    if (!cosmosProfile) {
-      return ctx.notFound('User profile not found', 'PROFILE_NOT_FOUND');
-    }
-
-    // Build public profile (filter sensitive fields)
+    // Build a public profile without exposing identity-provider claims. A
+    // newly authenticated user may not have created their editable Cosmos
+    // profile yet, but their canonical PostgreSQL user remains valid.
     const publicProfile: PublicUserProfile = {
       id: pgUser.id,
-      displayName: cosmosProfile.displayName,
-      username: cosmosProfile.username,
-      bio: cosmosProfile.bio,
-      avatarUrl: cosmosProfile.avatarUrl,
+      displayName: cosmosProfile?.displayName ?? 'Lythaus member',
+      username: cosmosProfile?.username,
+      bio: cosmosProfile?.bio,
+      avatarUrl: cosmosProfile?.avatarUrl,
       tier: pgUser.tier,
       reputation: pgUser.reputation_score,
       badges: [], // TODO: Fetch from badges service if available
       trustPassportVisibility: resolveTrustPassportVisibility(
-        cosmosProfile.settings
+        cosmosProfile?.settings
       ),
     };
 

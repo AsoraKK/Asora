@@ -9,6 +9,32 @@ on:
       - 'workers/feed-cache/**'
       - '.github/workflows/deploy-feed-cache-worker.yml'
   workflow_dispatch:
+    inputs:
+      deployment_target:
+        description: Explicit Worker deployment target
+        required: true
+        default: feed-cache
+        type: choice
+        options:
+          - feed-cache
+          - lythaus-gateway-preview
+          - flutter-auth-preview
+      release_sha:
+        description: Exact validated SHA for the gateway preview
+        required: false
+        type: string
+      ci_run_id:
+        description: Successful exact-SHA CI run for the gateway preview
+        required: false
+        type: string
+      cors_allowed_origin:
+        description: Exact HTTPS browser origin for the gateway preview
+        required: false
+        type: string
+      api_preview_base_url:
+        description: Exact Worker /api URL for the Flutter preview
+        required: false
+        type: string
 
 concurrency:
   group: deploy-feed-cache-worker
@@ -16,6 +42,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: ${{ github.event_name == 'push' || inputs.deployment_target == 'feed-cache' }}
     name: Deploy and smoke test
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -52,3 +79,21 @@ jobs:
 
           echo "Feed discover did not return HTTP 200 after deployment"
           exit 1
+
+  deploy-lythaus-gateway-preview:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.deployment_target == 'lythaus-gateway-preview' }}
+    uses: ./.github/workflows/deploy-lythaus-gateway-preview.yml
+    with:
+      release_sha: ${{ inputs.release_sha }}
+      ci_run_id: ${{ inputs.ci_run_id }}
+      cors_allowed_origin: ${{ inputs.cors_allowed_origin }}
+    secrets: inherit
+
+  deploy-flutter-auth-preview:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.deployment_target == 'flutter-auth-preview' }}
+    uses: ./.github/workflows/deploy-flutter-auth-preview.yml
+    with:
+      release_sha: ${{ inputs.release_sha }}
+      ci_run_id: ${{ inputs.ci_run_id }}
+      api_preview_base_url: ${{ inputs.api_preview_base_url }}
+    secrets: inherit

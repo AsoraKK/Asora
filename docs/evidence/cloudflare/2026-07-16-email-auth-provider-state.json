@@ -1,0 +1,58 @@
+{
+  "date": "2026-07-16",
+  "result": "PROVIDER_READY_LIVE_EMAIL_LIFECYCLE_NO_GO",
+  "azure": {
+    "communicationProviderRegistered": true,
+    "dataLocation": "Europe",
+    "emailService": {
+      "name": "lythaus-mvp-email",
+      "provisioningState": "Succeeded"
+    },
+    "domain": {
+      "name": "mail.lythaus.co",
+      "management": "CustomerManaged",
+      "provisioningState": "Succeeded",
+      "domainVerified": true,
+      "spfVerified": true,
+      "dkimVerified": true,
+      "dkim2Verified": true,
+      "dmarcStatus": "NotStarted"
+    },
+    "communicationService": {
+      "name": "lythaus-mvp-communication",
+      "provisioningState": "Succeeded",
+      "localAuthDisabled": true,
+      "linkedDomainCount": 1,
+      "approvedSender": "no-reply",
+      "approvedDisplayName": "Lythaus"
+    },
+    "functionManagedIdentityPresent": true,
+    "functionAcsRoleScoped": true,
+    "functionAcsRole": "Communication and Email Service Owner",
+    "emailTokenHmacStorage": "KEY_VAULT_REFERENCE",
+    "databaseSchemaTables": 2,
+    "databaseCredentialRows": 0,
+    "databaseTokenRows": 0,
+    "providerAcceptanceTest": "Succeeded",
+    "mailboxDeliveryConfirmed": false,
+    "deliveryTelemetry": "Application attempted/accepted/failed events added; provider delivered/bounced/suppressed events not configured",
+    "costGuardrail": {
+      "name": "lythaus-acs-email-monthly",
+      "monthlyCriticalUsd": 25,
+      "warningUsd": 10,
+      "resourceFilterCount": 2,
+      "currentSpendUsd": 0
+    }
+  },
+  "github": {
+    "oidcRole": "Contributor",
+    "oidcCanCreateCommunicationResources": true,
+    "oidcCanAssignRoles": false,
+    "oidcCanWriteKeyVaultSecretData": false,
+    "cloudflareAuditSecretPresent": true,
+    "cloudflareAuditRepositoryVariablePresent": false,
+    "retiredAccessRepositoryVariablePresent": false
+  },
+  "publicDomainCutoverPerformed": false,
+  "secretsDisclosed": false
+}

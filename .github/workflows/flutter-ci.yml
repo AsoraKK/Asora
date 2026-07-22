@@ -77,6 +77,9 @@ jobs:
       run: flutter pub get
 
     - name: Build web release
+      env:
+        OAUTH2_CLIENT_ID: ${{ vars.GOOGLE_OAUTH_CLIENT_ID }}
+        OAUTH2_SCOPE: openid email profile
       run: |
         source cloudflare/pages-release.sh
         bash scripts/cf-pages-build.sh

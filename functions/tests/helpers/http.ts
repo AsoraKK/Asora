@@ -50,7 +50,7 @@ export function httpReqMock(init: MockRequestInit = {}): HttpRequest & { princip
     },
 
     async text() {
-      return JSON.stringify(init.body ?? {});
+      return typeof init.body === 'string' ? init.body : JSON.stringify(init.body ?? {});
     },
 
     bodyUsed: false,

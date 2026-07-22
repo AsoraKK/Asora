@@ -26,6 +26,20 @@ void main() {
       expect(dio.options.baseUrl, isNotEmpty);
     });
 
+    test('preserves the API path for relative application routes', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final dio = container.read(secureDioProvider);
+      final uri = RequestOptions(
+        baseUrl: dio.options.baseUrl,
+        path: 'users/me',
+      ).uri;
+
+      expect(dio.options.baseUrl, endsWith('/'));
+      expect(uri.path, endsWith('/api/users/me'));
+    });
+
     test('configures correct timeouts', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);

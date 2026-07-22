@@ -117,6 +117,23 @@ describe('authorizeService - parameter validation', () => {
     expect(response.headers?.Location).toBeUndefined();
   });
 
+  it('does not redirect to an unregistered redirect_uri', async () => {
+    const req = httpReqMock({
+      query: {
+        client_id: 'test-client',
+        response_type: 'code',
+        redirect_uri: 'https://denied.invalid/auth/callback',
+        state: 'xyz',
+        code_challenge: VALID_CODE_CHALLENGE,
+        code_challenge_method: 'S256',
+      },
+    });
+
+    const response = await authorizeHandler(req, contextStub);
+    expect(response.status).toBe(400);
+    expect(response.headers?.Location).toBeUndefined();
+  });
+
   it('returns error for missing code_challenge in PKCE flow', async () => {
     const req = httpReqMock({
       query: {

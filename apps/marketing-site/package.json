@@ -10,5 +10,8 @@
   },
   "dependencies": {
     "astro": "6.4.8"
+  },
+  "overrides": {
+    "sharp": "0.35.0"
   }
 }

@@ -102,6 +102,10 @@ describe('Admin Config Routes', () => {
 
       const response = await adminConfigHandler(req as any, contextStub);
       expect(response.status).toBe(200);
+      expect(requireCloudflareAccessMock).toHaveBeenCalledWith(
+        req.headers,
+        expect.objectContaining({ requireOwner: true, allowOperationsReader: true })
+      );
     });
 
     it('returns 405 for unsupported methods', async () => {

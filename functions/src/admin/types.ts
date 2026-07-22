@@ -90,12 +90,15 @@ export interface AdminAuditResponse {
  */
 export interface CloudflareAccessClaims {
   aud: string[];
-  email: string;
+  email?: string;
   exp: number;
   iat: number;
   iss: string;
-  sub: string;
+  sub?: string;
   type: string;
+  common_name?: string;
+  service_token_id?: string;
+  service_token_status?: boolean;
   identity_nonce?: string;
   custom?: Record<string, unknown>;
 }

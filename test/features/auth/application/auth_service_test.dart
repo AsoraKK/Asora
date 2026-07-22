@@ -262,11 +262,16 @@ void main() {
       test('should login successfully with valid credentials', () async {
         // Arrange
         final responseBody = {
-          'success': true,
-          'data': {'access_token': testToken, 'user': testUser.toJson()},
+          'access_token': testToken,
+          'refresh_token': 'refresh-token',
+          'expires_in': 900,
+          'user': testUser.toJson(),
         };
 
-        mockHttpClient.setResponse('$testAuthUrl/email', responseBody);
+        mockHttpClient.setResponse(
+          '$testAuthUrl/auth/email/login',
+          responseBody,
+        );
 
         // Act
         final result = await authService.loginWithEmail(
@@ -281,9 +286,13 @@ void main() {
 
         // Check that data was stored
         final storedToken = await mockSecureStorage.read(key: 'jwt');
+        final storedRefreshToken = await mockSecureStorage.read(
+          key: 'refreshToken',
+        );
         final storedUserData = await mockSecureStorage.read(key: 'userData');
 
         expect(storedToken, testToken);
+        expect(storedRefreshToken, 'refresh-token');
         expect(storedUserData, isNotNull);
         expect(jsonDecode(storedUserData!), testUser.toJson());
       });
@@ -314,7 +323,7 @@ void main() {
         'should throw AuthFailure.invalidCredentials for 401 response',
         () async {
           // Arrange
-          mockHttpClient.setResponse('$testAuthUrl/email', {
+          mockHttpClient.setResponse('$testAuthUrl/auth/email/login', {
             'error': 'Invalid email or password',
           }, statusCode: 401);
 
@@ -328,7 +337,7 @@ void main() {
 
       test('should throw AuthFailure.serverError for 500 response', () async {
         // Arrange
-        mockHttpClient.setResponse('$testAuthUrl/email', {
+        mockHttpClient.setResponse('$testAuthUrl/auth/email/login', {
           'error': 'Internal Server Error',
         }, statusCode: 500);
 
@@ -344,11 +353,14 @@ void main() {
         () async {
           // Arrange
           final responseBody = {
-            'success': true,
-            'data': {'user': testUser.toJson()},
+            'user': testUser.toJson(),
+            // Missing token
           };
 
-          mockHttpClient.setResponse('$testAuthUrl/email', responseBody);
+          mockHttpClient.setResponse(
+            '$testAuthUrl/auth/email/login',
+            responseBody,
+          );
 
           // Act & Assert
           expect(
@@ -363,11 +375,15 @@ void main() {
         () async {
           // Arrange
           final responseBody = {
-            'success': true,
-            'data': {'access_token': testToken},
+            'access_token': testToken,
+            'refresh_token': 'refresh-token',
+            // Missing user key
           };
 
-          mockHttpClient.setResponse('$testAuthUrl/email', responseBody);
+          mockHttpClient.setResponse(
+            '$testAuthUrl/auth/email/login',
+            responseBody,
+          );
 
           // Act & Assert
           expect(
@@ -381,7 +397,7 @@ void main() {
         'should throw AuthFailure.serverError for non-200 status code',
         () async {
           // Arrange
-          mockHttpClient.setResponse('$testAuthUrl/email', {
+          mockHttpClient.setResponse('$testAuthUrl/auth/email/login', {
             'error': 'Not found',
           }, statusCode: 404);
 
@@ -396,7 +412,7 @@ void main() {
       test('should throw AuthFailure.serverError for network error', () async {
         // Arrange
         mockHttpClient.setException(
-          '$testAuthUrl/email',
+          '$testAuthUrl/auth/email/login',
           Exception('Network error'),
         );
 

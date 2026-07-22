@@ -14,6 +14,7 @@
  */
 
 import { createRemoteJWKSet, jwtVerify, JWTPayload, errors as joseErrors } from 'jose';
+import { createHash, timingSafeEqual } from 'crypto';
 import type { CloudflareAccessClaims } from './types';
 
 /**
@@ -33,7 +34,14 @@ interface CloudflareAccessConfig {
 export interface VerifyOptions {
   /** Require email to match CF_ACCESS_OWNER_EMAIL (for owner-only endpoints) */
   requireOwner?: boolean;
+  /**
+   * Permit only the explicitly configured Access service token to act as the
+   * read-only daily-operations service identity.
+   */
+  allowOperationsReader?: boolean;
 }
+
+export type AccessBackendRole = 'human' | 'operations_reader';
 
 /**
  * Get Cloudflare Access configuration from environment
@@ -144,6 +152,7 @@ export function clearJWKSCache(): void {
 export interface AccessAuthResult {
   authenticated: true;
   actor: string;  // Email or sub claim for audit logging
+  role: AccessBackendRole;
   claims: CloudflareAccessClaims;
 }
 
@@ -154,6 +163,38 @@ export interface AccessAuthError {
 }
 
 export type AccessAuthOutcome = AccessAuthResult | AccessAuthError;
+
+function identifiersMatch(left: string, right: string): boolean {
+  const leftHash = createHash('sha256').update(left).digest();
+  const rightHash = createHash('sha256').update(right).digest();
+  return timingSafeEqual(leftHash, rightHash);
+}
+
+function isAccessServiceToken(claims: Partial<CloudflareAccessClaims>): boolean {
+  // Cloudflare service-token JWTs use an empty subject and the service client
+  // ID as common_name. service_token_status is available in some Access
+  // identity responses but is not guaranteed in the application JWT, so an
+  // explicit false value rejects while an omitted value remains compatible.
+  return (
+    claims.sub === '' &&
+    typeof claims.common_name === 'string' &&
+    claims.service_token_status !== false
+  );
+}
+
+function getOperationsReaderRole(claims: Partial<CloudflareAccessClaims>): AccessBackendRole | undefined {
+  const commonName = claims.common_name;
+  if (!isAccessServiceToken(claims) || typeof commonName !== 'string') {
+    return undefined;
+  }
+
+  const configuredClientId = process.env.CF_ACCESS_OPERATIONS_SERVICE_TOKEN_CLIENT_ID?.trim();
+  if (!configuredClientId || !identifiersMatch(commonName, configuredClientId)) {
+    return undefined;
+  }
+
+  return 'operations_reader';
+}
 
 /**
  * Verify Cloudflare Access JWT from request headers
@@ -235,18 +276,30 @@ export async function verifyCloudflareAccess(
 
     // Extract claims
     const claims = payload as JWTPayload & Partial<CloudflareAccessClaims>;
-    const actor = claims.email || claims.sub || 'unknown';
+    const role = getOperationsReaderRole(claims);
+    const actor = claims.email || claims.sub || claims.common_name || 'unknown';
+
+    if (isAccessServiceToken(claims) && options.allowOperationsReader && !role) {
+      return {
+        authenticated: false,
+        error: 'Access service identity is not approved for operations reads',
+        code: 'FORBIDDEN',
+      };
+    }
 
     // Owner email enforcement
     if (options.requireOwner && config.ownerEmail) {
-      if (!claims.email) {
+      if (!claims.email && role !== 'operations_reader') {
         return {
           authenticated: false,
           error: 'Token missing email claim',
           code: 'FORBIDDEN',
         };
       }
-      if (claims.email.toLowerCase() !== config.ownerEmail.toLowerCase()) {
+      if (
+        role !== 'operations_reader' &&
+        claims.email?.toLowerCase() !== config.ownerEmail.toLowerCase()
+      ) {
         // Log safely - only indicate mismatch, not actual values
         console.warn('[accessAuth] Owner email mismatch - access denied');
         return {
@@ -260,6 +313,7 @@ export async function verifyCloudflareAccess(
     return {
       authenticated: true,
       actor,
+      role: role ?? 'human',
       claims: claims as CloudflareAccessClaims,
     };
   } catch (err) {
@@ -323,7 +377,7 @@ export async function verifyCloudflareAccess(
 export async function requireCloudflareAccess(
   headers: { get(name: string): string | null },
   options: VerifyOptions = {}
-): Promise<{ status: number; error: string; code: string } | { actor: string; claims: CloudflareAccessClaims }> {
+): Promise<{ status: number; error: string; code: string } | { actor: string; role: AccessBackendRole; claims: CloudflareAccessClaims }> {
   const result = await verifyCloudflareAccess(headers, options);
 
   if (!result.authenticated) {
@@ -341,7 +395,7 @@ export async function requireCloudflareAccess(
     return { status, error: result.error, code: result.code };
   }
 
-  return { actor: result.actor, claims: result.claims };
+  return { actor: result.actor, role: result.role, claims: result.claims };
 }
 
 /**

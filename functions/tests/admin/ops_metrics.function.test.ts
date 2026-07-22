@@ -1,5 +1,5 @@
 import { InvocationContext } from '@azure/functions';
-import { getOpsMetrics } from '../../src/admin/routes/ops_metrics.function';
+import { getOpsMetrics, opsMetricsRouteHandler } from '../../src/admin/routes/ops_metrics.function';
 import { buildOpsMetrics } from '../../src/admin/service/opsMetricsService';
 import { httpReqMock } from '../helpers/http';
 import { configService } from '../../shared/configService';
@@ -8,6 +8,10 @@ import { getNotificationsDegradationStatus } from '../../src/notifications/share
 
 jest.mock('../../src/admin/adminAuthUtils', () => ({
   requireActiveModerator: jest.fn((handler) => handler),
+}));
+
+jest.mock('../../src/admin/accessAuth', () => ({
+  requireCloudflareAccess: jest.fn(),
 }));
 
 jest.mock('@shared/clients/cosmos', () => ({
@@ -41,6 +45,9 @@ jest.mock('@alpha/alphaConfig', () => ({
 const { getTargetDatabase, getCosmosDatabase } = jest.requireMock('@shared/clients/cosmos') as {
   getTargetDatabase: jest.Mock;
   getCosmosDatabase: jest.Mock;
+};
+const { requireCloudflareAccess } = jest.requireMock('../../src/admin/accessAuth') as {
+  requireCloudflareAccess: jest.Mock;
 };
 
 let flagTrendRows: Array<{ createdAt: string }>;
@@ -78,6 +85,11 @@ describe('ops metrics routes/service', () => {
     failFlagTrend = false;
     failAppealTrend = false;
     lastAuditQueryText = '';
+    requireCloudflareAccess.mockResolvedValue({
+      actor: 'operations-reader',
+      role: 'operations_reader',
+      claims: {},
+    });
 
     const flagsQuery = makeContainerQuery(async (queryText) => {
       if (queryText.includes('COUNT(1)')) {
@@ -128,6 +140,29 @@ describe('ops metrics routes/service', () => {
 
   afterEach(() => {
     jest.useRealTimers();
+  });
+
+  it('allows only the mapped Access operations reader through the read-only route', async () => {
+    const response = await opsMetricsRouteHandler(httpReqMock({ method: 'GET' }) as any, contextStub);
+
+    expect(response.status).toBe(200);
+    expect(requireCloudflareAccess).toHaveBeenCalledWith(
+      expect.anything(),
+      { allowOperationsReader: true }
+    );
+  });
+
+  it('returns 403 when Access succeeds but no backend operations role is mapped', async () => {
+    requireCloudflareAccess.mockResolvedValue({
+      status: 403,
+      code: 'FORBIDDEN',
+      error: 'Access service identity is not approved for operations reads',
+    });
+
+    const response = await opsMetricsRouteHandler(httpReqMock({ method: 'GET' }) as any, contextStub);
+
+    expect(response.status).toBe(403);
+    expect(response.headers).toMatchObject({ 'Cache-Control': 'private, no-store' });
   });
 
   it('rejects invalid window on route handler', async () => {

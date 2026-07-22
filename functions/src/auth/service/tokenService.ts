@@ -23,7 +23,8 @@ import {
   auditTokenReuse,
 } from './authAuditService';
 import { getClientIp } from '@rate-limit/keys';
-import type { PGUser } from './usersService';
+import { exchangeAndVerifyGoogleCode } from './googleOAuthService';
+import { ProviderAccountLinkRequiredError, usersService, type PGUser } from './usersService';
 
 const logger = getAzureLogger('auth/token');
 
@@ -80,11 +81,18 @@ async function signJwtToken(
     .sign(getJwtSecretBytes());
 }
 
-export async function issueTokensForPgUser(
-  user: PGUser,
-  clientId: string,
-  requestId: string
-): Promise<{
+export interface TokenIssuanceUser {
+  id: string;
+  email: string;
+  roles?: string[];
+  role?: string;
+  tier?: string;
+  reputationScore?: number;
+  createdAt?: string;
+  lastLoginAt?: string;
+}
+
+export interface IssuedTokenPair {
   access_token: string;
   refresh_token: string;
   token_type: 'Bearer';
@@ -97,38 +105,55 @@ export async function issueTokensForPgUser(
     roles: string[];
     tier: string;
     reputationScore: number;
+    createdAt: string;
+    lastLoginAt: string;
   };
-}> {
+}
+
+/** Issue the canonical Lythaus access/refresh pair for a verified user. */
+export async function issueTokenPairForUser(
+  user: TokenIssuanceUser,
+  audience: string,
+  claims: { nonce?: string } = {}
+): Promise<IssuedTokenPair> {
   if (!isInternalUserId(user.id)) {
     throw new Error('User account identifier is not a valid internal UUIDv7');
   }
+  if (!audience.trim()) {
+    throw new Error('Token audience is required');
+  }
 
-  const roles = user.roles.filter((role) => typeof role === 'string' && role.trim().length > 0);
+  const roles = user.roles?.length ? user.roles : [user.role || 'user'];
   const role = roles[0] || 'user';
-  const tokenPayload: TokenPayload = {
-    sub: user.id,
-    email: user.primary_email,
-    role,
-    roles,
-    tier: user.tier,
-    reputation: user.reputation_score,
-    iss: JWT_ISSUER,
-    aud: clientId,
-    type: 'access',
-  };
+  const tier = user.tier || 'free';
+  const reputationScore = user.reputationScore ?? 0;
+  const issuedAt = new Date().toISOString();
+  const createdAt = user.createdAt || issuedAt;
+  const lastLoginAt = user.lastLoginAt || issuedAt;
+  const accessToken = await signJwtToken(
+    {
+      sub: user.id,
+      email: user.email,
+      role,
+      roles,
+      tier,
+      reputation: reputationScore,
+      iss: JWT_ISSUER,
+      aud: audience,
+      type: 'access',
+      ...(claims.nonce ? { nonce: claims.nonce } : {}),
+    },
+    ACCESS_TOKEN_EXPIRY
+  );
 
-  const accessToken = await signJwtToken(tokenPayload, ACCESS_TOKEN_EXPIRY);
   const refreshJti = crypto.randomUUID();
   const refreshExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
   const refreshToken = await signJwtToken(
-    { sub: user.id, iss: JWT_ISSUER, aud: clientId, type: 'refresh' },
+    { sub: user.id, iss: JWT_ISSUER, aud: audience, type: 'refresh' },
     REFRESH_TOKEN_EXPIRY,
     refreshJti
   );
-
   await storeRefreshToken(refreshJti, user.id, refreshExpiresAt);
-  logAuthAttempt(logger, true, user.id, 'Email token issuance successful', requestId);
-  auditTokenExchange(user.id, requestId).catch(() => {});
 
   return {
     access_token: accessToken,
@@ -138,13 +163,37 @@ export async function issueTokensForPgUser(
     scope: 'read write',
     user: {
       id: user.id,
-      email: user.primary_email,
+      email: user.email,
       role,
       roles,
-      tier: user.tier,
-      reputationScore: user.reputation_score,
+      tier,
+      reputationScore,
+      createdAt,
+      lastLoginAt,
     },
   };
+}
+
+export async function issueTokensForPgUser(
+  user: PGUser,
+  clientId: string,
+  requestId: string
+): Promise<IssuedTokenPair> {
+  const tokens = await issueTokenPairForUser(
+    {
+      id: user.id,
+      email: user.primary_email,
+      roles: user.roles,
+      tier: user.tier,
+      reputationScore: user.reputation_score,
+      createdAt: user.created_at,
+      lastLoginAt: user.updated_at,
+    },
+    clientId
+  );
+  logAuthAttempt(logger, true, user.id, 'Email token issuance successful', requestId);
+  auditTokenExchange(user.id, requestId).catch(() => {});
+  return tokens;
 }
 
 
@@ -175,7 +224,7 @@ export async function tokenHandler(
     });
 
     // Parse and validate request body
-    const body = (await req.json()) as TokenRequest;
+    const body = await parseTokenRequest(req);
     const validationResult = validateRequestSize(body);
 
     if (!validationResult.valid) {
@@ -233,19 +282,29 @@ export async function tokenHandler(
     }
 
     if (error instanceof InviteRequiredError) {
-      // OAuth2-compliant error payload for token endpoint
-      return {
-        status: 403,
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache, no-store',
-          Pragma: 'no-cache',
-        },
-        body: JSON.stringify({
-          error: error.code,
-          error_description: error.message,
-        }),
-      };
+      return oauthErrorResponse(403, error.code, error.message);
+    }
+
+    if (error instanceof ProviderAccountLinkRequiredError) {
+      auditTokenExchangeFailure(
+        'account_link_required',
+        context.invocationId,
+        getClientIp(req) || undefined
+      ).catch(() => {});
+      return oauthErrorResponse(
+        409,
+        'account_link_required',
+        'Sign in to the existing account before linking Google'
+      );
+    }
+
+    if (error instanceof InvalidGrantError) {
+      auditTokenExchangeFailure(
+        error.code,
+        context.invocationId,
+        getClientIp(req) || undefined
+      ).catch(() => {});
+      return oauthErrorResponse(400, error.code, 'Authorization could not be completed');
     }
 
     logger.error('Token exchange failed', {
@@ -269,7 +328,7 @@ export async function tokenHandler(
 async function handleAuthorizationCodeGrant(body: TokenRequest, requestId: string): Promise<any> {
   // Validate required parameters for authorization code grant
   if (!body.code || !body.redirect_uri || !body.code_verifier) {
-    throw new Error(
+    throw new InvalidGrantError(
       'Missing required parameters for authorization_code grant: code, redirect_uri, code_verifier'
     );
   }
@@ -280,40 +339,49 @@ async function handleAuthorizationCodeGrant(body: TokenRequest, requestId: strin
     redirectUri: body.redirect_uri,
   });
 
-  // Look up the authorization session
-  const sessionQuery = {
-    query:
-      'SELECT * FROM c WHERE c.authorizationCode = @code AND c.clientId = @clientId AND c.used != true',
-    parameters: [
-      { name: '@code', value: body.code },
-      { name: '@clientId', value: body.client_id },
-    ],
-  };
+  // Google returns its own authorization code, so the pending transaction is
+  // found by state. Legacy internal authorization codes remain supported for
+  // established non-web callers.
+  const sessionQuery = body.state
+    ? {
+        query: 'SELECT * FROM c WHERE c.state = @state AND c.clientId = @clientId AND c.used != true',
+        parameters: [
+          { name: '@state', value: body.state },
+          { name: '@clientId', value: body.client_id },
+        ],
+      }
+    : {
+        query: 'SELECT * FROM c WHERE c.authorizationCode = @code AND c.clientId = @clientId AND c.used != true',
+        parameters: [
+          { name: '@code', value: body.code },
+          { name: '@clientId', value: body.client_id },
+        ],
+      };
 
   const { sessions } = ensureContainers();
   const { resources: sessionResults } = await sessions.items.query(sessionQuery).fetchAll();
 
   if (sessionResults.length === 0) {
-    throw new Error('Invalid authorization code or code already used');
+    throw new InvalidGrantError('Invalid authorization code or code already used');
   }
 
   const session: AuthSession = sessionResults[0];
 
   // Check if session has expired
   if (new Date(session.expiresAt) < new Date()) {
-    throw new Error('Authorization code has expired');
+    throw new InvalidGrantError('Authorization code has expired');
   }
 
   // Validate redirect URI matches
   if (session.redirectUri !== body.redirect_uri) {
-    throw new Error('Redirect URI mismatch');
+    throw new InvalidGrantError('Redirect URI mismatch');
   }
 
   // Enforce S256 PKCE method — reject any session that does not use it.
   // PLAIN is blocked at the authorize endpoint, but we defend-in-depth here
   // to guard against any tampered or legacy session document.
   if (session.codeChallengeMethod !== 'S256') {
-    throw new Error('Unsupported code_challenge_method: only S256 is accepted');
+    throw new InvalidGrantError('Unsupported code_challenge_method: only S256 is accepted');
   }
 
   // Validate PKCE code verifier (accept base64 or base64url, ignore padding)
@@ -324,7 +392,76 @@ async function handleAuthorizationCodeGrant(body: TokenRequest, requestId: strin
   const challengeNorm = normalize(session.codeChallenge || '');
   const match = normalize(b64url) === challengeNorm || normalize(b64) === challengeNorm;
   if (!match) {
-    throw new Error('Invalid PKCE code verifier');
+    throw new InvalidGrantError('Invalid PKCE code verifier');
+  }
+
+  if (session.provider === 'google') {
+    if (!body.state || body.state !== session.state) {
+      throw new InvalidGrantError('Invalid or missing state');
+    }
+    let identity;
+    try {
+      identity = await exchangeAndVerifyGoogleCode({
+        code: body.code,
+        codeVerifier: body.code_verifier,
+        clientId: body.client_id,
+        redirectUri: body.redirect_uri,
+        nonce: session.nonce,
+      });
+    } catch {
+      throw new InvalidGrantError('Google authorization could not be validated');
+    }
+    const [providerUser] = await usersService.getOrCreateUserByProvider(
+      'google',
+      identity.sub,
+      identity.email
+    );
+    if (!isInternalUserId(providerUser.id)) {
+      throw new Error('User account identifier is not a valid internal UUIDv7');
+    }
+
+    const { users } = ensureContainers();
+    const existing = await users.item(providerUser.id, providerUser.id).read();
+    if (existing.resource?.isActive === false) {
+      throw new Error('User account is inactive');
+    }
+    if (!existing.resource) {
+      const now = new Date().toISOString();
+      await users.items.upsert({
+        id: providerUser.id,
+        partitionKey: providerUser.id,
+        email: providerUser.primary_email,
+        role: providerUser.roles[0] || 'user',
+        tier: providerUser.tier || 'free',
+        reputationScore: Number(providerUser.reputation_score || 0),
+        createdAt: providerUser.created_at || now,
+        lastLoginAt: now,
+        isActive: true,
+        preferences: {
+          emailNotifications: true,
+          pushNotifications: true,
+          publicProfile: true,
+          allowDirectMessages: true,
+        },
+      });
+    }
+
+    await sessions.item(session.id, session.partitionKey).patch([
+      { op: 'add', path: '/used', value: true },
+      { op: 'add', path: '/usedAt', value: new Date().toISOString() },
+    ]);
+    return issueTokenPairForUser(
+      {
+        id: providerUser.id,
+        email: providerUser.primary_email,
+        roles: providerUser.roles,
+        tier: providerUser.tier,
+        reputationScore: Number(providerUser.reputation_score || 0),
+        createdAt: providerUser.created_at,
+      },
+      body.client_id,
+      { nonce: session.nonce }
+    );
   }
 
   // Mark session as used
@@ -403,6 +540,35 @@ async function handleAuthorizationCodeGrant(body: TokenRequest, requestId: strin
       reputationScore: user.reputationScore,
     },
   };
+}
+
+class InvalidGrantError extends Error {
+  code = 'invalid_grant' as const;
+}
+
+function oauthErrorResponse(
+  status: number,
+  error: string,
+  description: string
+): HttpResponseInit {
+  return {
+    status,
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache, no-store',
+      Pragma: 'no-cache',
+    },
+    body: JSON.stringify({ error, error_description: description }),
+  };
+}
+
+async function parseTokenRequest(req: HttpRequest): Promise<TokenRequest> {
+  const contentType = req.headers.get('content-type')?.toLowerCase() || '';
+  if (contentType.includes('application/x-www-form-urlencoded')) {
+    const params = new URLSearchParams(await req.text());
+    return Object.fromEntries(params.entries()) as unknown as TokenRequest;
+  }
+  return (await req.json()) as TokenRequest;
 }
 
 async function handleRefreshTokenGrant(body: TokenRequest, requestId: string): Promise<any> {

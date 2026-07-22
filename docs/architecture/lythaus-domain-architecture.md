@@ -43,6 +43,11 @@ tokens, Worker preview, legacy compatibility routes, Access policy, browser
 authentication, and rollback rehearsal are proven together.
 
 Cloudflare audit evidence is available under `docs/evidence/cloudflare/`, but
-the target custom domains remain unbound. A credential-type repository variable
-was found during configuration review; it must be rotated and removed before
-any provider-side rehearsal. The cutover remains `NO-GO`.
+the target public custom domains remain unbound. Credential-like repository
+variables have been removed while protected secret copies remain. The approved
+Europe ACS Email foundation is provisioned with local key authentication
+disabled. The customer-managed domain, SPF, DKIM, and DKIM2 are verified; the
+approved sender is linked and a provider acceptance test passed. Mailbox
+delivery confirmation and the full live email authentication lifecycle are
+still pending.
+The cutover remains `NO-GO`.

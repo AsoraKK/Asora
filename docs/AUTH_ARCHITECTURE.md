@@ -139,25 +139,29 @@ into the `roles` array used by route guards.
 
 ## Identity Providers
 
-The auth choice screen offers three social providers and guest access. The provider hints
-are compatibility metadata only:
+The MVP auth choice screen exposes Google, email/password, and guest access only.
+Apple and World ID remain deferred architecture hooks and fail closed when invoked:
 
 | Provider | IdP Hint | Status |
 |----------|----------|--------|
-| Google   | `Google` | Listed â€” compatibility hint consumed by the upstream trusted identity layer |
-| Apple    | `Apple`  | Listed â€” compatibility hint consumed by the upstream trusted identity layer |
-| World ID | `World`  | Listed â€” compatibility hint consumed by the upstream trusted identity layer |
-| Guest    | â€”        | Works (no authentication) |
+| Google | `Google` | Enabled for MVP through Authorization Code + PKCE |
+| Email/password | â€” | Enabled for MVP with verification, reset, refresh, logout, and revocation |
+| Apple | `Apple` | Deferred; hidden in UI and rejected as `provider_unavailable` |
+| World ID | `World` | Deferred; hidden in UI and rejected as `provider_unavailable` |
+| Guest | â€” | Enabled for public read-only use |
 
-**How IdP hints work**: The Flutter client passes `idp=Google` (etc.) as an additional
-query parameter to `/api/auth/authorize`. Currently the authorize endpoint does not
-process this parameter â€” it relies on an upstream authentication proxy (Cloudflare Access)
-to handle social login and inject user identity headers. IdPs will be functional once
-Cloudflare Access is enabled on the admin surface, and the auth server consumes trusted
-identity proof from upstream when it is present.
+The email MVP is deliberately limited to email plus password: registration,
+verification and resend, login, forgot/reset, access and refresh tokens, logout,
+and revocation. Magic links and email one-time codes are not active MVP flows.
+The user-facing choices are exactly `Continue with Google` and
+`Continue with email`.
 
-Compatibility note: the `idp=` hints are not the auth boundary. The active boundary is
-upstream trusted identity proof plus internal OAuth2/PKCE and internal JWT issuance.
+**How IdP hints work**: the Flutter client passes `idp=Google` to
+`/api/auth/authorize`. The backend MVP provider policy accepts Google and email only;
+Apple, World ID, and unknown hints receive a controlled unavailable response.
+
+The `idp=` hint is not an authentication boundary. The active boundary is verified
+upstream identity proof plus internal PKCE, nonce/state validation, and Lythaus JWT issuance.
 
 ## Admin Auth (Cloudflare Access)
 

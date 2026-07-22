@@ -32,7 +32,7 @@ COMMENT ON COLUMN users.reputation_score IS 'Rolling reputation metric; used for
 
 -- Provider links derive an OAuth/sub identity to the canonical user ID.
 CREATE TABLE IF NOT EXISTS provider_links (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+  id UUID PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   provider TEXT NOT NULL,
   provider_sub TEXT NOT NULL,
@@ -42,6 +42,18 @@ CREATE TABLE IF NOT EXISTS provider_links (
 CREATE UNIQUE INDEX IF NOT EXISTS ux_provider_links_provider_sub ON provider_links (provider, provider_sub);
 CREATE INDEX IF NOT EXISTS ix_provider_links_user_id ON provider_links (user_id);
 COMMENT ON TABLE provider_links IS 'Maps third-party issuers to canonical users for token exchange.';
+
+-- Refresh-session state stores only JWT IDs, never raw refresh tokens.
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+  jti UUID PRIMARY KEY,
+  user_uuid UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  expires_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS ix_refresh_tokens_user_uuid ON refresh_tokens (user_uuid);
+CREATE INDEX IF NOT EXISTS ix_refresh_tokens_expiry ON refresh_tokens (expires_at);
+COMMENT ON TABLE refresh_tokens IS 'Refresh-session JWT IDs for rotation, revocation, and reuse detection.';
 
 -- v2: Snapshots of reputation + tier over time; enables history and rollback analysis.
 CREATE TABLE IF NOT EXISTS reputation_snapshots (

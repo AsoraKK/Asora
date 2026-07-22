@@ -4,20 +4,24 @@
 
 class AuthFailure implements Exception {
   final String message;
-  const AuthFailure._(this.message);
+  final bool retryable;
+  const AuthFailure._(this.message, {this.retryable = false});
 
   factory AuthFailure.cancelledByUser() =>
       const AuthFailure._('Cancelled by user');
 
-  factory AuthFailure.serverError([String message = 'Server error']) =>
-      AuthFailure._(message);
+  factory AuthFailure.serverError([
+    String message = 'Server error',
+    bool retryable = false,
+  ]) =>
+      AuthFailure._(message, retryable: retryable);
 
   factory AuthFailure.invalidCredentials([
     String message = 'Invalid credentials',
   ]) => AuthFailure._(message);
 
   factory AuthFailure.networkError([String message = 'Network error']) =>
-      AuthFailure._(message);
+      AuthFailure._(message, retryable: true);
 
   factory AuthFailure.platformError([String message = 'Platform error']) =>
       AuthFailure._(message);

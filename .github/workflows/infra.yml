@@ -3,6 +3,14 @@ name: Reviewed Infrastructure Change
 on:
   workflow_dispatch:
     inputs:
+      operation:
+        description: 'Explicit infrastructure operation'
+        required: true
+        default: 'terraform_plan_apply'
+        type: choice
+        options:
+          - terraform_plan_apply
+          - acs_email_domain_verification
       apply:
         description: 'Apply the reviewed Terraform plan'
         required: true
@@ -10,6 +18,19 @@ on:
         type: boolean
       change_ticket:
         description: 'Approved infrastructure change identifier'
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      operation:
+        required: false
+        default: 'terraform_plan_apply'
+        type: string
+      apply:
+        required: false
+        default: false
+        type: boolean
+      change_ticket:
         required: true
         type: string
 
@@ -25,7 +46,23 @@ env:
   TF_WORKING_DIR: infra
 
 jobs:
+  validate-approval:
+    name: Validate reviewed infrastructure change
+    runs-on: ubuntu-latest
+    environment: infrastructure-change
+    steps:
+      - name: Validate approval metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "${{ inputs.change_ticket }}" =~ ^[A-Za-z0-9._/-]{3,80}$ ]]; then
+            echo '::error::A valid approved infrastructure change identifier is required.'
+            exit 1
+          fi
+
   terraform:
+    needs: validate-approval
+    if: ${{ inputs.operation == 'terraform_plan_apply' }}
     name: Plan reviewed shared-MVP infrastructure
     runs-on: ubuntu-latest
     environment: infrastructure-change
@@ -39,15 +76,6 @@ jobs:
       INFRASTRUCTURE_CHANGE_PATH: ${{ inputs.apply && 'approved' || 'plan-only' }}
     steps:
       - uses: actions/checkout@v5
-
-      - name: Validate approval metadata
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ ! "${{ inputs.change_ticket }}" =~ ^[A-Za-z0-9._/-]{3,80}$ ]]; then
-            echo '::error::A valid approved infrastructure change identifier is required.'
-            exit 1
-          fi
 
       - name: Azure login (OIDC)
         uses: azure/login@v3
@@ -85,3 +113,12 @@ jobs:
       - name: Terraform apply reviewed plan
         if: ${{ inputs.apply }}
         run: terraform -chdir="$TF_WORKING_DIR" apply -input=false tfplan
+
+  configure-acs-email-domain:
+    needs: validate-approval
+    if: ${{ inputs.operation == 'acs_email_domain_verification' && inputs.apply }}
+    name: Configure ACS email domain verification
+    uses: ./.github/workflows/configure-acs-email-domain.yml
+    with:
+      change_ticket: ${{ inputs.change_ticket }}
+    secrets: inherit

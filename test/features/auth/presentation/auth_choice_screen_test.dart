@@ -13,6 +13,7 @@ import 'package:asora/features/auth/application/auth_providers.dart';
 import 'package:asora/features/auth/application/oauth2_service.dart';
 import 'package:asora/features/auth/domain/user.dart';
 import 'package:asora/features/auth/presentation/auth_choice_screen.dart';
+import 'package:asora/features/auth/presentation/email_auth_screen.dart';
 
 class _FakeAnalyticsClient implements AnalyticsClient {
   final List<String> loggedEvents = [];
@@ -82,42 +83,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Welcome to Lythaus'), findsOneWidget);
-    expect(find.text('Continue as guest'), findsOneWidget);
-    expect(find.text('Sign in'), findsOneWidget);
-    expect(find.text('Create account'), findsOneWidget);
+    expect(find.text('Continue as guest'), findsNothing);
+    expect(find.text('Continue with Google'), findsOneWidget);
+    expect(find.text('Continue with email'), findsOneWidget);
+    expect(find.text('Apple'), findsNothing);
+    expect(find.text('World ID'), findsNothing);
     expect(find.text('Security Debug'), findsOneWidget);
-  });
-
-  testWidgets('continue as guest logs analytics and enables guest mode', (
-    tester,
-  ) async {
-    await tester.binding.setSurfaceSize(const Size(400, 800));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-
-    final analytics = _FakeAnalyticsClient();
-    final notifier = _MockAuthStateNotifier();
-    when(() => notifier.continueAsGuest()).thenAnswer((_) async {});
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          analyticsClientProvider.overrideWithValue(analytics),
-          authStateProvider.overrideWith((ref) => notifier),
-        ],
-        child: const MaterialApp(home: AuthChoiceScreen()),
-      ),
-    );
-
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Continue as guest'));
-    await tester.pump();
-
-    verify(() => notifier.continueAsGuest()).called(1);
-    expect(
-      analytics.loggedEvents,
-      contains(AnalyticsEvents.authChoiceSelected),
-    );
-    expect(analytics.loggedEvents, contains(AnalyticsEvents.authCompleted));
   });
 
   testWidgets('sign in logs analytics and triggers auth notifier', (
@@ -149,9 +120,7 @@ void main() {
     );
 
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Sign in'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Google'));
+    await tester.tap(find.text('Continue with Google'));
     await tester.pumpAndSettle();
 
     verify(() => notifier.signInWithProvider(OAuth2Provider.google)).called(1);
@@ -159,11 +128,9 @@ void main() {
       analytics.loggedEvents,
       contains(AnalyticsEvents.authChoiceSelected),
     );
-    expect(analytics.loggedEvents, contains(AnalyticsEvents.authStarted));
-    expect(analytics.loggedEvents, contains(AnalyticsEvents.authCompleted));
   });
 
-  testWidgets('cancelling provider picker does not start auth flow', (
+  testWidgets('email action opens the MVP email authentication screen', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(400, 800));
@@ -189,16 +156,11 @@ void main() {
     );
 
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Sign in'));
-    await tester.pumpAndSettle();
-    expect(find.text('Google'), findsOneWidget);
-    expect(find.text('Email'), findsOneWidget);
-    expect(find.text('Apple'), findsNothing);
-    expect(find.text('World ID'), findsNothing);
-
-    await tester.tapAt(const Offset(12, 12));
+    await tester.tap(find.text('Continue with email'));
     await tester.pumpAndSettle();
 
+    expect(find.byType(EmailAuthScreen), findsOneWidget);
+    expect(find.text('Sign in with email'), findsNWidgets(2));
     verifyNever(() => notifier.signInWithProvider(OAuth2Provider.google));
     expect(
       analytics.loggedEvents,
@@ -237,9 +199,6 @@ void main() {
     );
 
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Sign in'));
-    await tester.pumpAndSettle();
-
     expect(find.text('Apple'), findsNothing);
     expect(find.text('World ID'), findsNothing);
 

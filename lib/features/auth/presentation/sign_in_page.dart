@@ -51,7 +51,7 @@ class SignInPage extends ConsumerWidget {
 
               // Email sign-in button
               LythButton.primary(
-                label: 'Continue with Email',
+                label: 'Continue with email',
                 icon: Icons.email_outlined,
                 onPressed: authState.isLoading
                     ? null
@@ -127,7 +127,7 @@ class SignInPage extends ConsumerWidget {
                     const TextSpan(text: 'By continuing, you agree to our '),
                     TextSpan(
                       text: 'Terms of Service',
-                      style: TextStyle(
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         decoration: TextDecoration.underline,
                         color: scheme.primary,
                       ),
@@ -145,7 +145,7 @@ class SignInPage extends ConsumerWidget {
                     const TextSpan(text: ' and '),
                     TextSpan(
                       text: 'Privacy Policy',
-                      style: TextStyle(
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         decoration: TextDecoration.underline,
                         color: scheme.primary,
                       ),

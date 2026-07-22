@@ -20,7 +20,8 @@ import * as crypto from 'crypto';
 import { v7 as uuidv7 } from 'uuid';
 import { getCosmosClient } from '@shared/clients/cosmos';
 import { isRegisteredRedirectUri } from './redirectUriPolicy';
-import { isMvpAuthProviderEnabled } from './mvpProviderPolicy';
+import { classifyMvpAuthProvider, isMvpAuthProviderEnabled } from './mvpProviderPolicy';
+import { buildGoogleAuthorizationUrl, getConfiguredGoogleClientId } from './googleOAuthService';
 
 const logger = getAzureLogger('auth/authorize');
 
@@ -73,6 +74,15 @@ export async function authorizeHandler(
     // Validate the authorization request
     const validationError = validateAuthorizeRequest(authRequest);
     if (validationError) {
+      // OAuth errors may only be redirected to a previously registered URI.
+      // Reflecting an invalid redirect_uri would create an open redirect.
+      if (!isRegisteredRedirectUri(authRequest.redirect_uri)) {
+        return createErrorResponse(
+          400,
+          'Invalid authorization request',
+          'Invalid or unregistered redirect_uri parameter'
+        );
+      }
       return createAuthError(
         authRequest.redirect_uri,
         authRequest.state,
@@ -88,6 +98,61 @@ export async function authorizeHandler(
         'provider_unavailable',
         'Requested sign-in method is not available'
       );
+    }
+
+    const provider = classifyMvpAuthProvider(authRequest.idp);
+    if (provider === 'google') {
+      if (!authRequest.nonce) {
+        return createAuthError(
+          authRequest.redirect_uri,
+          authRequest.state,
+          'invalid_request',
+          'Nonce parameter is required'
+        );
+      }
+
+      const googleClientId = getConfiguredGoogleClientId();
+      if (authRequest.client_id !== googleClientId) {
+        return createAuthError(
+          authRequest.redirect_uri,
+          authRequest.state,
+          'invalid_request',
+          'Invalid client_id parameter'
+        );
+      }
+
+      const session = {
+        id: uuidv7(),
+        partitionKey: authRequest.client_id,
+        provider: 'google' as const,
+        state: authRequest.state,
+        nonce: authRequest.nonce,
+        codeChallenge: authRequest.code_challenge,
+        codeChallengeMethod: authRequest.code_challenge_method,
+        redirectUri: authRequest.redirect_uri,
+        clientId: authRequest.client_id,
+        scope: 'openid email profile',
+        createdAt: new Date().toISOString(),
+        expiresAt: new Date(Date.now() + AUTHORIZATION_CODE_TTL).toISOString(),
+        used: false,
+      };
+      const { sessions } = ensureContainers();
+      await sessions.items.create(session);
+      const googleUrl = buildGoogleAuthorizationUrl({
+        clientId: googleClientId,
+        redirectUri: session.redirectUri,
+        state: session.state,
+        nonce: session.nonce,
+        codeChallenge: session.codeChallenge,
+      });
+      return {
+        status: 302,
+        headers: {
+          Location: googleUrl.toString(),
+          'Cache-Control': 'no-cache, no-store',
+          Pragma: 'no-cache',
+        },
+      };
     }
 
     logger.info('Authorization request validated', {
@@ -191,7 +256,11 @@ export async function authorizeHandler(
 
     // Try to return error to redirect URI if possible
     const queryParams = Object.fromEntries(req.query.entries());
-    if (queryParams.redirect_uri && queryParams.state) {
+    if (
+      queryParams.redirect_uri &&
+      queryParams.state &&
+      isRegisteredRedirectUri(queryParams.redirect_uri)
+    ) {
       return createAuthError(
         queryParams.redirect_uri,
         queryParams.state,

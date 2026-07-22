@@ -15,7 +15,7 @@ class _MockDio extends Mock implements Dio {}
 
 void main() {
   setUpAll(() {
-    registerFallbackValue(RequestOptions(path: '/api/users/me'));
+    registerFallbackValue(RequestOptions(path: 'users/me'));
     registerFallbackValue(Options());
   });
 
@@ -59,7 +59,7 @@ void main() {
     final dio = _MockDio();
     when(
       () => dio.patch<Map<String, dynamic>>(
-        '/api/users/me',
+        'users/me',
         data: any(named: 'data'),
         options: any(named: 'options'),
       ),
@@ -67,7 +67,7 @@ void main() {
       (_) async => Response<Map<String, dynamic>>(
         data: const {},
         statusCode: 200,
-        requestOptions: RequestOptions(path: '/api/users/me'),
+        requestOptions: RequestOptions(path: 'users/me'),
       ),
     );
 
@@ -106,7 +106,7 @@ void main() {
 
     verify(
       () => dio.patch<Map<String, dynamic>>(
-        '/api/users/me',
+        'users/me',
         data: {'trustPassportVisibility': 'private'},
         options: any(named: 'options'),
       ),
@@ -124,17 +124,17 @@ void main() {
     final dio = _MockDio();
     when(
       () => dio.patch<Map<String, dynamic>>(
-        '/api/users/me',
+        'users/me',
         data: any(named: 'data'),
         options: any(named: 'options'),
       ),
     ).thenThrow(
       DioException(
-        requestOptions: RequestOptions(path: '/api/users/me'),
+        requestOptions: RequestOptions(path: 'users/me'),
         response: Response<Map<String, dynamic>>(
           data: const {'error': 'rate_limited', 'retry_after_seconds': 30},
           statusCode: 429,
-          requestOptions: RequestOptions(path: '/api/users/me'),
+          requestOptions: RequestOptions(path: 'users/me'),
         ),
         type: DioExceptionType.badResponse,
       ),

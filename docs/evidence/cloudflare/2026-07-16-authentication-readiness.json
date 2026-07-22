@@ -3,72 +3,80 @@
   "result": "NO-GO",
   "branch": "codex/lythaus-domain-migration",
   "pullRequest": 453,
-  "basePullRequest": 452,
-  "productionWrites": false,
+  "pullRequestDraft": true,
+  "headBeforeEvidenceUpdate": "141c6f2deb0ad5c360f1a8b6b0794d02537c8ab0",
+  "deployedBackendSha": "0c4e3367466eab45b437832a7bc6806e1bd7527b",
+  "productionDomainCutoverPerformed": false,
   "credentialRotation": {
     "formerVariableName": "CF_ACCESS_CLIENT_SECRET",
-    "repositoryVariablePresent": true,
+    "repositoryVariablePresent": false,
     "approvedSecretPresent": true,
-    "workflowVariableReferenceFound": false,
+    "workflowCredentialVariableReferences": 0,
     "retiredValueRead": false,
-    "result": "blocked"
+    "result": "passed"
   },
-  "live": {
-    "lythausApplicationDnsPublished": false,
-    "lythausApiDnsPublished": false,
-    "lythausMarketingDnsPublished": false,
-    "googleFlowProven": false,
-    "emailFlowProven": false,
-    "originEnforcementProven": false,
-    "rollbackProven": false
+  "providers": {
+    "google": "blocked_missing_provider_configuration_and_live_proof",
+    "email": "provider_foundation_and_routes_deployed_live_lifecycle_unproven",
+    "apple": "disabled_mvp",
+    "worldId": "disabled_mvp"
+  },
+  "previews": {
+    "flutterUrl": "https://396f64a3.lythaus-web.pages.dev",
+    "flutterWorkflowRun": 29534316796,
+    "gatewayUrl": "https://lythaus-api-gateway-preview.asora.workers.dev",
+    "gatewayDeploymentId": "48b59e27-29d7-4f1e-b02f-0c3d8894acd0",
+    "gatewayPreviousVersion": "44ae3497-1bc4-4b06-8f09-d9cd265eccca",
+    "gatewayWorkflowRun": 29534553157,
+    "exactCorsOrigin": "https://396f64a3.lythaus-web.pages.dev",
+    "exactCallback": "https://396f64a3.lythaus-web.pages.dev/auth/callback",
+    "wildcardConfigured": false,
+    "routeRefreshPassed": true,
+    "forbiddenArtifactScanPassed": true
   },
   "originGuard": {
-    "currentTokenConfigured": true,
-    "modeConfigured": false,
-    "nextTokenConfigured": false,
-    "operationalTokenConfigured": false,
+    "mode": "observe",
+    "currentTokenStorage": "azure_key_vault_reference",
+    "nextTokenStorage": "azure_key_vault_reference",
+    "operationalTokenStorage": "azure_key_vault_reference",
+    "legacyAllowlistConfigured": true,
     "dualExpiryConfigured": false,
-    "legacyAllowlistConfigured": false
+    "dualProven": false,
+    "enforceProven": false,
+    "rollbackProven": false
   },
-  "jwt": {
-    "audienceConfigured": false,
-    "productionStartupFailsClosedWithoutAudience": true
-  },
-  "repositoryHardening": {
-    "appleWorldHidden": true,
-    "appleWorldRejectedServerSide": true,
-    "callbackErrorsNeutral": true,
-    "callbackQueryRemoved": true,
-    "canonicalCallbackEnforced": true,
-    "exactPreviewCallbackOnly": true,
-    "exactPreviewCorsOnly": true,
-    "legacyB2cServiceReachable": true
+  "deployment": {
+    "workflowRun": 29536173007,
+    "immutableArtifactDeployed": true,
+    "deploymentJobPassed": true,
+    "publicAndHostAdminAcceptancePassed": true,
+    "liveOpenApiPassed": false,
+    "liveOpenApiPassedTests": 31,
+    "liveOpenApiFailedTests": 6,
+    "failureClass": "authenticated_smoke_credential_rejected"
   },
   "validation": {
-    "functionsTypecheck": "passed",
-    "functionsFullSuite": "passed: 206 suites, 2275 passed, 18 skipped",
-    "functionsPolicyTests": "passed",
-    "flutterFocusedAuthTests": "passed",
-    "flutterFullSuite": "passed",
-    "flutterAnalyze": "passed",
-    "flutterWebReleaseBuild": "passed",
-    "marketingBuild": "passed: 10 generated routes",
-    "openapiLint": "passed",
-    "androidSignedRelease": "blocked: local release-signing material unavailable; no artifact produced",
-    "corsValidator": "passed",
-    "domainContract": "passed",
-    "repositorySecretScan": "passed",
-    "artifactSecretScans": "passed"
+    "artifactCiRun": 29534973990,
+    "artifactCi": "passed",
+    "latestHeadCiRun": 29536159758,
+    "latestHeadCiAtCapture": "running_no_failed_jobs",
+    "workflowLint": "passed",
+    "gitleaks": "passed",
+    "flutterFullSuite": "passed_3644_tests_5_skipped_90.04_percent",
+    "focusedAuthTests": "passed_61",
+    "liveEmailNegativeControls": "passed_empty_input_and_rate_limit",
+    "liveGoogle": "not_run_provider_absent",
+    "liveEmailLifecycle": "not_run_interactive_credential_required",
+    "accessBackendRole": "not_complete"
   },
   "blockers": [
-    "credential_named_repository_variable_present",
-    "google_provider_handoff_not_configured_or_proven",
-    "email_auth_backend_and_delivery_not_configured_or_proven",
-    "immutable_preview_not_deployed",
-    "origin_guard_runtime_settings_incomplete",
-    "legacy_b2c_browser_service_reachable",
-    "signed_mobile_artifact_not_built",
-    "lythaus_target_dns_not_published",
-    "access_and_rollback_not_proven"
+    "google_oauth_provider_not_configured",
+    "google_live_browser_lifecycle_not_proven",
+    "email_live_account_lifecycle_not_proven",
+    "mvp_smoke_identity_or_session_not_accepted",
+    "admin_gateway_access_and_backend_role_not_proven",
+    "legacy_compatibility_token_injection_not_proven",
+    "dual_enforce_and_rollback_not_proven",
+    "final_exact_head_ci_after_evidence_update_required"
   ]
 }

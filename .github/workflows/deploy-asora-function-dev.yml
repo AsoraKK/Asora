@@ -93,8 +93,12 @@ env:
   KEY_VAULT: ${{ inputs.key_vault_name || 'kv-asora-flex-dev' }}
   MVP_CORS_ALLOWED_ORIGINS: ${{ vars.MVP_CORS_ALLOWED_ORIGINS }}
   MVP_PREVIEW_APP_ORIGIN: ${{ vars.MVP_PREVIEW_APP_ORIGIN }}
+  MVP_EMAIL_VERIFICATION_TTL_MINUTES: ${{ vars.MVP_EMAIL_VERIFICATION_TTL_MINUTES }}
+  MVP_EMAIL_VERIFICATION_V2_ISSUANCE_ENABLED: ${{ vars.MVP_EMAIL_VERIFICATION_V2_ISSUANCE_ENABLED || 'false' }}
+  GOOGLE_OAUTH_PREVIEW_REDIRECT_URI: ${{ vars.GOOGLE_OAUTH_PREVIEW_REDIRECT_URI }}
   MVP_PUBLIC_API_BASE_URL: ${{ vars.MVP_PUBLIC_API_BASE_URL }}
   MVP_ADMIN_API_BASE_URL: ${{ vars.MVP_ADMIN_API_BASE_URL }}
+  GOOGLE_OAUTH_CLIENT_ID: ${{ vars.GOOGLE_OAUTH_CLIENT_ID }}
   RELEASE_SHA: ${{ inputs.release_sha }}
   CI_RUN_ID: ${{ inputs.ci_run_id }}
   APPROVED_ALPHA_STAGE: ${{ inputs.approved_alpha_stage }}
@@ -188,6 +192,26 @@ jobs:
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Apply MVP authentication schema
+        run: |
+          set -euo pipefail
+          set +x
+          POSTGRES_CONN="$(az keyvault secret show \
+            --vault-name "$KEY_VAULT" \
+            --name postgres-connection-string \
+            --query value \
+            --output tsv)"
+          test -n "$POSTGRES_CONN" || {
+            echo "::error::postgres-connection-string is required for MVP authentication schema";
+            exit 1;
+          }
+          export POSTGRES_CONN
+          node tools/apply_sql_to_pg.js database/migrations/004_email_password_auth.sql
+          node tools/apply_sql_to_pg.js database/migrations/005_google_provider_links.sql
+          node tools/apply_sql_to_pg.js database/migrations/006_refresh_token_families.sql
+          node tools/apply_sql_to_pg.js database/migrations/007_email_verification_v2.sql
+          node scripts/verify-mvp-auth-schema.mjs
+
       - name: Configure CORS allowed origins
         run: |
           set -euo pipefail
@@ -196,14 +220,90 @@ jobs:
           test -n "$MVP_CORS_ALLOWED_ORIGINS" || { echo "::error::MVP_CORS_ALLOWED_ORIGINS repository variable is required"; exit 1; }
           # The immutable preview value, when present, must be one exact
           # pages.dev origin. Wildcards and retired public domains are rejected.
-          # The JavaScript template literal is intentionally single-quoted for the shell.
-          # shellcheck disable=SC2016
-          node -e 'const configured = process.env.MVP_CORS_ALLOWED_ORIGINS.split(",").map(v => v.trim()).filter(Boolean); const preview = process.env.MVP_PREVIEW_APP_ORIGIN.trim(); const fixed = new Set(["https://app.lythaus.co", "https://admin.lythaus.co", "https://control.asora.co.za"]); if (preview) { const u = new URL(preview); if (u.protocol !== "https:" || !u.hostname.endsWith(".pages.dev") || u.username || u.password || u.pathname !== "/" || u.search || u.hash) throw new Error("MVP_PREVIEW_APP_ORIGIN must be one exact HTTPS Pages origin"); fixed.add(u.origin); } for (const raw of configured) { const u = new URL(raw); if (u.origin !== raw || !fixed.has(u.origin)) throw new Error(`Unsafe CORS origin: ${u.origin}`); }'
+          node -e 'const configured = process.env.MVP_CORS_ALLOWED_ORIGINS.split(",").map(v => v.trim()).filter(Boolean); const preview = process.env.MVP_PREVIEW_APP_ORIGIN.trim(); const fixed = new Set(["https://app.lythaus.co", "https://admin.lythaus.co", "https://control.asora.co.za"]); if (preview) { const u = new URL(preview); if (u.protocol !== "https:" || !u.hostname.endsWith(".pages.dev") || u.username || u.password || u.pathname !== "/" || u.search || u.hash) throw new Error("MVP_PREVIEW_APP_ORIGIN must be one exact HTTPS Pages origin"); fixed.add(u.origin); } for (const raw of configured) { const u = new URL(raw); if (u.origin !== raw || !fixed.has(u.origin)) throw new Error("Unsafe CORS origin: " + u.origin); }'
           az functionapp config appsettings set \
             -g "$RG_CLEAN" \
             -n "$FUNC_APP_CLEAN" \
             --settings CORS_ALLOWED_ORIGINS="$MVP_CORS_ALLOWED_ORIGINS" \
             --output none
+
+      - name: Configure exact OAuth preview callback
+        run: |
+          set -euo pipefail
+          RG_CLEAN=$(echo "$RG" | tr -d '\r')
+          FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
+          test -n "$GOOGLE_OAUTH_PREVIEW_REDIRECT_URI" || {
+            echo "::error::GOOGLE_OAUTH_PREVIEW_REDIRECT_URI repository variable is required"
+            exit 1
+          }
+          node -e 'const value = process.env.GOOGLE_OAUTH_PREVIEW_REDIRECT_URI; const uri = new URL(value); if (uri.protocol !== "https:" || !uri.hostname.endsWith(".lythaus-web.pages.dev") || uri.username || uri.password || uri.pathname !== "/auth/callback" || uri.search || uri.hash || uri.toString() !== value) throw new Error("GOOGLE_OAUTH_PREVIEW_REDIRECT_URI must be one exact immutable HTTPS Pages callback");'
+          az functionapp config appsettings set \
+            -g "$RG_CLEAN" \
+            -n "$FUNC_APP_CLEAN" \
+            --settings OAUTH_REDIRECT_URIS="$GOOGLE_OAUTH_PREVIEW_REDIRECT_URI" \
+            --output none
+
+      - name: Configure exact email preview action target
+        run: |
+          set -euo pipefail
+          RG_CLEAN=$(echo "$RG" | tr -d '\r')
+          FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
+          test -n "$MVP_PREVIEW_APP_ORIGIN" || {
+            echo "::error::MVP_PREVIEW_APP_ORIGIN repository variable is required"
+            exit 1
+          }
+          node -e 'const value = process.env.MVP_PREVIEW_APP_ORIGIN; const uri = new URL(value); if (uri.protocol !== "https:" || !/^[a-f0-9]{8}\.lythaus-web\.pages\.dev$/.test(uri.hostname) || uri.username || uri.password || uri.pathname !== "/" || uri.search || uri.hash || uri.toString() !== value) throw new Error("MVP_PREVIEW_APP_ORIGIN must be one exact immutable Lythaus Pages origin");'
+          az functionapp config appsettings set \
+            -g "$RG_CLEAN" \
+            -n "$FUNC_APP_CLEAN" \
+            --settings AUTH_EMAIL_PREVIEW_ORIGIN="$MVP_PREVIEW_APP_ORIGIN" \
+            --output none
+
+      - name: Configure bounded email verification lifetime
+        run: |
+          set -euo pipefail
+          RG_CLEAN=$(echo "$RG" | tr -d '\r')
+          FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
+          test -n "$MVP_EMAIL_VERIFICATION_TTL_MINUTES" || {
+            echo "::error::MVP_EMAIL_VERIFICATION_TTL_MINUTES repository variable is required"
+            exit 1
+          }
+          node -e 'const value = process.env.MVP_EMAIL_VERIFICATION_TTL_MINUTES; if (!/^\d+$/.test(value) || Number(value) < 30 || Number(value) > 240) throw new Error("MVP_EMAIL_VERIFICATION_TTL_MINUTES must be a whole number between 30 and 240");'
+          az functionapp config appsettings set \
+            -g "$RG_CLEAN" \
+            -n "$FUNC_APP_CLEAN" \
+            --settings EMAIL_VERIFICATION_TTL_MINUTES="$MVP_EMAIL_VERIFICATION_TTL_MINUTES" \
+            --output none
+
+      - name: Configure verification-v2 issuance release gate
+        run: |
+          set -euo pipefail
+          RG_CLEAN=$(echo "$RG" | tr -d '\r')
+          FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
+          node -e 'const value = process.env.MVP_EMAIL_VERIFICATION_V2_ISSUANCE_ENABLED; if (value !== "true" && value !== "false") throw new Error("MVP_EMAIL_VERIFICATION_V2_ISSUANCE_ENABLED must be true or false");'
+          az functionapp config appsettings set \
+            -g "$RG_CLEAN" \
+            -n "$FUNC_APP_CLEAN" \
+            --settings EMAIL_VERIFICATION_V2_ISSUANCE_ENABLED="$MVP_EMAIL_VERIFICATION_V2_ISSUANCE_ENABLED" \
+            --output none
+
+      - name: Configure current email-token key identifier
+        run: |
+          set -euo pipefail
+          RG_CLEAN=$(echo "$RG" | tr -d '\r')
+          FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
+          CURRENT_KEY_ID=$(az functionapp config appsettings list \
+            -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
+            --query "[?name=='EMAIL_TOKEN_HMAC_KEY_ID'] | [0].value" -o tsv | tr -d '\r')
+          if [ -z "$CURRENT_KEY_ID" ]; then
+            CURRENT_KEY_ID='email-v1'
+            az functionapp config appsettings set \
+              -g "$RG_CLEAN" \
+              -n "$FUNC_APP_CLEAN" \
+              --settings EMAIL_TOKEN_HMAC_KEY_ID="$CURRENT_KEY_ID" \
+              --output none
+          fi
+          CURRENT_KEY_ID="$CURRENT_KEY_ID" node -e 'const value = process.env.CURRENT_KEY_ID; if (!/^[A-Za-z0-9_-]{1,64}$/.test(value)) throw new Error("EMAIL_TOKEN_HMAC_KEY_ID is invalid");'
 
       - name: Inspect CORS allowed origins
         run: |
@@ -337,6 +437,8 @@ jobs:
 
       - name: Configure and verify Key Vault references
         continue-on-error: false
+        env:
+          GOOGLE_OAUTH_CLIENT_SECRET_WEB: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET_WEB }}
         run: |
           set -euo pipefail
           RG_CLEAN=$(echo "$RG" | tr -d '\r')
@@ -356,18 +458,41 @@ jobs:
             exit 1
           fi
 
+          test -n "$GOOGLE_OAUTH_CLIENT_SECRET_WEB" || { echo "::error::GOOGLE_OAUTH_CLIENT_SECRET_WEB repository secret is required"; exit 1; }
+          az keyvault secret set \
+            --vault-name "$KEY_VAULT" \
+            --name google-oauth-client-secret-web \
+            --value "$GOOGLE_OAUTH_CLIENT_SECRET_WEB" \
+            --output none
+
           az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
             --settings \
               "AUDIT_HMAC_KEY=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/audit-hmac-key/)" \
               "INVITE_CODE_PEPPER=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/invite-code-pepper/)" \
               "HIVE_API_KEY=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/HIVE-AI-KEY/)" \
-              "GOOGLE_IDENTITY_PLATFORM_API_KEY=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/google-identity-platform-api-key/)" \
               "CF_ACCESS_CLIENT_SECRET=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/cf-access-client-secret/)" \
+              "EMAIL_TOKEN_HMAC_SECRET=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/email-token-hmac-secret/)" \
+              "GOOGLE_OAUTH_CLIENT_SECRET_WEB=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/google-oauth-client-secret-web/)" \
+            --output none
+
+          test -n "$GOOGLE_OAUTH_CLIENT_ID" || { echo "::error::GOOGLE_OAUTH_CLIENT_ID repository variable is required"; exit 1; }
+          [[ "$GOOGLE_OAUTH_CLIENT_ID" == *.apps.googleusercontent.com ]] || { echo "::error::GOOGLE_OAUTH_CLIENT_ID is not a Google Web client ID"; exit 1; }
+          EMAIL_CLIENT_ID=$(az functionapp config appsettings list -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
+            --query "[?name=='AUTH_EMAIL_CLIENT_ID'] | [0].value" -o tsv | tr -d '\r')
+          test -n "$EMAIL_CLIENT_ID" || { echo "::error::AUTH_EMAIL_CLIENT_ID must already be configured"; exit 1; }
+          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
+            --settings \
+              GOOGLE_OAUTH_CLIENT_ID="$GOOGLE_OAUTH_CLIENT_ID" \
+              JWT_AUDIENCE="${GOOGLE_OAUTH_CLIENT_ID},${EMAIL_CLIENT_ID}" \
             --output none
 
           SUBSCRIPTION_ID=$(az account show --query id -o tsv)
           REFERENCES_URI="https://management.azure.com/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG_CLEAN}/providers/Microsoft.Web/sites/${FUNC_APP_CLEAN}/config/configreferences/appsettings?api-version=2024-11-01"
-          REQUIRED_REFERENCES=(AUDIT_HMAC_KEY INVITE_CODE_PEPPER HIVE_API_KEY GOOGLE_IDENTITY_PLATFORM_API_KEY CF_ACCESS_CLIENT_SECRET)
+          az functionapp config appsettings delete -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
+            --setting-names GOOGLE_IDENTITY_PLATFORM_API_KEY \
+            --output none
+
+          REQUIRED_REFERENCES=(AUDIT_HMAC_KEY INVITE_CODE_PEPPER HIVE_API_KEY CF_ACCESS_CLIENT_SECRET EMAIL_TOKEN_HMAC_SECRET GOOGLE_OAUTH_CLIENT_SECRET_WEB)
           for attempt in $(seq 1 12); do
             REFERENCES_JSON=$(az rest --method get --uri "$REFERENCES_URI")
             unresolved=false
@@ -390,6 +515,22 @@ jobs:
             fi
             sleep 10
           done
+
+      - name: Map approved Access service identity for operations reads
+        env:
+          CF_ACCESS_OPERATIONS_SERVICE_TOKEN_CLIENT_ID: ${{ secrets.CF_Access_Client_Id }}
+        run: |
+          set -euo pipefail
+          RG_CLEAN=$(echo "$RG" | tr -d '\r')
+          FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
+          test -n "$CF_ACCESS_OPERATIONS_SERVICE_TOKEN_CLIENT_ID" || {
+            echo "::error::Approved Cloudflare Access operations service identity is required"
+            exit 1
+          }
+          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
+            --settings "CF_ACCESS_OPERATIONS_SERVICE_TOKEN_CLIENT_ID=$CF_ACCESS_OPERATIONS_SERVICE_TOKEN_CLIENT_ID" \
+            --output none
+          echo "Approved operations service identity mapped for backend authorization"
 
       - name: Record immutable deployment metadata
         run: |
@@ -431,11 +572,12 @@ jobs:
             JWT_SECRET
             INVITE_CODE_PEPPER
             HIVE_API_KEY
-            GOOGLE_IDENTITY_PLATFORM_API_KEY
             COSMOS_CONNECTION_STRING
             POSTGRES_CONNECTION_STRING
             AUDIT_HMAC_KEY
             FCM_PRIVATE_KEY
+            EMAIL_TOKEN_HMAC_SECRET
+            GOOGLE_OAUTH_CLIENT_SECRET_WEB
           )
           for key in "${REQUIRED_KEY_VAULT_SETTINGS[@]}"; do
             value=$(echo "$SETTINGS" | jq -r --arg key "$key" '.[] | select(.name==$key) | .value' || echo "")
@@ -448,10 +590,15 @@ jobs:
           echo "✅ Required Alpha secrets are configured as Key Vault references"
 
       - name: Post-deploy direct-origin health diagnostic
-        env:
-          ORIGIN_OPERATIONAL_TOKEN: ${{ secrets.ORIGIN_OPERATIONAL_TOKEN }}
         run: |
           set -euo pipefail
+          set +x
+          KEY_VAULT_CLEAN=$(echo "$KEY_VAULT" | tr -d '\r')
+          ORIGIN_OPERATIONAL_TOKEN="$(az keyvault secret show \
+            --vault-name "$KEY_VAULT_CLEAN" \
+            --name origin-operational-token \
+            --query value \
+            --output tsv)"
           test -n "$ORIGIN_OPERATIONAL_TOKEN" || { echo "::error::ORIGIN_OPERATIONAL_TOKEN is required for direct-origin health diagnostics"; exit 1; }
           
           # Strip CRLF from variables
@@ -499,6 +646,7 @@ jobs:
           echo "🎉 All 3 runtime gates PASSED!"
           echo "   - Health endpoint: 200 OK"
           echo "   - Host routing: functional (404 for bogus)"
+          unset ORIGIN_OPERATIONAL_TOKEN
           echo "   - Azure management inventory: $FUNC_COUNT registered functions"
 
       - name: Diagnostic logs on failure
@@ -798,7 +946,10 @@ jobs:
           fi
 
           az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
-            --settings CF_ACCESS_CLIENT_ID="$CF_CLIENT_ID" --output none
+            --settings \
+              CF_ACCESS_CLIENT_ID="$CF_CLIENT_ID" \
+              CF_ACCESS_OPERATIONS_SERVICE_TOKEN_CLIENT_ID="$CF_CLIENT_ID" \
+            --output none
 
           echo "✅ Cloudflare Access client ID configured; secret remains Key Vault-backed"
 

@@ -10,7 +10,13 @@ All URIs are relative to *https://api.lythaus.co/api*
 Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**authAuthorize**](AuthApi.md#authauthorize) | **GET** /auth/authorize | OAuth2 authorization endpoint
-[**authEmailLogin**](AuthApi.md#authemaillogin) | **POST** /auth/email | Sign in with a verified email identity
+[**authEmailForgotPassword**](AuthApi.md#authemailforgotpassword) | **POST** /auth/email/forgot-password | Request a password-reset email
+[**authEmailLogin**](AuthApi.md#authemaillogin) | **POST** /auth/email/login | Sign in with email and password
+[**authEmailProviderLogin**](AuthApi.md#authemailproviderlogin) | **POST** /auth/email | Sign in with a verified provider-managed email identity
+[**authEmailRegister**](AuthApi.md#authemailregister) | **POST** /auth/email/register | Register an email/password account
+[**authEmailResend**](AuthApi.md#authemailresend) | **POST** /auth/email/resend | Resend email verification
+[**authEmailResetPassword**](AuthApi.md#authemailresetpassword) | **POST** /auth/email/reset-password | Complete a password reset
+[**authEmailVerify**](AuthApi.md#authemailverify) | **POST** /auth/email/verify | Verify an email address
 [**authInviteValidate**](AuthApi.md#authinvitevalidate) | **GET** /auth/invite/validate | Validate an invite code
 [**authPing**](AuthApi.md#authping) | **GET** /auth/ping | Verify authentication token is valid
 [**authRedeemInvite**](AuthApi.md#authredeeminvite) | **POST** /auth/redeem-invite | Redeem an invite code to activate account
@@ -76,22 +82,63 @@ No authorization required
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **authEmailLogin**
-> OAuthTokenResponse authEmailLogin(emailLoginRequest)
+# **authEmailForgotPassword**
+> EmailAuthStatusResponse authEmailForgotPassword(emailActionEmailRequest)
 
-Sign in with a verified email identity
+Request a password-reset email
 
-Verifies email/password credentials with Google Identity Platform, requires a verified provider email and an existing invited Lythaus account, then returns short-lived Lythaus access and rotating refresh tokens. The endpoint never creates an uninvited account.
+Always returns a neutral response to resist account enumeration.
 
 ### Example
 ```dart
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAuthApi();
-final EmailLoginRequest emailLoginRequest = ; // EmailLoginRequest |
+final EmailActionEmailRequest emailActionEmailRequest = ; // EmailActionEmailRequest |
 
 try {
-    final response = api.authEmailLogin(emailLoginRequest);
+    final response = api.authEmailForgotPassword(emailActionEmailRequest);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AuthApi->authEmailForgotPassword: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **emailActionEmailRequest** | [**EmailActionEmailRequest**](EmailActionEmailRequest.md)|  |
+
+### Return type
+
+[**EmailAuthStatusResponse**](EmailAuthStatusResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **authEmailLogin**
+> EmailLoginResponse authEmailLogin(emailPasswordRequest)
+
+Sign in with email and password
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAuthApi();
+final EmailPasswordRequest emailPasswordRequest = ; // EmailPasswordRequest |
+
+try {
+    final response = api.authEmailLogin(emailPasswordRequest);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling AuthApi->authEmailLogin: $e\n');
@@ -102,11 +149,226 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **emailLoginRequest** | [**EmailLoginRequest**](EmailLoginRequest.md)|  |
+ **emailPasswordRequest** | [**EmailPasswordRequest**](EmailPasswordRequest.md)|  |
+
+### Return type
+
+[**EmailLoginResponse**](EmailLoginResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **authEmailProviderLogin**
+> OAuthTokenResponse authEmailProviderLogin(emailProviderLoginRequest)
+
+Sign in with a verified provider-managed email identity
+
+Compatibility endpoint retained from the shared-MVP runtime. It verifies email/password credentials with Google Identity Platform, requires a verified provider email and an existing invited Lythaus account, then returns short-lived Lythaus access and rotating refresh tokens. It never creates an uninvited account.
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAuthApi();
+final EmailProviderLoginRequest emailProviderLoginRequest = ; // EmailProviderLoginRequest |
+
+try {
+    final response = api.authEmailProviderLogin(emailProviderLoginRequest);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AuthApi->authEmailProviderLogin: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **emailProviderLoginRequest** | [**EmailProviderLoginRequest**](EmailProviderLoginRequest.md)|  |
 
 ### Return type
 
 [**OAuthTokenResponse**](OAuthTokenResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **authEmailRegister**
+> EmailAuthStatusResponse authEmailRegister(emailActionPasswordRequest)
+
+Register an email/password account
+
+Creates an unverified account and sends a verification email to a server-mapped action target. The response is deliberately neutral.
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAuthApi();
+final EmailActionPasswordRequest emailActionPasswordRequest = ; // EmailActionPasswordRequest |
+
+try {
+    final response = api.authEmailRegister(emailActionPasswordRequest);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AuthApi->authEmailRegister: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **emailActionPasswordRequest** | [**EmailActionPasswordRequest**](EmailActionPasswordRequest.md)|  |
+
+### Return type
+
+[**EmailAuthStatusResponse**](EmailAuthStatusResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **authEmailResend**
+> EmailAuthStatusResponse authEmailResend(emailActionEmailRequest)
+
+Resend email verification
+
+Returns a neutral response whether or not the account exists.
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAuthApi();
+final EmailActionEmailRequest emailActionEmailRequest = ; // EmailActionEmailRequest |
+
+try {
+    final response = api.authEmailResend(emailActionEmailRequest);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AuthApi->authEmailResend: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **emailActionEmailRequest** | [**EmailActionEmailRequest**](EmailActionEmailRequest.md)|  |
+
+### Return type
+
+[**EmailAuthStatusResponse**](EmailAuthStatusResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **authEmailResetPassword**
+> EmailAuthStatusResponse authEmailResetPassword(emailPasswordResetRequest)
+
+Complete a password reset
+
+Consumes a single-use reset token, replaces the password hash, and revokes existing refresh sessions.
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAuthApi();
+final EmailPasswordResetRequest emailPasswordResetRequest = ; // EmailPasswordResetRequest |
+
+try {
+    final response = api.authEmailResetPassword(emailPasswordResetRequest);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AuthApi->authEmailResetPassword: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **emailPasswordResetRequest** | [**EmailPasswordResetRequest**](EmailPasswordResetRequest.md)|  |
+
+### Return type
+
+[**EmailAuthStatusResponse**](EmailAuthStatusResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **authEmailVerify**
+> EmailAuthStatusResponse authEmailVerify(emailTokenRequest)
+
+Verify an email address
+
+Redeems a token supplied only in the JSON request body. GET and query-string redemption are rejected.
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAuthApi();
+final EmailTokenRequest emailTokenRequest = ; // EmailTokenRequest |
+
+try {
+    final response = api.authEmailVerify(emailTokenRequest);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AuthApi->authEmailVerify: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **emailTokenRequest** | [**EmailTokenRequest**](EmailTokenRequest.md)|  |
+
+### Return type
+
+[**EmailAuthStatusResponse**](EmailAuthStatusResponse.md)
 
 ### Authorization
 

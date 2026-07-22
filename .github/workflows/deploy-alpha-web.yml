@@ -22,7 +22,7 @@ on:
         default: lythaus-web
         type: string
       pages_branch:
-        description: Pages branch alias to deploy
+        description: Pages branch alias to deploy, or reuse-existing-preview for an auth-preview gateway retry
         required: true
         default: alpha
         type: string
@@ -38,13 +38,25 @@ on:
         description: Cloudflare-protected admin API origin
         required: true
         type: string
+      auth_preview:
+        description: Orchestrate exact Flutter and gateway authentication previews
+        required: true
+        default: false
+        type: boolean
+      api_preview_base_url:
+        description: Exact temporary gateway preview URL ending in /api
+        required: true
+        default: https://lythaus-api-gateway-preview.asora.workers.dev/api
+        type: string
 
 permissions:
   actions: read
   contents: read
+  id-token: write
 
 jobs:
   deploy-and-smoke:
+    if: ${{ !inputs.auth_preview }}
     runs-on: ubuntu-latest
     environment: ${{ inputs.target_environment }}
     timeout-minutes: 35
@@ -89,7 +101,7 @@ jobs:
 
       - name: Deploy immutable Pages artifact
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_AUDIT_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           RELEASE_SHA: ${{ inputs.release_sha }}
           PAGES_PROJECT: ${{ inputs.pages_project }}
@@ -153,3 +165,22 @@ jobs:
             ${{ runner.temp }}/alpha-web-smoke-report.json
             alpha-web-deployment-evidence.json
           if-no-files-found: warn
+
+  auth-preview-web:
+    if: ${{ inputs.auth_preview && inputs.pages_branch != 'reuse-existing-preview' }}
+    uses: ./.github/workflows/deploy-flutter-auth-preview.yml
+    with:
+      release_sha: ${{ inputs.release_sha }}
+      ci_run_id: ${{ inputs.ci_run_id }}
+      api_preview_base_url: ${{ inputs.api_preview_base_url }}
+    secrets: inherit
+
+  auth-preview-gateway:
+    if: ${{ always() && inputs.auth_preview && (inputs.pages_branch == 'reuse-existing-preview' || needs.auth-preview-web.result == 'success') }}
+    needs: auth-preview-web
+    uses: ./.github/workflows/deploy-lythaus-gateway-preview.yml
+    with:
+      release_sha: ${{ inputs.release_sha }}
+      ci_run_id: ${{ inputs.ci_run_id }}
+      cors_allowed_origin: ${{ inputs.pages_branch == 'reuse-existing-preview' && inputs.web_base_url || needs.auth-preview-web.outputs.preview_url }}
+    secrets: inherit

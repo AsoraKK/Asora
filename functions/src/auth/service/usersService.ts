@@ -35,6 +35,12 @@ function normalizeProvider(provider: string): string {
   return normalized;
 }
 
+export class ProviderAccountLinkRequiredError extends Error {
+  constructor() {
+    super('An existing account must be linked through an authenticated account-linking flow');
+  }
+}
+
 function assertInternalUserId(userId: string, context: string): void {
   if (!isInternalUserId(userId)) {
     throw new Error(`${context} must be an internal UUIDv7 user ID`);
@@ -143,14 +149,15 @@ class UsersService {
   ): Promise<ProviderLink> {
     const normalizedProvider = normalizeProvider(provider);
     assertInternalUserId(userId, 'Provider link user_id');
+    const linkId = uuidv7();
     const now = new Date().toISOString();
 
     return withClient(async (client) => {
       const result = await client.query(
-        `INSERT INTO provider_links (provider, provider_sub, user_id, created_at)
-         VALUES ($1, $2, $3, $4)
+        `INSERT INTO provider_links (id, provider, provider_sub, user_id, created_at)
+         VALUES ($1, $2, $3, $4, $5)
          RETURNING provider, provider_sub, user_id, created_at`,
-        [normalizedProvider, providerSub, userId, now]
+        [linkId, normalizedProvider, providerSub, userId, now]
       );
       return result.rows[0];
     });
@@ -166,34 +173,73 @@ class UsersService {
     email: string
   ): Promise<[PGUser, boolean]> {
     const normalizedProvider = normalizeProvider(provider);
+    const normalizedEmail = email.trim().normalize('NFKC').toLowerCase();
+    if (!normalizedEmail) {
+      throw new Error('Provider email is required');
+    }
 
-    // Check if provider link exists
-    const existingLink = await this.getProviderLink(normalizedProvider, providerSub);
-    if (existingLink) {
-      const user = await this.getUserById(existingLink.user_id);
-      if (user) {
-        assertInternalUserId(user.id, 'Linked user ID');
-        return [user, false];
+    return withClient(async (client: PoolClient) => {
+      await client.query('BEGIN');
+      try {
+        const linkResult = await client.query(
+          `SELECT provider, provider_sub, user_id, created_at
+           FROM provider_links
+           WHERE provider = $1 AND provider_sub = $2
+           FOR UPDATE`,
+          [normalizedProvider, providerSub]
+        );
+        const existingLink = linkResult.rows[0] as ProviderLink | undefined;
+        if (existingLink) {
+          const userResult = await client.query(
+            `SELECT id, primary_email, roles, tier, reputation_score, created_at, updated_at
+             FROM users WHERE id = $1`,
+            [existingLink.user_id]
+          );
+          const user = userResult.rows[0] as PGUser | undefined;
+          if (!user) {
+            throw new Error('Provider link points to a missing internal user');
+          }
+          assertInternalUserId(user.id, 'Linked user ID');
+          await client.query('COMMIT');
+          return [user, false];
+        }
+
+        // Email is mutable and cannot be used to silently merge identities. An
+        // existing email account must be linked from an authenticated session.
+        const emailResult = await client.query(
+          `SELECT id, primary_email, roles, tier, reputation_score, created_at, updated_at
+           FROM users WHERE primary_email = $1
+           FOR UPDATE`,
+          [normalizedEmail]
+        );
+        if (emailResult.rows[0]) {
+          throw new ProviderAccountLinkRequiredError();
+        }
+
+        const userId = uuidv7();
+        assertInternalUserId(userId, 'Generated user ID');
+        const now = new Date().toISOString();
+        const userResult = await client.query(
+          `INSERT INTO users (id, primary_email, roles, tier, reputation_score, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
+           RETURNING id, primary_email, roles, tier, reputation_score, created_at, updated_at`,
+          [userId, normalizedEmail, ['user'], 'free', 0, now, now]
+        );
+        const user = userResult.rows[0] as PGUser;
+        const linkId = uuidv7();
+
+        await client.query(
+          `INSERT INTO provider_links (id, provider, provider_sub, user_id, created_at)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [linkId, normalizedProvider, providerSub, user.id, now]
+        );
+        await client.query('COMMIT');
+        return [user, true];
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
       }
-      throw new Error('Provider link points to a missing internal user');
-    }
-
-    // Check if user exists by email
-    let user = await this.getUserByEmail(email);
-    let isNewUser = false;
-
-    if (!user) {
-      // Create new user
-      user = await this.createUser(email);
-      isNewUser = true;
-    }
-
-    // Create provider link if it doesn't exist
-    if (!existingLink) {
-      await this.createProviderLink(normalizedProvider, providerSub, user.id);
-    }
-
-    return [user, isNewUser];
+    });
   }
 }
 

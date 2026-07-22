@@ -118,7 +118,7 @@ class AuthConfig {
       ),
       scopes: const String.fromEnvironment(
         'OAUTH2_SCOPES',
-        defaultValue: 'openid offline_access email profile',
+        defaultValue: 'openid email profile',
       ).split(' '),
       redirectUris: const {
         'android': String.fromEnvironment(

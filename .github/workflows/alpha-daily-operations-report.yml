@@ -16,6 +16,9 @@ concurrency:
 jobs:
   report:
     runs-on: ubuntu-latest
+    # Reuse the protected deployment environment so the existing Azure OIDC
+    # federated credential is used instead of a branch-specific subject.
+    environment: dev
     steps:
       - uses: actions/checkout@v5
 
@@ -72,6 +75,59 @@ jobs:
           done
           node scripts/merge-app-insights-aggregates.mjs --output alpha-telemetry.json "${outputs[@]}"
           jq -e '.tables[0].rows | length == 1' alpha-telemetry.json >/dev/null
+
+      - name: Verify legacy admin Access service-token alignment
+        shell: bash
+        env:
+          AZURE_RESOURCE_GROUP: ${{ vars.ALPHA_RESOURCE_GROUP || 'asora-psql-flex' }}
+          AZURE_FUNCTIONAPP_NAME: ${{ vars.ALPHA_FUNCTIONAPP_NAME || 'asora-function-dev' }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_AUDIT_API_TOKEN: ${{ secrets.CLOUDFLARE_AUDIT_API_TOKEN }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_Access_Client_Id }}
+        run: |
+          set -euo pipefail
+          set +x
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "::error::Cloudflare account ID is required"; exit 1; }
+          test -n "$CLOUDFLARE_AUDIT_API_TOKEN" || { echo "::error::Cloudflare audit token is required"; exit 1; }
+          test -n "$CF_ACCESS_CLIENT_ID" || { echo "::error::Cloudflare Access service client ID is required"; exit 1; }
+
+          workdir="$(mktemp -d)"
+          trap 'rm -rf "$workdir"; unset CLOUDFLARE_AUDIT_API_TOKEN CF_ACCESS_CLIENT_ID' EXIT
+          backend_audience="$(az functionapp config appsettings list \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name "$AZURE_FUNCTIONAPP_NAME" \
+            --query "[?name=='CF_ACCESS_AUDIENCE' || name=='CF_ACCESS_AUD'].value | [0]" \
+            --output tsv | tr -d '\r')"
+          test -n "$backend_audience" || { echo "::error::Backend Cloudflare Access audience is not configured"; exit 1; }
+
+          api='https://api.cloudflare.com/client/v4'
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $CLOUDFLARE_AUDIT_API_TOKEN" \
+            "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/access/apps" > "$workdir/apps.json"
+          legacy_app_id="$(jq -r '[.result[] | select(.domain == "admin-api.asora.co.za")] | if length == 1 then .[0].id else empty end' "$workdir/apps.json")"
+          legacy_audience="$(jq -r '[.result[] | select(.domain == "admin-api.asora.co.za")] | if length == 1 then .[0].aud else empty end' "$workdir/apps.json")"
+          if [[ -z "$legacy_app_id" || -z "$legacy_audience" ]]; then
+            echo "::error::Expected exactly one legacy admin Access application"
+            exit 1
+          fi
+          test "$backend_audience" = "$legacy_audience" || { echo "::error::Backend Access audience does not match the legacy admin application"; exit 1; }
+
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $CLOUDFLARE_AUDIT_API_TOKEN" \
+            "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/access/service_tokens" > "$workdir/service-tokens.json"
+          service_token_id="$(jq -r --arg client_id "$CF_ACCESS_CLIENT_ID" '[.result[] | select(.client_id == $client_id)] | if length == 1 then .[0].id else empty end' "$workdir/service-tokens.json")"
+          test -n "$service_token_id" || { echo "::error::Configured Access service token is absent or ambiguous"; exit 1; }
+
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $CLOUDFLARE_AUDIT_API_TOKEN" \
+            "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/access/apps/$legacy_app_id/policies" > "$workdir/policies.json"
+          jq -e --arg token_id "$service_token_id" '[.. | strings | select(. == $token_id)] | length > 0' "$workdir/policies.json" >/dev/null || {
+            echo "::error::Configured Access service token is not included by the legacy admin policy"
+            exit 1
+          }
+
+          echo "Legacy admin Access audience alignment: verified"
+          echo "Legacy admin Access service-token policy: verified"
 
       - name: Read administrative snapshots
         shell: bash

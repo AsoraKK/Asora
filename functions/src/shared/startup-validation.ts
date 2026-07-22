@@ -7,6 +7,7 @@
 
 import { trackException } from './appInsights';
 import { originGatewayConfigurationErrors } from './security/originGatewayAuth';
+import { validateEmailTokenKeyConfiguration } from '@auth/service/emailToken';
 
 interface EnvVar {
   name: string;
@@ -24,7 +25,6 @@ const REQUIRED_ENV_VARS: EnvVar[] = [
   { name: 'FCM_PROJECT_ID', required: true, description: 'Firebase project id' },
   { name: 'FCM_CLIENT_EMAIL', required: true, description: 'Firebase service account email' },
   { name: 'FCM_PRIVATE_KEY', required: true, description: 'Firebase service account private key' },
-  { name: 'GOOGLE_IDENTITY_PLATFORM_API_KEY', required: true, description: 'Identity Platform password sign-in API key' },
 ];
 
 const OPTIONAL_ENV_VARS: EnvVar[] = [
@@ -40,7 +40,114 @@ const OPTIONAL_ENV_VARS: EnvVar[] = [
   { name: 'ORIGIN_OPERATIONAL_TOKEN', required: false, description: 'Health-only direct operational token' },
   { name: 'ORIGIN_GATEWAY_DUAL_UNTIL', required: false, description: 'UTC dual-mode expiry' },
   { name: 'ORIGIN_GATEWAY_LEGACY_ALLOWLIST', required: false, description: 'Strict JSON temporary legacy route allowlist' },
+  { name: 'APP_ORIGIN', required: false, description: 'Canonical Lythaus application origin' },
+  { name: 'AUTH_EMAIL_PREVIEW_ORIGIN', required: false, description: 'Exact immutable preview origin for authentication email links' },
+  { name: 'ACS_EMAIL_ENDPOINT', required: false, description: 'Azure Communication Services endpoint' },
+  { name: 'AUTH_EMAIL_FROM_ADDRESS', required: false, description: 'Verified Lythaus email sender' },
+  { name: 'AUTH_EMAIL_FROM_NAME', required: false, description: 'Email sender display name' },
+  { name: 'EMAIL_VERIFICATION_TTL_MINUTES', required: false, description: 'Bounded email verification-token lifetime in minutes' },
+  { name: 'EMAIL_TOKEN_HMAC_SECRET', required: false, description: 'Email-token HMAC root key' },
+  { name: 'EMAIL_TOKEN_HMAC_KEY_ID', required: false, description: 'Current non-secret email-token key identifier' },
+  { name: 'AUTH_EMAIL_CLIENT_ID', required: false, description: 'Email authentication OAuth client audience' },
+  { name: 'GOOGLE_OAUTH_CLIENT_ID', required: false, description: 'Public Google Web OAuth client ID' },
+  { name: 'GOOGLE_OAUTH_CLIENT_SECRET_WEB', required: false, description: 'Google Web OAuth client secret' },
+  { name: 'GOOGLE_IDENTITY_PLATFORM_API_KEY', required: false, description: 'Legacy Identity Platform password sign-in compatibility key' },
 ];
+
+function isMvpEnvironment(): boolean {
+  const nodeEnv = (process.env.NODE_ENV ?? '').toLowerCase();
+  const appEnv = (process.env.APP_ENV ?? '').toLowerCase();
+  return nodeEnv === 'production' || appEnv === 'production' || appEnv === 'prod' || appEnv === 'mvp';
+}
+
+export function emailAuthConfigurationErrors(): string[] {
+  if (!isMvpEnvironment()) return [];
+
+  const errors: string[] = [];
+  const appOrigin = process.env.APP_ORIGIN?.trim();
+  if (appOrigin !== 'https://app.lythaus.co') {
+    errors.push('APP_ORIGIN must be https://app.lythaus.co in the MVP environment');
+  }
+
+  const emailLinkOrigin = process.env.AUTH_EMAIL_PREVIEW_ORIGIN?.trim();
+  if (emailLinkOrigin) {
+    try {
+      const parsed = new URL(emailLinkOrigin);
+      if (
+        parsed.protocol !== 'https:' ||
+        parsed.username ||
+        parsed.password ||
+        parsed.pathname !== '/' ||
+        parsed.search ||
+        parsed.hash ||
+        !/^[a-f0-9]{8}\.lythaus-web\.pages\.dev$/.test(parsed.hostname) ||
+        parsed.toString() !== emailLinkOrigin
+      ) {
+        throw new Error('invalid origin');
+      }
+    } catch {
+      errors.push('AUTH_EMAIL_PREVIEW_ORIGIN must be one exact immutable Lythaus Pages HTTPS origin');
+    }
+  }
+
+  const endpoint = process.env.ACS_EMAIL_ENDPOINT?.trim();
+  try {
+    const parsed = new URL(endpoint ?? '');
+    if (
+      parsed.protocol !== 'https:' ||
+      parsed.username ||
+      parsed.password ||
+      parsed.pathname !== '/' ||
+      parsed.search ||
+      parsed.hash ||
+      !parsed.hostname.endsWith('.communication.azure.com')
+    ) {
+      throw new Error('invalid endpoint');
+    }
+  } catch {
+    errors.push('ACS_EMAIL_ENDPOINT must be an Azure Communication Services HTTPS endpoint');
+  }
+
+  if (process.env.AUTH_EMAIL_FROM_ADDRESS?.trim().toLowerCase() !== 'no-reply@mail.lythaus.co') {
+    errors.push('AUTH_EMAIL_FROM_ADDRESS must be no-reply@mail.lythaus.co');
+  }
+  if ((process.env.AUTH_EMAIL_FROM_NAME?.trim() || 'Lythaus') !== 'Lythaus') {
+    errors.push('AUTH_EMAIL_FROM_NAME must be Lythaus');
+  }
+  const verificationTtlMinutes = process.env.EMAIL_VERIFICATION_TTL_MINUTES?.trim();
+  if (
+    verificationTtlMinutes &&
+    (!/^\d+$/.test(verificationTtlMinutes) ||
+      Number(verificationTtlMinutes) < 30 ||
+      Number(verificationTtlMinutes) > 240)
+  ) {
+    errors.push('EMAIL_VERIFICATION_TTL_MINUTES must be a whole number between 30 and 240');
+  }
+  const verificationIssuanceEnabled = process.env.EMAIL_VERIFICATION_V2_ISSUANCE_ENABLED?.trim().toLowerCase();
+  if (verificationIssuanceEnabled && verificationIssuanceEnabled !== 'true' && verificationIssuanceEnabled !== 'false') {
+    errors.push('EMAIL_VERIFICATION_V2_ISSUANCE_ENABLED must be true or false');
+  }
+  const keyError = validateEmailTokenKeyConfiguration();
+  if (keyError) errors.push(keyError);
+  if (!(process.env.AUTH_EMAIL_CLIENT_ID?.trim() || process.env.JWT_AUDIENCE?.trim())) {
+    errors.push('AUTH_EMAIL_CLIENT_ID or JWT_AUDIENCE is required for email token issuance');
+  }
+  return errors;
+}
+
+export function googleAuthConfigurationErrors(): string[] {
+  if (!isMvpEnvironment()) return [];
+
+  const errors: string[] = [];
+  const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID?.trim() || '';
+  if (!clientId.endsWith('.apps.googleusercontent.com')) {
+    errors.push('GOOGLE_OAUTH_CLIENT_ID must be the approved Google Web OAuth client ID');
+  }
+  if ((process.env.GOOGLE_OAUTH_CLIENT_SECRET_WEB?.trim().length ?? 0) < 16) {
+    errors.push('GOOGLE_OAUTH_CLIENT_SECRET_WEB must be configured through Azure Key Vault');
+  }
+  return errors;
+}
 
 export function validateStartupEnvironment(): void {
   const missing: string[] = [];
@@ -59,6 +166,8 @@ export function validateStartupEnvironment(): void {
   }
 
   missing.push(...originGatewayConfigurationErrors());
+  missing.push(...emailAuthConfigurationErrors());
+  missing.push(...googleAuthConfigurationErrors());
 
   if (warnings.length > 0) {
     // eslint-disable-next-line no-console

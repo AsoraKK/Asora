@@ -55,10 +55,10 @@ function isApprovedConfiguredCallback(value: string): boolean {
     return uri.toString() === CANONICAL_WEB_CALLBACK;
   }
 
-  // Exact immutable Pages previews are temporary and may never be enabled in
-  // the production environment. Wildcards are rejected by URL parsing and
-  // exact-set membership below.
-  return !isProductionEnvironment() && uri.hostname.endsWith('.pages.dev');
+  // The MVP uses one shared backend for production and immutable Cloudflare
+  // previews. Preview callbacks remain temporary, exact-set entries and are
+  // restricted to the Flutter Pages project; wildcards never reach this set.
+  return uri.hostname.endsWith('.lythaus-web.pages.dev');
 }
 
 export function isRegisteredRedirectUri(value: string): boolean {

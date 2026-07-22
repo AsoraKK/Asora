@@ -6,6 +6,7 @@ import 'package:http/testing.dart' as http_testing;
 
 import 'package:asora/features/auth/application/web_auth_service.dart';
 import 'package:asora/features/auth/application/web_token_storage.dart';
+import 'package:asora/features/auth/application/oauth2_service.dart';
 import 'package:asora/features/auth/domain/auth_failure.dart';
 import 'package:asora/features/auth/domain/user.dart';
 
@@ -58,6 +59,57 @@ Map<String, dynamic> _tokenResponseJson({
 // ---------------------------------------------------------------------------
 
 void main() {
+  group('WebAuthService authorization request', () {
+    test(
+      'builds a Google PKCE S256 transaction and persists pending state',
+      () {
+        final storage = InMemoryTokenStorage();
+        final service = WebAuthService(storage: storage);
+
+        final uri = service.prepareAuthorizationRequest();
+
+        expect(uri.toString(), startsWith(OAuth2Config.authorizationEndpoint));
+        expect(uri.queryParameters['response_type'], 'code');
+        expect(uri.queryParameters['client_id'], OAuth2Config.clientId);
+        expect(uri.queryParameters['code_challenge_method'], 'S256');
+        expect(uri.queryParameters['code_challenge'], hasLength(43));
+        expect(uri.queryParameters['state'], storage.read('pkce_state'));
+        expect(uri.queryParameters['nonce'], storage.read('oidc_nonce'));
+        expect(storage.read('pkce_code_verifier'), hasLength(43));
+        expect(storage.read('auth_provider'), 'google');
+        expect(uri.queryParameters['idp'], OAuth2Config.googleIdpHint);
+        expect(uri.queryParameters['scope'], OAuth2Config.scopeString);
+      },
+    );
+
+    test('email transaction omits an identity-provider hint', () {
+      final storage = InMemoryTokenStorage();
+      final service = WebAuthService(storage: storage);
+
+      final uri = service.prepareAuthorizationRequest(
+        provider: OAuth2Provider.email,
+      );
+
+      expect(uri.queryParameters.containsKey('idp'), isFalse);
+      expect(storage.read('auth_provider'), 'email');
+    });
+
+    test('deferred providers cannot prepare a browser transaction', () {
+      final service = WebAuthService(storage: InMemoryTokenStorage());
+
+      expect(
+        () =>
+            service.prepareAuthorizationRequest(provider: OAuth2Provider.apple),
+        throwsA(isA<AuthFailure>()),
+      );
+      expect(
+        () =>
+            service.prepareAuthorizationRequest(provider: OAuth2Provider.world),
+        throwsA(isA<AuthFailure>()),
+      );
+    });
+  });
+
   group('WebAuthService.handleCallback', () {
     WebAuthService buildService({
       InMemoryTokenStorage? storage,
@@ -159,6 +211,118 @@ void main() {
       expect(storage.read('oidc_nonce'), isNull);
       expect(storage.read('auth_provider'), isNull);
     });
+
+    test('sends callback state with the form-encoded code exchange', () async {
+      final storage = InMemoryTokenStorage()
+        ..write('pkce_state', 'expected_state')
+        ..write('pkce_code_verifier', 'verifier-123')
+        ..write('oidc_nonce', 'nonce-123');
+      Map<String, String>? tokenFields;
+      final client = http_testing.MockClient((request) async {
+        if (request.url.toString().contains('token')) {
+          tokenFields = request.bodyFields;
+          return http.Response(jsonEncode(_tokenResponseJson()), 200);
+        }
+        return http.Response(jsonEncode(_userJson()), 200);
+      });
+      final svc = WebAuthService(httpClient: client, storage: storage);
+
+      await svc.handleCallback(
+        Uri.parse(
+          'https://app.lythaus.co/auth/callback?code=abc&state=expected_state',
+        ),
+      );
+
+      expect(tokenFields?['state'], 'expected_state');
+      expect(tokenFields?['code_verifier'], 'verifier-123');
+    });
+
+    test('rejects a matching state when the PKCE verifier is missing', () async {
+      final storage = InMemoryTokenStorage()
+        ..write('pkce_state', 'expected_state')
+        ..write('oidc_nonce', 'nonce-123')
+        ..write('auth_provider', 'google');
+      final svc = buildService(storage: storage);
+
+      await expectLater(
+        svc.handleCallback(
+          Uri.parse(
+            'https://app.lythaus.co/auth/callback?code=abc&state=expected_state',
+          ),
+        ),
+        throwsA(isA<AuthFailure>()),
+      );
+      expect(storage.read('pkce_state'), isNull);
+      expect(storage.read('oidc_nonce'), isNull);
+      expect(storage.read('auth_provider'), isNull);
+    });
+
+    test('rejects token responses without an access token', () async {
+      final storage = InMemoryTokenStorage()
+        ..write('pkce_state', 'expected_state')
+        ..write('pkce_code_verifier', 'verifier-123');
+      final svc = buildService(
+        storage: storage,
+        tokenBody: {'refresh_token': 'rt-only', 'expires_in': 900},
+      );
+
+      await expectLater(
+        svc.handleCallback(
+          Uri.parse(
+            'https://app.lythaus.co/auth/callback?code=abc&state=expected_state',
+          ),
+        ),
+        throwsA(isA<AuthFailure>()),
+      );
+      expect(storage.read('pkce_code_verifier'), isNull);
+    });
+
+    test('accepts string expiry and nested userinfo envelopes', () async {
+      final storage = InMemoryTokenStorage()
+        ..write('pkce_state', 'expected_state')
+        ..write('pkce_code_verifier', 'verifier-123');
+      final svc = buildService(
+        storage: storage,
+        tokenBody: {'access_token': 'at-only', 'expires_in': '1200'},
+        userBody: {'user': _userJson(id: 'nested-user')},
+      );
+
+      final user = await svc.handleCallback(
+        Uri.parse(
+          'https://app.lythaus.co/auth/callback?code=abc&state=expected_state',
+        ),
+      );
+
+      expect(user.id, 'nested-user');
+      expect(storage.read('access_token'), 'at-only');
+      expect(storage.read('refresh_token'), isNull);
+      expect(storage.read('id_token'), isNull);
+      expect(DateTime.tryParse(storage.read('token_expiry')!), isNotNull);
+    });
+
+    test('accepts canonical backend data envelopes', () async {
+      final storage = InMemoryTokenStorage()
+        ..write('pkce_state', 'expected_state')
+        ..write('pkce_code_verifier', 'verifier-123');
+      final svc = buildService(
+        storage: storage,
+        tokenBody: {'success': true, 'data': _tokenResponseJson()},
+        userBody: {
+          'success': true,
+          'data': _userJson(id: 'canonical-user'),
+        },
+      );
+
+      final user = await svc.handleCallback(
+        Uri.parse(
+          'https://app.lythaus.co/auth/callback?code=abc&state=expected_state',
+        ),
+      );
+
+      expect(user.id, 'canonical-user');
+      expect(storage.read('access_token'), 'at_123');
+      expect(storage.read('refresh_token'), 'rt_456');
+    });
   });
 
   group('WebAuthService session management (stub platform)', () {
@@ -225,11 +389,109 @@ void main() {
       expect(service.isSignedIn(), isFalse);
     });
 
-    test('signOut does not throw', () {
-      storage.write('access_token', 'token');
-      storage.write('user_data', jsonEncode(_userJson()));
-      expect(() => service.signOut(), returnsNormally);
-      expect(storage.snapshot, isEmpty);
+    test(
+      'signOut revokes the server session before clearing browser state',
+      () async {
+        storage.write('access_token', 'token');
+        storage.write('user_data', jsonEncode(_userJson()));
+        http.Request? revokeRequest;
+        service = WebAuthService(
+          storage: storage,
+          httpClient: http_testing.MockClient((request) async {
+            revokeRequest = request;
+            return http.Response('{}', 200);
+          }),
+        );
+
+        await service.signOut();
+
+        expect(revokeRequest?.url.path, endsWith('/auth/sessions/revoke'));
+        expect(revokeRequest?.headers['Authorization'], 'Bearer token');
+        expect(storage.snapshot, isEmpty);
+      },
+    );
+
+    test('refreshSession rotates tokens and refreshes UserInfo', () async {
+      storage
+        ..write('access_token', 'old-access')
+        ..write('refresh_token', 'old-refresh')
+        ..write(
+          'token_expiry',
+          DateTime.now().subtract(const Duration(minutes: 1)).toIso8601String(),
+        );
+      Map<String, String>? refreshFields;
+      service = WebAuthService(
+        storage: storage,
+        httpClient: http_testing.MockClient((request) async {
+          if (request.url.path.endsWith('/auth/token')) {
+            refreshFields = request.bodyFields;
+            return http.Response(
+              jsonEncode({
+                'success': true,
+                'data': _tokenResponseJson(
+                  accessToken: 'new-access',
+                  refreshToken: 'new-refresh',
+                ),
+              }),
+              200,
+            );
+          }
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': _userJson(id: 'refreshed-user'),
+            }),
+            200,
+          );
+        }),
+      );
+
+      final user = await service.refreshSession();
+
+      expect(user?.id, 'refreshed-user');
+      expect(refreshFields?['grant_type'], 'refresh_token');
+      expect(refreshFields?['refresh_token'], 'old-refresh');
+      expect(storage.read('access_token'), 'new-access');
+      expect(storage.read('refresh_token'), 'new-refresh');
+      expect(service.isSignedIn(), isTrue);
+    });
+
+    test('refreshSession rejects a non-rotating refresh token', () async {
+      storage.write('refresh_token', 'same-refresh');
+      service = WebAuthService(
+        storage: storage,
+        httpClient: http_testing.MockClient((request) async {
+          return http.Response(
+            jsonEncode(
+              _tokenResponseJson(
+                accessToken: 'new-access',
+                refreshToken: 'same-refresh',
+              ),
+            ),
+            200,
+          );
+        }),
+      );
+
+      expect(await service.refreshSession(), isNull);
+      expect(storage.read('refresh_token'), 'same-refresh');
+      expect(storage.read('access_token'), isNull);
+    });
+
+    test('storeDirectSession persists an email-auth session', () {
+      final user = User.fromJson(_userJson(id: 'email-user'));
+
+      service.storeDirectSession(
+        accessToken: 'email-access',
+        refreshToken: 'email-refresh',
+        expiresIn: 900,
+        user: user,
+      );
+
+      expect(service.getAccessToken(), 'email-access');
+      expect(storage.read('refresh_token'), 'email-refresh');
+      expect(service.getStoredUser()!.id, 'email-user');
+      expect(service.isSignedIn(), isTrue);
     });
   });
 

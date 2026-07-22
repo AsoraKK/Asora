@@ -121,7 +121,13 @@ Class | Method | HTTP request | Description
 [*AppealsApi*](doc/AppealsApi.md) | [**appealsGet**](doc/AppealsApi.md#appealsget) | **GET** /appeals/{id} | Get appeal detail
 [*AppealsApi*](doc/AppealsApi.md) | [**appealsVote**](doc/AppealsApi.md#appealsvote) | **POST** /appeals/{id}/votes | Cast a community vote on an appeal
 [*AuthApi*](doc/AuthApi.md) | [**authAuthorize**](doc/AuthApi.md#authauthorize) | **GET** /auth/authorize | OAuth2 authorization endpoint
-[*AuthApi*](doc/AuthApi.md) | [**authEmailLogin**](doc/AuthApi.md#authemaillogin) | **POST** /auth/email | Sign in with a verified email identity
+[*AuthApi*](doc/AuthApi.md) | [**authEmailForgotPassword**](doc/AuthApi.md#authemailforgotpassword) | **POST** /auth/email/forgot-password | Request a password-reset email
+[*AuthApi*](doc/AuthApi.md) | [**authEmailLogin**](doc/AuthApi.md#authemaillogin) | **POST** /auth/email/login | Sign in with email and password
+[*AuthApi*](doc/AuthApi.md) | [**authEmailProviderLogin**](doc/AuthApi.md#authemailproviderlogin) | **POST** /auth/email | Sign in with a verified provider-managed email identity
+[*AuthApi*](doc/AuthApi.md) | [**authEmailRegister**](doc/AuthApi.md#authemailregister) | **POST** /auth/email/register | Register an email/password account
+[*AuthApi*](doc/AuthApi.md) | [**authEmailResend**](doc/AuthApi.md#authemailresend) | **POST** /auth/email/resend | Resend email verification
+[*AuthApi*](doc/AuthApi.md) | [**authEmailResetPassword**](doc/AuthApi.md#authemailresetpassword) | **POST** /auth/email/reset-password | Complete a password reset
+[*AuthApi*](doc/AuthApi.md) | [**authEmailVerify**](doc/AuthApi.md#authemailverify) | **POST** /auth/email/verify | Verify an email address
 [*AuthApi*](doc/AuthApi.md) | [**authInviteValidate**](doc/AuthApi.md#authinvitevalidate) | **GET** /auth/invite/validate | Validate an invite code
 [*AuthApi*](doc/AuthApi.md) | [**authPing**](doc/AuthApi.md#authping) | **GET** /auth/ping | Verify authentication token is valid
 [*AuthApi*](doc/AuthApi.md) | [**authRedeemInvite**](doc/AuthApi.md#authredeeminvite) | **POST** /auth/redeem-invite | Redeem an invite code to activate account
@@ -288,7 +294,16 @@ Class | Method | HTTP request | Description
  - [DSRExportResponseMetadata](doc/DSRExportResponseMetadata.md)
  - [DsrRequestInput](doc/DsrRequestInput.md)
  - [DsrRequestSummary](doc/DsrRequestSummary.md)
- - [EmailLoginRequest](doc/EmailLoginRequest.md)
+ - [EmailActionEmailRequest](doc/EmailActionEmailRequest.md)
+ - [EmailActionPasswordRequest](doc/EmailActionPasswordRequest.md)
+ - [EmailActionTarget](doc/EmailActionTarget.md)
+ - [EmailAuthStatusResponse](doc/EmailAuthStatusResponse.md)
+ - [EmailAuthUser](doc/EmailAuthUser.md)
+ - [EmailLoginResponse](doc/EmailLoginResponse.md)
+ - [EmailPasswordRequest](doc/EmailPasswordRequest.md)
+ - [EmailPasswordResetRequest](doc/EmailPasswordResetRequest.md)
+ - [EmailProviderLoginRequest](doc/EmailProviderLoginRequest.md)
+ - [EmailTokenRequest](doc/EmailTokenRequest.md)
  - [Error](doc/Error.md)
  - [ErrorResponse](doc/ErrorResponse.md)
  - [ErrorResponseError](doc/ErrorResponseError.md)

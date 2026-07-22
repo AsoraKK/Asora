@@ -32,7 +32,7 @@ class ProfilePreferencesService {
     }
 
     await _dio.patch<Map<String, dynamic>>(
-      '/api/users/me',
+      'users/me',
       data: {'trustPassportVisibility': visibility},
       options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
     );
@@ -55,7 +55,7 @@ final publicUserProvider = FutureProvider.autoDispose
           : null;
 
       final response = await dio.get<Map<String, dynamic>>(
-        '/api/users/$userId',
+        'users/$userId',
         options: authHeader == null ? null : Options(headers: authHeader),
       );
 
@@ -63,11 +63,10 @@ final publicUserProvider = FutureProvider.autoDispose
       if (data == null) {
         throw Exception('Invalid profile response');
       }
-      final userJson = data['user'];
-      if (userJson is! Map) {
+      if (data['id'] is! String || data['displayName'] is! String) {
         throw Exception('Invalid profile response');
       }
-      return PublicUser.fromJson(Map<String, dynamic>.from(userJson));
+      return PublicUser.fromJson(data);
     });
 
 final trustPassportProvider = FutureProvider.autoDispose
@@ -79,7 +78,7 @@ final trustPassportProvider = FutureProvider.autoDispose
           : null;
 
       final response = await dio.get<Map<String, dynamic>>(
-        '/api/users/$userId/trust-passport',
+        'users/$userId/trust-passport',
         options: authHeader == null ? null : Options(headers: authHeader),
       );
 

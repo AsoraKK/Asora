@@ -335,7 +335,7 @@ export function authorizeGatewayRequest(request: HttpRequest, now = new Date()):
   }
 
   const dualActive = configuration.mode === 'dual' && Boolean(configuration.dualUntil && configuration.dualUntil > now);
-  if (dualActive && isLegacyAllowed(request, configuration.legacyAllowlist)) {
+  if (dualActive && outcome === 'missing' && isLegacyAllowed(request, configuration.legacyAllowlist)) {
     trackDecision(configuration.mode, 'legacy_allowlist', request, false);
     return undefined;
   }

@@ -9,13 +9,22 @@ import 'package:dio/dio.dart';
 
 import 'package:asora_api_client/src/api_util.dart';
 import 'package:asora_api_client/src/model/auth_token_request.dart';
-import 'package:asora_api_client/src/model/email_login_request.dart';
+import 'package:asora_api_client/src/model/email_action_email_request.dart';
+import 'package:asora_api_client/src/model/email_action_password_request.dart';
+import 'package:asora_api_client/src/model/email_auth_status_response.dart';
+import 'package:asora_api_client/src/model/email_login_response.dart';
+import 'package:asora_api_client/src/model/email_password_request.dart';
+import 'package:asora_api_client/src/model/email_password_reset_request.dart';
+import 'package:asora_api_client/src/model/email_provider_login_request.dart';
+import 'package:asora_api_client/src/model/email_token_request.dart';
 import 'package:asora_api_client/src/model/error.dart';
+import 'package:asora_api_client/src/model/forbidden_error.dart';
 import 'package:asora_api_client/src/model/invite_validation_response.dart';
 import 'package:asora_api_client/src/model/o_auth_token_response.dart';
 import 'package:asora_api_client/src/model/rate_limit_error.dart';
 import 'package:asora_api_client/src/model/redeem_invite_request.dart';
 import 'package:asora_api_client/src/model/redeem_invite_response.dart';
+import 'package:asora_api_client/src/model/service_unavailable_error.dart';
 import 'package:asora_api_client/src/model/unauthorized_error.dart';
 import 'package:asora_api_client/src/model/user_info_response.dart';
 import 'package:asora_api_client/src/model/validation_error_response.dart';
@@ -124,11 +133,201 @@ class AuthApi {
     );
   }
 
-  /// Sign in with a verified email identity
-  /// Verifies email/password credentials with Google Identity Platform, requires a verified provider email and an existing invited Lythaus account, then returns short-lived Lythaus access and rotating refresh tokens. The endpoint never creates an uninvited account.
+  /// Request a password-reset email
+  /// Always returns a neutral response to resist account enumeration.
   ///
   /// Parameters:
-  /// * [emailLoginRequest]
+  /// * [emailActionEmailRequest]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [EmailAuthStatusResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<EmailAuthStatusResponse>> authEmailForgotPassword({
+    required EmailActionEmailRequest emailActionEmailRequest,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/auth/email/forgot-password';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(EmailActionEmailRequest);
+      _bodyData = _serializers.serialize(emailActionEmailRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    EmailAuthStatusResponse? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(EmailAuthStatusResponse),
+      ) as EmailAuthStatusResponse;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<EmailAuthStatusResponse>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Sign in with email and password
+  ///
+  ///
+  /// Parameters:
+  /// * [emailPasswordRequest]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [EmailLoginResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<EmailLoginResponse>> authEmailLogin({
+    required EmailPasswordRequest emailPasswordRequest,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/auth/email/login';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(EmailPasswordRequest);
+      _bodyData = _serializers.serialize(emailPasswordRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    EmailLoginResponse? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(EmailLoginResponse),
+      ) as EmailLoginResponse;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<EmailLoginResponse>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Sign in with a verified provider-managed email identity
+  /// Compatibility endpoint retained from the shared-MVP runtime. It verifies email/password credentials with Google Identity Platform, requires a verified provider email and an existing invited Lythaus account, then returns short-lived Lythaus access and rotating refresh tokens. It never creates an uninvited account.
+  ///
+  /// Parameters:
+  /// * [emailProviderLoginRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -138,8 +337,8 @@ class AuthApi {
   ///
   /// Returns a [Future] containing a [Response] with a [OAuthTokenResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<OAuthTokenResponse>> authEmailLogin({
-    required EmailLoginRequest emailLoginRequest,
+  Future<Response<OAuthTokenResponse>> authEmailProviderLogin({
+    required EmailProviderLoginRequest emailProviderLoginRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -164,8 +363,8 @@ class AuthApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(EmailLoginRequest);
-      _bodyData = _serializers.serialize(emailLoginRequest, specifiedType: _type);
+      const _type = FullType(EmailProviderLoginRequest);
+      _bodyData = _serializers.serialize(emailProviderLoginRequest, specifiedType: _type);
 
     } catch(error, stackTrace) {
       throw DioException(
@@ -208,6 +407,386 @@ class AuthApi {
     }
 
     return Response<OAuthTokenResponse>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Register an email/password account
+  /// Creates an unverified account and sends a verification email to a server-mapped action target. The response is deliberately neutral.
+  ///
+  /// Parameters:
+  /// * [emailActionPasswordRequest]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [EmailAuthStatusResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<EmailAuthStatusResponse>> authEmailRegister({
+    required EmailActionPasswordRequest emailActionPasswordRequest,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/auth/email/register';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(EmailActionPasswordRequest);
+      _bodyData = _serializers.serialize(emailActionPasswordRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    EmailAuthStatusResponse? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(EmailAuthStatusResponse),
+      ) as EmailAuthStatusResponse;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<EmailAuthStatusResponse>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Resend email verification
+  /// Returns a neutral response whether or not the account exists.
+  ///
+  /// Parameters:
+  /// * [emailActionEmailRequest]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [EmailAuthStatusResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<EmailAuthStatusResponse>> authEmailResend({
+    required EmailActionEmailRequest emailActionEmailRequest,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/auth/email/resend';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(EmailActionEmailRequest);
+      _bodyData = _serializers.serialize(emailActionEmailRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    EmailAuthStatusResponse? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(EmailAuthStatusResponse),
+      ) as EmailAuthStatusResponse;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<EmailAuthStatusResponse>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Complete a password reset
+  /// Consumes a single-use reset token, replaces the password hash, and revokes existing refresh sessions.
+  ///
+  /// Parameters:
+  /// * [emailPasswordResetRequest]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [EmailAuthStatusResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<EmailAuthStatusResponse>> authEmailResetPassword({
+    required EmailPasswordResetRequest emailPasswordResetRequest,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/auth/email/reset-password';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(EmailPasswordResetRequest);
+      _bodyData = _serializers.serialize(emailPasswordResetRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    EmailAuthStatusResponse? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(EmailAuthStatusResponse),
+      ) as EmailAuthStatusResponse;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<EmailAuthStatusResponse>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Verify an email address
+  /// Redeems a token supplied only in the JSON request body. GET and query-string redemption are rejected.
+  ///
+  /// Parameters:
+  /// * [emailTokenRequest]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [EmailAuthStatusResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<EmailAuthStatusResponse>> authEmailVerify({
+    required EmailTokenRequest emailTokenRequest,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/auth/email/verify';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(EmailTokenRequest);
+      _bodyData = _serializers.serialize(emailTokenRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    EmailAuthStatusResponse? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(EmailAuthStatusResponse),
+      ) as EmailAuthStatusResponse;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<EmailAuthStatusResponse>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

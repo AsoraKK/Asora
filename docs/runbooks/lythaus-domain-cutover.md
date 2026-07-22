@@ -2,7 +2,9 @@
 
 ## Gate
 
-This pass is audit and repository preparation only. Do not perform provider writes without separate authorization after both Cloudflare zones, Pages, Workers, custom domains/routes, Access, rulesets, certificates, the Azure MVP origin, CORS, OAuth callbacks, secrets, and rollback snapshots are verified.
+Provider preparation is authorised for immutable previews, ACS email, controlled
+origin-guard rehearsals, and rollback proof. Do not attach final public Lythaus
+custom domains until the mandatory live authentication and rollback gates pass.
 
 ## Environment model
 
@@ -29,8 +31,6 @@ Store raw exports only under `.artifacts/cloudflare-audit/`; commit sanitized su
 9. Restore the prior Function package and Worker version, verify rollback, then restore the exact candidate SHA and repeat tests.
 
 ## Authorised provider-change plan
-
-After a separate approval:
 
 1. Attach `lythaus.co` to the identified marketing Pages project and verify canonical/sitemap output.
 2. Configure the path/query-preserving `www.lythaus.co` redirect.
@@ -63,5 +63,10 @@ PR 453 is draft and stacked on PR 452. Repository preparation is complete only
 where evidence is recorded in `docs/evidence/cloudflare/`; current Worker,
 Pages, Azure origin-authentication, browser-authentication, Access, and
 rollback rehearsals must be repeated against the exact candidate before
-cutover. Production DNS, custom domains, redirects, email DNS, certificates,
-and Access bindings remain unchanged.
+cutover. PR 452 has merged; retarget PR 453 to `main` after the new commit exists.
+ACS Email resources, verified customer-managed domain, approved sender, scoped
+Function identity, provider acceptance test, cost budget, and additive empty
+email-auth schema are prepared. Mailbox delivery and the full application email
+auth lifecycle are not yet proven. Email DNS remains limited to exact
+Azure-issued verification records; public app/API/marketing custom domains
+remain unchanged.

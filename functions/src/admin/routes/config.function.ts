@@ -35,9 +35,12 @@ async function adminConfigHandler(
     return createCorsPreflightResponse(origin);
   }
 
-  // Verify Cloudflare Access for all methods
-  // Require owner email match for config endpoints (defense-in-depth)
-  const authResult = await requireCloudflareAccess(request.headers, { requireOwner: true });
+  // Config writes remain owner-only. The daily report may use the single
+  // explicitly mapped service identity for read-only configuration snapshots.
+  const authResult = await requireCloudflareAccess(request.headers, {
+    requireOwner: true,
+    allowOperationsReader: method === 'GET',
+  });
 
   if ('error' in authResult) {
     context.warn(`[admin/config ${method}] Auth failed: ${authResult.error} [${correlationId}]`);

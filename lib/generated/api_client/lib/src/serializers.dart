@@ -93,7 +93,16 @@ import 'package:asora_api_client/src/model/dsr_export_response.dart';
 import 'package:asora_api_client/src/model/dsr_export_response_metadata.dart';
 import 'package:asora_api_client/src/model/dsr_request_input.dart';
 import 'package:asora_api_client/src/model/dsr_request_summary.dart';
-import 'package:asora_api_client/src/model/email_login_request.dart';
+import 'package:asora_api_client/src/model/email_action_email_request.dart';
+import 'package:asora_api_client/src/model/email_action_password_request.dart';
+import 'package:asora_api_client/src/model/email_action_target.dart';
+import 'package:asora_api_client/src/model/email_auth_status_response.dart';
+import 'package:asora_api_client/src/model/email_auth_user.dart';
+import 'package:asora_api_client/src/model/email_login_response.dart';
+import 'package:asora_api_client/src/model/email_password_request.dart';
+import 'package:asora_api_client/src/model/email_password_reset_request.dart';
+import 'package:asora_api_client/src/model/email_provider_login_request.dart';
+import 'package:asora_api_client/src/model/email_token_request.dart';
 import 'package:asora_api_client/src/model/error.dart';
 import 'package:asora_api_client/src/model/error_response.dart';
 import 'package:asora_api_client/src/model/error_response_error.dart';
@@ -241,7 +250,16 @@ part 'serializers.g.dart';
   DSRExportResponseMetadata,
   DsrRequestInput,
   DsrRequestSummary,
-  EmailLoginRequest,
+  EmailActionEmailRequest,
+  EmailActionPasswordRequest,
+  EmailActionTarget,
+  EmailAuthStatusResponse,
+  EmailAuthUser,
+  EmailLoginResponse,
+  EmailPasswordRequest,
+  EmailPasswordResetRequest,
+  EmailProviderLoginRequest,
+  EmailTokenRequest,
   Error,
   ErrorResponse,
   ErrorResponseError,

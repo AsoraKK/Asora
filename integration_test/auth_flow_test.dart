@@ -42,7 +42,7 @@ void main() {
       expect(find.byType(SignInPage), findsOneWidget);
 
       // Should see both sign-in buttons
-      expect(find.text('Continue with Email'), findsOneWidget);
+      expect(find.text('Continue with email'), findsOneWidget);
       expect(find.text('Continue with Google'), findsOneWidget);
     });
 
@@ -55,11 +55,11 @@ void main() {
         app.main();
         await tester.pumpAndSettle();
 
-        // Tap "Continue with Email" to trigger B2C flow
-        await tester.tap(find.text('Continue with Email'));
+        // Tap "Continue with email" to open the MVP email/password flow.
+        await tester.tap(find.text('Continue with email'));
         await tester.pumpAndSettle();
 
-        // At this point, the B2C hosted page should appear in the system browser
+        // The active email/password screen should now be available.
         // Complete the authentication manually (sign in or create account)
 
         // Wait up to 2 minutes for auth to complete
@@ -117,7 +117,7 @@ void main() {
 
       // Should return to sign-in page
       expect(find.byType(SignInPage), findsOneWidget);
-      expect(find.text('Continue with Email'), findsOneWidget);
+      expect(find.text('Continue with email'), findsOneWidget);
     }, skip: skipInteractive);
 
     testWidgets(

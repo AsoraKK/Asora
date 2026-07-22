@@ -28,6 +28,7 @@ const queryCalls: Array<{ sql: string; params: any[] }> = [];
 const usersById = new Map<string, UserRow>();
 const usersByEmail = new Map<string, UserRow>();
 const linksByKey = new Map<string, LinkRow>();
+let failProviderLinkInsert = false;
 const UUID_V7_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const LINKED_USER_ID = '01944c1d-5672-7000-8000-0c91f95a72b1';
 const EXISTING_USER_ID = '01944c1d-5672-7000-8000-0c91f95a72b2';
@@ -79,12 +80,17 @@ const mockClient = {
     }
 
     if (sql.includes('INSERT INTO provider_links')) {
-      const [provider, providerSub, userId, createdAt] = params as [
+      if (failProviderLinkInsert) {
+        throw new Error('provider link insert failed');
+      }
+      const [linkId, provider, providerSub, userId, createdAt] = params as [
+        string,
         string,
         string,
         string,
         string,
       ];
+      expect(linkId).toMatch(UUID_V7_REGEX);
       const link = {
         provider,
         provider_sub: providerSub,
@@ -120,6 +126,7 @@ describe('usersService provider linking', () => {
     usersById.clear();
     usersByEmail.clear();
     linksByKey.clear();
+    failProviderLinkInsert = false;
     mockClient.query.mockClear();
     mockedWithClient.mockClear();
   });
@@ -146,21 +153,16 @@ describe('usersService provider linking', () => {
     expect(queryCalls.filter((call) => call.sql.includes('INSERT INTO users'))).toHaveLength(0);
   });
 
-  it('creates a provider link for an existing user on first sign-in', async () => {
+  it('does not silently merge an unlinked provider identity by email', async () => {
     usersByEmail.set('existing@example.com', makeUser(EXISTING_USER_ID, 'existing@example.com'));
 
-    const [user, isNewUser] = await usersService.getOrCreateUserByProvider(
-      'apple',
-      'sub-2',
-      'existing@example.com'
-    );
+    await expect(
+      usersService.getOrCreateUserByProvider('google', 'sub-2', 'existing@example.com')
+    ).rejects.toThrow('must be linked through an authenticated account-linking flow');
 
-    expect(isNewUser).toBe(false);
-    expect(user.id).toBe(EXISTING_USER_ID);
-    expect(user.primary_email).toBe('existing@example.com');
-    expect(queryCalls.filter((call) => call.sql.includes('INSERT INTO provider_links'))).toHaveLength(1);
+    expect(queryCalls.filter((call) => call.sql.includes('INSERT INTO provider_links'))).toHaveLength(0);
     expect(queryCalls.filter((call) => call.sql.includes('INSERT INTO users'))).toHaveLength(0);
-    expect(linksByKey.has('apple:sub-2')).toBe(true);
+    expect(linksByKey.has('google:sub-2')).toBe(false);
   });
 
   it('creates a new user and provider link when no account exists', async () => {
@@ -175,6 +177,21 @@ describe('usersService provider linking', () => {
     expect(user.id).toMatch(UUID_V7_REGEX);
     expect(queryCalls.filter((call) => call.sql.includes('INSERT INTO users'))).toHaveLength(1);
     expect(queryCalls.filter((call) => call.sql.includes('INSERT INTO provider_links'))).toHaveLength(1);
+    expect(queryCalls.map((call) => call.sql)).toContain('BEGIN');
+    expect(queryCalls.map((call) => call.sql)).toContain('COMMIT');
+    expect(queryCalls.map((call) => call.sql)).not.toContain('ROLLBACK');
+  });
+
+  it('rolls back user creation when provider-link creation fails', async () => {
+    failProviderLinkInsert = true;
+
+    await expect(
+      usersService.getOrCreateUserByProvider('google', 'sub-rollback', 'rollback@example.com')
+    ).rejects.toThrow('provider link insert failed');
+
+    expect(queryCalls.map((call) => call.sql)).toContain('BEGIN');
+    expect(queryCalls.map((call) => call.sql)).toContain('ROLLBACK');
+    expect(queryCalls.map((call) => call.sql)).not.toContain('COMMIT');
   });
 
   it('rejects invalid provider identifiers before touching the database', async () => {

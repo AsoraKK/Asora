@@ -15,12 +15,13 @@ part 'service_unavailable_error_error.g.dart';
 /// * [code]
 /// * [message]
 /// * [retryAfterSeconds] - Suggested number of seconds to wait before retrying
-/// * [correlationId]
+/// * [correlationId] - Opaque request correlation identifier.
+/// * [retryable] - Whether the same request may be retried safely.
 @BuiltValue()
 abstract class ServiceUnavailableErrorError implements Built<ServiceUnavailableErrorError, ServiceUnavailableErrorErrorBuilder> {
   @BuiltValueField(wireName: r'code')
   ServiceUnavailableErrorErrorCodeEnum get code;
-  // enum codeEnum {  SERVICE_UNAVAILABLE,  DEPENDENCY_UNAVAILABLE,  MAINTENANCE,  };
+  // enum codeEnum {  SERVICE_UNAVAILABLE,  DEPENDENCY_UNAVAILABLE,  MAINTENANCE,  EMAIL_AUTH_TEMPORARILY_UNAVAILABLE,  EMAIL_DELIVERY_UNAVAILABLE,  };
 
   @BuiltValueField(wireName: r'message')
   String get message;
@@ -29,8 +30,13 @@ abstract class ServiceUnavailableErrorError implements Built<ServiceUnavailableE
   @BuiltValueField(wireName: r'retryAfterSeconds')
   int? get retryAfterSeconds;
 
+  /// Opaque request correlation identifier.
   @BuiltValueField(wireName: r'correlationId')
   String? get correlationId;
+
+  /// Whether the same request may be retried safely.
+  @BuiltValueField(wireName: r'retryable')
+  bool? get retryable;
 
   ServiceUnavailableErrorError._();
 
@@ -77,6 +83,13 @@ class _$ServiceUnavailableErrorErrorSerializer implements PrimitiveSerializer<Se
       yield serializers.serialize(
         object.correlationId,
         specifiedType: const FullType(String),
+      );
+    }
+    if (object.retryable != null) {
+      yield r'retryable';
+      yield serializers.serialize(
+        object.retryable,
+        specifiedType: const FullType(bool),
       );
     }
   }
@@ -130,6 +143,13 @@ class _$ServiceUnavailableErrorErrorSerializer implements PrimitiveSerializer<Se
           ) as String;
           result.correlationId = valueDes;
           break;
+        case r'retryable':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(bool),
+          ) as bool;
+          result.retryable = valueDes;
+          break;
         default:
           unhandled.add(key);
           unhandled.add(value);
@@ -167,6 +187,10 @@ class ServiceUnavailableErrorErrorCodeEnum extends EnumClass {
   static const ServiceUnavailableErrorErrorCodeEnum DEPENDENCY_UNAVAILABLE = _$serviceUnavailableErrorErrorCodeEnum_DEPENDENCY_UNAVAILABLE;
   @BuiltValueEnumConst(wireName: r'MAINTENANCE')
   static const ServiceUnavailableErrorErrorCodeEnum MAINTENANCE = _$serviceUnavailableErrorErrorCodeEnum_MAINTENANCE;
+  @BuiltValueEnumConst(wireName: r'EMAIL_AUTH_TEMPORARILY_UNAVAILABLE')
+  static const ServiceUnavailableErrorErrorCodeEnum EMAIL_AUTH_TEMPORARILY_UNAVAILABLE = _$serviceUnavailableErrorErrorCodeEnum_EMAIL_AUTH_TEMPORARILY_UNAVAILABLE;
+  @BuiltValueEnumConst(wireName: r'EMAIL_DELIVERY_UNAVAILABLE')
+  static const ServiceUnavailableErrorErrorCodeEnum EMAIL_DELIVERY_UNAVAILABLE = _$serviceUnavailableErrorErrorCodeEnum_EMAIL_DELIVERY_UNAVAILABLE;
 
   static Serializer<ServiceUnavailableErrorErrorCodeEnum> get serializer => _$serviceUnavailableErrorErrorCodeEnumSerializer;
 
