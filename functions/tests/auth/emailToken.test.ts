@@ -6,6 +6,16 @@ import {
   validateEmailTokenKeyConfiguration,
 } from '../../src/auth/service/emailToken';
 
+function tamperHexSuffix(value: string): string {
+  if (value.length === 0) {
+    throw new Error('Cannot tamper with an empty value');
+  }
+
+  const last = value.at(-1)!.toLowerCase();
+  const replacement = last === '0' ? '1' : '0';
+  return `${value.slice(0, -1)}${replacement}`;
+}
+
 describe('email token v2', () => {
   beforeEach(() => {
     process.env.EMAIL_TOKEN_HMAC_SECRET = 'current-email-token-hmac-secret-with-at-least-32-characters';
@@ -36,7 +46,9 @@ describe('email token v2', () => {
     expect(parseVersionedEmailToken(`${issued.token}x`)).toBeNull();
 
     const parsed = parseVersionedEmailToken(issued.token)!;
-    expect(tokenDigestMatches(`${issued.digest.slice(0, -1)}0`, 'verify_email', parsed)).toBe(false);
+    const tampered = tamperHexSuffix(issued.digest);
+    expect(tampered).not.toBe(issued.digest);
+    expect(tokenDigestMatches(tampered, 'verify_email', parsed)).toBe(false);
   });
 
   it('derives an independent delivery recipient reference without exposing an email', () => {
