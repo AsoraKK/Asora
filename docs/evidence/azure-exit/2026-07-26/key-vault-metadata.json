@@ -1,0 +1,8 @@
+{
+  "vaults":[
+    {"name":"kv-asora-dev","region":"northeurope","sku":"Standard","rbac":true,"softDelete":true,"retentionDays":90,"purgeProtection":"NOT RETURNED","publicNetworkAccess":"Enabled","secretNamesObserved":22,"keys":"FORBIDDEN","certificates":"FORBIDDEN"},
+    {"name":"kv-asora-flex-dev","region":"northeurope","sku":"Standard","rbac":true,"softDelete":true,"retentionDays":90,"purgeProtection":"NOT RETURNED","publicNetworkAccess":"Enabled","secretNamesObserved":18,"keys":"FORBIDDEN","certificates":"FORBIDDEN"}
+  ],
+  "secretValues":"never retrieved",
+  "permissionGap":"Caller lacks Microsoft.KeyVault/vaults/keys/read and certificates/read; secret names only were retained"
+}

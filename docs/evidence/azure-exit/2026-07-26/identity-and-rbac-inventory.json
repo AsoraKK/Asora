@@ -1,0 +1,9 @@
+{
+  "managedIdentities":[{"name":"mi-asora-cicd","resourceGroup":"asora-psql-flex","clientId":"[IDENTIFIER RETAINED]","principalId":"[IDENTIFIER RETAINED]"}],
+  "functionIdentity":"SystemAssigned on all three discovered Function Apps",
+  "roleAssignments":"QUERY FAILED because az role assignment list was invoked with incompatible --all and scope options; live assignments unverified",
+  "appRegistrations":"No Asora/Lythaus match returned from readable query",
+  "githubOidc":"Referenced by workflows through AZURE_CLIENT_ID/AZURE_TENANT_ID/AZURE_SUBSCRIPTION_ID",
+  "databaseEntraAccess":"Unverified",
+  "removalPlan":"Freeze workflows, identify principals/scopes, revoke only after exports and cutover approval"
+}
