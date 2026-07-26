@@ -1,0 +1,10 @@
+{
+  "accounts": [
+    {"name":"stasoradsrdev","region":"eastus","kind":"StorageV2","sku":"Standard_LRS","tls":"TLS1_2","containers":["dsr-exports","dsr-diagnostic-ping","dsr-diagnostic-ping-poison","dsr-requests","dsr-requests-poison"],"queues":["dsr-diagnostic-ping","dsr-diagnostic-ping-poison","dsr-requests","dsr-requests-poison"],"messageCounts":"UNVERIFIED","resourceListReconciliation":"BLOCKED"},
+    {"name":"asoraflexdev1404","region":"northeurope","kind":"StorageV2","sku":"Standard_LRS","tls":"TLS1_2","containers":["app-package-asorafunctionflex-9983684","azure-webjobs-hosts","azure-webjobs-secrets","deploy-asora-function-dev","deployments","function-releases","onedeploy","sanity","scm-releases","scm-zipdeploy","zipdeploy"],"queues":[],"messageCounts":"NOT APPLICABLE/UNVERIFIED"},
+    {"name":"asoramediadev","region":"northeurope","kind":"StorageV2","sku":"Standard_LRS","tls":"TLS1_2","containers":["user-media"],"queues":[],"messageCounts":"NOT APPLICABLE/UNVERIFIED"},
+    {"name":"asorapsqlflex8fa9","region":"northeurope","kind":"StorageV2","sku":"Standard_LRS","tls":"TLS1_2","containers":["app-package-asora-function-dev-5589db8","azure-webjobs-hosts","azure-webjobs-secrets"],"queues":[],"messageCounts":"NOT APPLICABLE/UNVERIFIED"}
+  ],
+  "queueEncoding":"repository/live evidence indicates DSR queue messageEncoding none; exact live host.json reconciliation pending",
+  "dataPlanePolicy":"queue list only; no message bodies retrieved and no dequeue performed"
+}
