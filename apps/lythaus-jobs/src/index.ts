@@ -37,6 +37,10 @@ interface QueueBatch {
 }
 
 const MAX_IMAGE_PIXELS = 40_000_000;
+const HIVE_DEFAULT_MODELS = ['general_text_classification', 'hate_speech_detection_text', 'violence_text_detection'];
+
+interface HiveClass { class?: string; score?: number; }
+interface HiveResult { highestScore: number; classes: HiveClass[]; action: 'allow' | 'block' | 'queue'; }
 
 function hasMagicBytes(bytes: Uint8Array, contentType: string): boolean {
   if (contentType === 'image/jpeg') return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
@@ -44,6 +48,90 @@ function hasMagicBytes(bytes: Uint8Array, contentType: string): boolean {
   if (contentType === 'image/webp') return bytes.length >= 12 && new TextDecoder().decode(bytes.slice(0, 4)) === 'RIFF' && new TextDecoder().decode(bytes.slice(8, 12)) === 'WEBP';
   if (contentType === 'image/avif') return bytes.length >= 12 && new TextDecoder().decode(bytes.slice(4, 8)) === 'ftyp' && ['avif', 'avis'].includes(new TextDecoder().decode(bytes.slice(8, 12)));
   return false;
+}
+
+async function moderateTextWithHive(text: string, userId: string, contentId: string, env: Env): Promise<HiveResult> {
+  if (!env.HIVE_API_KEY) throw new Error('hive_not_configured');
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15_000);
+  try {
+    const response = await fetch(env.HIVE_API_URL ?? 'https://api.thehive.ai/api/v2/task/sync', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Token ${env.HIVE_API_KEY}`, 'x-content-id': contentId },
+      body: JSON.stringify({ text_data: text, models: HIVE_DEFAULT_MODELS, user_id: userId }),
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error(`hive_http_${response.status}`);
+    const payload = await response.json() as { code?: number; status?: Array<{ response?: { output?: Array<{ classes?: HiveClass[] }> } }> };
+    if (payload.code !== 200 || !Array.isArray(payload.status)) throw new Error('hive_response_invalid');
+    const classes = payload.status.flatMap((status) => status.response?.output?.flatMap((item) => item.classes ?? []) ?? []);
+    const highestScore = classes.reduce((highest, item) => Math.max(highest, typeof item.score === 'number' ? item.score : 0), 0);
+    return { highestScore, classes, action: highestScore >= 0.85 ? 'block' : highestScore >= 0.5 ? 'queue' : 'allow' };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function processPostModeration(message: QueueMessage, env: Env): Promise<void> {
+  const payload = (message.body.payload ?? message.body) as { postId?: unknown };
+  const postId = typeof payload.postId === 'string' ? payload.postId : undefined;
+  if (!postId) throw new Error('content_event_invalid');
+  const postResult = await query<{ id: string; author_id: string; body: string; declared_creation_mode: 'human' | 'ai_assisted' | 'ai_generated'; moderation_state: string }>(
+    env.DB_JOBS_FRESH,
+    `SELECT id, author_id, body, declared_creation_mode, moderation_state FROM content.posts WHERE id = $1`, [postId]
+  );
+  const post = postResult.rows[0];
+  if (!post || post.moderation_state !== 'under_review') return;
+  const prior = await query(env.DB_JOBS_FRESH,
+    `SELECT 1 FROM moderation.detector_runs WHERE content_type = 'post' AND content_id = $1 AND provider = 'hive' LIMIT 1`, [postId]);
+  if (prior.rowCount !== 0) return;
+  const result = await moderateTextWithHive(post.body, post.author_id, postId, env);
+  const modelVersion = env.HIVE_MODEL_VERSION ?? HIVE_DEFAULT_MODELS.join('+');
+  const publicLabel = result.action === 'allow'
+    ? ({ human: 'Human-authored', ai_assisted: 'AI-assisted', ai_generated: 'AI-generated' } as const)[post.declared_creation_mode]
+    : 'Under review';
+  const signal = JSON.stringify({ highestScore: result.highestScore, classes: result.classes, action: result.action });
+  await transaction(env.DB_JOBS_FRESH, async (client) => {
+    const existing = await client.query(`SELECT 1 FROM moderation.detector_runs WHERE content_type = 'post' AND content_id = $1 AND provider = 'hive' LIMIT 1`, [postId]);
+    if (existing.rowCount !== 0) return;
+    await client.query(
+      `INSERT INTO moderation.detector_runs (content_type, content_id, provider, model_version, signal) VALUES ('post', $1, 'hive', $2, $3::jsonb)`,
+      [postId, modelVersion, signal]
+    );
+    await client.query(
+      `INSERT INTO content.content_declarations (post_id, declared_creation_mode, public_label, detector_provider, detector_model_version, detector_signal, declaration_conflict, review_required)
+       VALUES ($1, $2, $3, 'hive', $4, $5::jsonb, false, $6)
+       ON CONFLICT (post_id) DO UPDATE SET public_label = EXCLUDED.public_label, detector_provider = EXCLUDED.detector_provider,
+         detector_model_version = EXCLUDED.detector_model_version, detector_signal = EXCLUDED.detector_signal,
+         declaration_conflict = EXCLUDED.declaration_conflict, review_required = EXCLUDED.review_required, updated_at = now()`,
+      [postId, post.declared_creation_mode, publicLabel, modelVersion, signal, result.action !== 'allow']
+    );
+    const caseResult = await client.query<{ id: string }>(
+      `INSERT INTO moderation.cases (content_type, content_id, state, policy_version) VALUES ('post', $1, $2, 'hive-v1') RETURNING id`,
+      [postId, result.action === 'allow' ? 'resolved' : 'open']
+    );
+    await client.query(
+      `INSERT INTO moderation.decisions (case_id, outcome, public_label, policy_version) VALUES ($1, $2, $3, 'hive-v1')`,
+      [caseResult.rows[0].id, result.action, publicLabel]
+    );
+    await client.query(
+      `INSERT INTO trust.provenance_events (content_id, author_id, declared_creation_mode, detected_content_class, detector_provider, detector_model_version, policy_version, final_decision)
+       VALUES ($1, $2, $3, $4, 'hive', $5, 'hive-v1', $6)`,
+      [postId, post.author_id, post.declared_creation_mode, result.classes[0]?.class ?? null, modelVersion, result.action]
+    );
+    if (result.action === 'allow') {
+      await client.query(`UPDATE content.posts SET moderation_state = 'allowed', published_at = COALESCE(published_at, now()), updated_at = now() WHERE id = $1`, [postId]);
+      await client.query(`INSERT INTO feed.author_outbox (post_id, author_id, published_at) VALUES ($1, $2, COALESCE((SELECT published_at FROM content.posts WHERE id = $1), now())) ON CONFLICT (post_id) DO NOTHING`, [postId, post.author_id]);
+      if (post.declared_creation_mode !== 'ai_generated') {
+        await client.query(
+          `INSERT INTO trust.human_contribution_events (subject_user_id, content_id, human_authorship_eligibility, policy_version, points_delta)
+           VALUES ($1, $2, true, 'hive-v1', 0)`, [post.author_id, postId]
+        );
+      }
+    } else if (result.action === 'block') {
+      await client.query(`UPDATE content.posts SET moderation_state = 'blocked', updated_at = now() WHERE id = $1`, [postId]);
+    }
+  });
 }
 
 async function processMediaUpload(message: QueueMessage, env: Env): Promise<void> {
@@ -124,6 +212,7 @@ async function processMessage(message: QueueMessage, env: Env): Promise<void> {
     return;
   }
   const eventType = message.body.eventType ?? 'unknown';
+  if (eventType === 'content.post.created') await processPostModeration(message, env);
   if (eventType === 'media.upload.finalised') await processMediaUpload(message, env);
   if (eventType === 'privacy.request.created') {
     const payload = (message.body.payload ?? {}) as { requestId?: string; requestType?: string };

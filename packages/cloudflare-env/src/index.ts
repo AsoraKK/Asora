@@ -22,6 +22,8 @@ export interface EnvBindings {
   AUDIT_DLQ?: Queue;
   LYTHAUS_CONFIG?: KVNamespaceLike;
   HIVE_API_KEY?: string;
+  HIVE_API_URL?: string;
+  HIVE_MODEL_VERSION?: string;
   R2_ACCESS_KEY_ID?: string;
   R2_SECRET_ACCESS_KEY?: string;
   AUTH_PASSWORD_PEPPER_V1?: string;
