@@ -1,0 +1,30 @@
+name: Native PlanetScale migrations
+
+on:
+  pull_request:
+    paths:
+      - 'database/planetscale/**'
+      - 'scripts/validate-migration-baseline.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+  push:
+    branches: [main, development]
+    paths:
+      - 'database/planetscale/**'
+      - 'scripts/validate-migration-baseline.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  migration-baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run validate:planetscale-migrations
+      - run: npm run test:native-architecture

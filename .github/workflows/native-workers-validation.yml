@@ -1,0 +1,44 @@
+name: native-workers-validation
+
+on:
+  pull_request:
+    paths:
+      - 'apps/lythaus-*/**'
+      - 'packages/**'
+      - 'database/planetscale/**'
+      - 'scripts/validate-native-worker-config.mjs'
+      - 'scripts/tests/native-architecture-invariants.test.js'
+      - 'tsconfig.native.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/native-workers-validation.yml'
+  push:
+    branches: [main, development]
+    paths:
+      - 'apps/lythaus-*/**'
+      - 'packages/**'
+      - 'database/planetscale/**'
+      - 'scripts/validate-native-worker-config.mjs'
+      - 'scripts/tests/native-architecture-invariants.test.js'
+      - 'tsconfig.native.json'
+      - 'package.json'
+      - 'package-lock.json'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run typecheck:native
+      - run: npm run validate:native-workers
+      - run: npm run validate:planetscale-migrations
+      - run: npm run test:native-architecture

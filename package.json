@@ -39,7 +39,13 @@
     "migrate:profiles": "node tools/migrate_profiles_to_postgres.js",
     "reconcile:profiles": "node tools/reconcile_profiles.js",
     "vuln:scan": "bash tools/run_vuln_scan.sh",
-    "lint:api": "npm run openapi:lint"
+    "lint:api": "npm run openapi:lint",
+    "validate:native-workers": "node scripts/validate-native-worker-config.mjs",
+    "validate:native-workers:provisioned": "node scripts/validate-native-worker-config.mjs --require-provisioned",
+    "typecheck:native": "tsc -p tsconfig.native.json --noEmit",
+    "test:native-architecture": "node --test scripts/tests/native-architecture-invariants.test.js",
+    "validate:planetscale-migrations": "node scripts/validate-migration-baseline.mjs",
+    "benchmark:native-endpoints": "node scripts/benchmarks/native-endpoint-benchmark.mjs"
   },
   "devDependencies": {
     "@openapitools/openapi-generator-cli": "^2.25.0",
@@ -60,6 +66,7 @@
     "ts-jest": "^29.4.5",
     "ts-node": "^10.9.2",
     "typescript": "5.5.4",
+    "wrangler": "^4.114.0",
     "yaml": "^2.8.1"
   },
   "overrides": {
@@ -73,7 +80,9 @@
     "typescript": "5.5.4"
   },
   "workspaces": [
-    "functions"
+    "functions",
+    "apps/*",
+    "packages/*"
   ],
   "keywords": [
     "flutter",

@@ -9,6 +9,37 @@ Authoritative, concise instructions for agents working in this repository via Co
 - When generating code, use "Lythaus" for user-visible strings.
 - Do **not** rename Azure resources, package identifiers, or internal imports without explicit instruction.
 - Full guide: `docs/branding/lythaus-transition.md`
+
+## PlanetScale Database
+
+- Organization: `lythaus`
+- Database: `lythaus-core`
+- Production branch: `main`
+- Development branch: `development`
+- AI development branch: `ai-development` (Git convention only; not a permanent database branch)
+- Ephemeral validation branches: `ci-*`
+- Default PostgreSQL database: `postgres`
+
+Use PlanetScale MCP for schema inspection and approved database operations.
+Do not execute write queries against `main` without explicit human approval.
+Prefer `development` with synthetic data or an ephemeral `ci-*` branch for experimental migrations and test data.
+Initial verification prompt: use PlanetScale MCP to confirm access to
+`lythaus/lythaus-core`, list all branches, and inspect the schema. Do not
+execute writes or DDL.
+Verified 2026-07-27: only the production `main` branch currently exists;
+`development` is planned and must not be assumed available until provisioned.
+
+The current database is an empty Frankfurt PS-5 PostgreSQL 17.10 branch billed
+through the shared Cloudflare account. Do not apply the native PostgreSQL 18
+migrations to `main` until a development branch or separately reprovisioned
+empty database is available and the exact safety snapshot is recorded. The
+native implementation branch is `codex/cloudflare-planetscale-provisioning`.
+
+Cloudflare development resources may temporarily use the shared account only
+when they are synthetic, prefixed `lythaus-`, and suffixed `-dev`. Production
+requires a dedicated Lythaus account. Never mutate Nite Owl or unrelated
+resources.
+
 ## Quick Start
 
 1. Read the repo structure with `rg --files` and open relevant files in small chunks (≤250 lines each).

@@ -1,0 +1,63 @@
+{
+  "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
+  "name": "lythaus-public-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-27",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "api.lythaus.co", "custom_domain": true }],
+  "observability": { "enabled": true, "head_sampling_rate": 0.1 },
+  "vars": {
+    "ENVIRONMENT": "production",
+    "EXPECTED_HOSTNAMES": "api.lythaus.co",
+    "CORS_ALLOWED_ORIGINS": "https://app.lythaus.co",
+    "HYPERDRIVE_QUERY_CACHE_MODE": "disabled",
+    "R2_ACCOUNT_ID": "REPLACE_WITH_DEDICATED_ACCOUNT_ID"
+  },
+  "hyperdrive": [
+    { "binding": "DB_APP_FRESH", "id": "REPLACE_WITH_DB_APP_FRESH_ID" }
+  ],
+  "kv_namespaces": [
+    { "binding": "LYTHAUS_CONFIG", "id": "REPLACE_WITH_LYTHAUS_CONFIG_PROD_ID" }
+  ],
+  "r2_buckets": [
+    { "binding": "MEDIA_QUARANTINE", "bucket_name": "lythaus-media-quarantine" },
+    { "binding": "MEDIA_APPROVED", "bucket_name": "lythaus-media-approved" }
+  ],
+  "queues": {
+    "producers": [
+      { "binding": "MODERATION_QUEUE", "queue": "lythaus-moderation" },
+      { "binding": "FEED_QUEUE", "queue": "lythaus-feed" },
+      { "binding": "PRIVACY_QUEUE", "queue": "lythaus-privacy" }
+    ]
+  },
+  "env": {
+    "development": {
+      "name": "lythaus-public-api-development",
+      "workers_dev": true,
+      "preview_urls": true,
+      "routes": [],
+      "hyperdrive": [{ "binding": "DB_APP_FRESH", "id": "REPLACE_WITH_DB_APP_FRESH_DEV_ID" }],
+      "vars": {
+        "ENVIRONMENT": "development",
+        "EXPECTED_HOSTNAMES": "lythaus-public-api-development.workers.dev",
+        "R2_ACCOUNT_ID": "e5b7ae46e04698f507b7e4b3d4ef1af0",
+        "CORS_ALLOWED_ORIGINS": "http://localhost:3000",
+        "HYPERDRIVE_QUERY_CACHE_MODE": "disabled"
+      },
+      "kv_namespaces": [{ "binding": "LYTHAUS_CONFIG", "id": "b02289a521bd40bd9112335a3e763b11" }],
+      "r2_buckets": [
+        { "binding": "MEDIA_QUARANTINE", "bucket_name": "lythaus-media-quarantine-dev" },
+        { "binding": "MEDIA_APPROVED", "bucket_name": "lythaus-media-approved-dev" }
+      ],
+      "queues": {
+        "producers": [
+          { "binding": "MODERATION_QUEUE", "queue": "lythaus-moderation-dev" },
+          { "binding": "FEED_QUEUE", "queue": "lythaus-feed-dev" },
+          { "binding": "PRIVACY_QUEUE", "queue": "lythaus-privacy-dev" }
+        ]
+      }
+    }
+  }
+}

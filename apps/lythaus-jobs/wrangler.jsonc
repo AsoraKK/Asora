@@ -1,0 +1,90 @@
+{
+  "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
+  "name": "lythaus-jobs",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-27",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "preview_urls": false,
+  "observability": { "enabled": true, "head_sampling_rate": 0.25 },
+  "vars": {
+    "ENVIRONMENT": "production",
+    "HYPERDRIVE_QUERY_CACHE_MODE": "disabled"
+  },
+  "hyperdrive": [
+    { "binding": "DB_JOBS_FRESH", "id": "REPLACE_WITH_DB_JOBS_FRESH_ID" },
+    { "binding": "DB_PRIVACY_FRESH", "id": "REPLACE_WITH_DB_PRIVACY_FRESH_ID" }
+  ],
+  "r2_buckets": [
+    { "binding": "MEDIA_QUARANTINE", "bucket_name": "lythaus-media-quarantine" },
+    { "binding": "MEDIA_APPROVED", "bucket_name": "lythaus-media-approved" },
+    { "binding": "PRIVATE_EXPORTS", "bucket_name": "lythaus-private-exports" },
+    { "binding": "AUDIT_ARCHIVE", "bucket_name": "lythaus-audit-archive" }
+  ],
+  "kv_namespaces": [
+    { "binding": "LYTHAUS_CONFIG", "id": "REPLACE_WITH_LYTHAUS_CONFIG_PROD_ID" }
+  ],
+  "queues": {
+    "producers": [
+      { "binding": "MODERATION_QUEUE", "queue": "lythaus-moderation" },
+      { "binding": "FEED_QUEUE", "queue": "lythaus-feed" },
+      { "binding": "NOTIFICATIONS_QUEUE", "queue": "lythaus-notifications" },
+      { "binding": "MEDIA_QUEUE", "queue": "lythaus-media" },
+      { "binding": "PRIVACY_QUEUE", "queue": "lythaus-privacy" },
+      { "binding": "AUDIT_QUEUE", "queue": "lythaus-audit" }
+    ],
+    "consumers": [
+      { "queue": "lythaus-moderation", "max_batch_size": 10, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-moderation-dlq" },
+      { "queue": "lythaus-feed", "max_batch_size": 25, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-feed-dlq" },
+      { "queue": "lythaus-privacy", "max_batch_size": 10, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-privacy-dlq" },
+      { "queue": "lythaus-notifications", "max_batch_size": 25, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-notifications-dlq" },
+      { "queue": "lythaus-media", "max_batch_size": 10, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-media-dlq" },
+      { "queue": "lythaus-audit", "max_batch_size": 25, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-audit-dlq" }
+    ]
+  },
+  "triggers": { "crons": ["*/15 * * * *"] },
+  "workflows": [
+    { "name": "lythaus-account-delete", "binding": "ACCOUNT_DELETE", "class_name": "AccountDeleteWorkflow" }
+  ],
+  "env": {
+    "development": {
+      "name": "lythaus-jobs-development",
+      "workers_dev": true,
+      "preview_urls": true,
+      "routes": [],
+      "hyperdrive": [
+        { "binding": "DB_JOBS_FRESH", "id": "REPLACE_WITH_DB_JOBS_FRESH_DEV_ID" },
+        { "binding": "DB_PRIVACY_FRESH", "id": "REPLACE_WITH_DB_PRIVACY_FRESH_DEV_ID" }
+      ],
+      "vars": { "ENVIRONMENT": "development", "HYPERDRIVE_QUERY_CACHE_MODE": "disabled" },
+      "r2_buckets": [
+        { "binding": "MEDIA_QUARANTINE", "bucket_name": "lythaus-media-quarantine-dev" },
+        { "binding": "MEDIA_APPROVED", "bucket_name": "lythaus-media-approved-dev" },
+        { "binding": "PRIVATE_EXPORTS", "bucket_name": "lythaus-private-exports-dev" },
+        { "binding": "AUDIT_ARCHIVE", "bucket_name": "lythaus-audit-archive-dev" }
+      ],
+      "kv_namespaces": [{ "binding": "LYTHAUS_CONFIG", "id": "b02289a521bd40bd9112335a3e763b11" }],
+      "queues": {
+        "producers": [
+          { "binding": "MODERATION_QUEUE", "queue": "lythaus-moderation-dev" },
+          { "binding": "FEED_QUEUE", "queue": "lythaus-feed-dev" },
+          { "binding": "NOTIFICATIONS_QUEUE", "queue": "lythaus-notifications-dev" },
+          { "binding": "MEDIA_QUEUE", "queue": "lythaus-media-dev" },
+          { "binding": "PRIVACY_QUEUE", "queue": "lythaus-privacy-dev" },
+          { "binding": "AUDIT_QUEUE", "queue": "lythaus-audit-dev" }
+        ],
+        "consumers": [
+          { "queue": "lythaus-moderation-dev", "max_batch_size": 10, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-moderation-dlq-dev" },
+          { "queue": "lythaus-feed-dev", "max_batch_size": 25, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-feed-dlq-dev" },
+          { "queue": "lythaus-notifications-dev", "max_batch_size": 25, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-notifications-dlq-dev" },
+          { "queue": "lythaus-media-dev", "max_batch_size": 10, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-media-dlq-dev" },
+          { "queue": "lythaus-privacy-dev", "max_batch_size": 10, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-privacy-dlq-dev" },
+          { "queue": "lythaus-audit-dev", "max_batch_size": 25, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-audit-dlq-dev" }
+        ]
+      },
+      "workflows": [
+        { "name": "lythaus-account-delete-dev", "binding": "ACCOUNT_DELETE", "class_name": "AccountDeleteWorkflow" }
+      ]
+    }
+  }
+}
