@@ -81,8 +81,15 @@
   },
   "workspaces": [
     "functions",
-    "apps/*",
-    "packages/*"
+    "apps/lythaus-admin-api",
+    "apps/lythaus-jobs",
+    "apps/lythaus-public-api",
+    "packages/cloudflare-env",
+    "packages/contracts",
+    "packages/db",
+    "packages/media",
+    "packages/observability",
+    "packages/security"
   ],
   "keywords": [
     "flutter",

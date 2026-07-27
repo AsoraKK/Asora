@@ -107,6 +107,7 @@ export 'package:asora_api_client/src/model/dsr_export_response.dart';
 export 'package:asora_api_client/src/model/dsr_export_response_metadata.dart';
 export 'package:asora_api_client/src/model/dsr_request_input.dart';
 export 'package:asora_api_client/src/model/dsr_request_summary.dart';
+export 'package:asora_api_client/src/model/email_login_request.dart';
 export 'package:asora_api_client/src/model/error.dart';
 export 'package:asora_api_client/src/model/error_response.dart';
 export 'package:asora_api_client/src/model/error_response_error.dart';

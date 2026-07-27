@@ -31,18 +31,33 @@ interface QueueBatch {
 
 async function processMessage(message: QueueMessage, env: Env): Promise<void> {
   const eventId = message.body.eventId ?? message.id;
-  const inserted = await query<{ inserted: boolean }>(env.DB_JOBS_FRESH,
-    `INSERT INTO system.consumer_inbox (consumer_name, event_id, event_type, payload)
-     VALUES ('lythaus-jobs', $1, $2, $3::jsonb)
-     ON CONFLICT (consumer_name, event_id) DO NOTHING
-     RETURNING true AS inserted`,
-    [eventId, message.body.eventType ?? 'unknown', JSON.stringify(message.body)]
-  );
-  if (inserted.rowCount === 0) {
+  const seen = await query(env.DB_JOBS_FRESH,
+    `SELECT 1 FROM system.consumer_inbox WHERE consumer_name = 'lythaus-jobs' AND event_id = $1`, [eventId]);
+  if (seen.rowCount !== 0) {
     message.ack();
     return;
   }
-  logEvent({ service: 'lythaus-jobs', eventId, eventType: message.body.eventType ?? 'unknown' });
+  const eventType = message.body.eventType ?? 'unknown';
+  if (eventType === 'privacy.request.created') {
+    const payload = (message.body.payload ?? {}) as { requestId?: string; requestType?: string };
+    const subjectId = message.body.actorId;
+    if (!payload.requestId || !subjectId || !['export', 'delete', 'rectify'].includes(payload.requestType ?? '')) throw new Error('privacy_event_invalid');
+    await query(env.DB_PRIVACY_FRESH,
+      `INSERT INTO privacy.requests (id, subject_id, request_type)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (id) DO NOTHING`, [payload.requestId, subjectId, payload.requestType]);
+    await query(env.DB_PRIVACY_FRESH,
+      `INSERT INTO privacy.request_events (id, request_id, event_type, metadata)
+       VALUES ($1, $2, 'received', $3::jsonb)
+       ON CONFLICT (id) DO NOTHING`, [eventId, payload.requestId, JSON.stringify({ eventId })]);
+  }
+  await query(env.DB_JOBS_FRESH,
+    `INSERT INTO system.consumer_inbox (consumer_name, event_id, event_type, payload)
+     VALUES ('lythaus-jobs', $1, $2, $3::jsonb)
+     ON CONFLICT (consumer_name, event_id) DO NOTHING`,
+    [eventId, eventType, JSON.stringify(message.body)]
+  );
+  logEvent({ service: 'lythaus-jobs', eventId, eventType });
   message.ack();
 }
 

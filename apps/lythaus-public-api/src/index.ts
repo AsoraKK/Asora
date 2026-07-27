@@ -7,7 +7,6 @@ import { uuidv7, verifyAccessToken, type Principal } from '@lythaus/security';
 
 interface Env extends EnvBindings {
   DB_APP_FRESH: HyperdriveBinding;
-  DB_PRIVACY_FRESH?: HyperdriveBinding;
   MEDIA_QUARANTINE: NonNullable<EnvBindings['MEDIA_QUARANTINE']>;
   MODERATION_QUEUE: NonNullable<EnvBindings['MODERATION_QUEUE']>;
   R2_ACCOUNT_ID: string;
@@ -188,13 +187,10 @@ async function createFlag(request: Request, env: Env, user: Principal): Promise<
 }
 
 async function createPrivacyRequest(request: Request, env: Env, user: Principal): Promise<Response> {
-  if (!env.DB_PRIVACY_FRESH) throw new Error('privacy_service_unavailable');
   const input = await readJson<{ requestType?: 'export' | 'delete' | 'rectify' }>(request, 8 * 1024);
   if (!input.requestType || !['export', 'delete', 'rectify'].includes(input.requestType)) throw new Error('invalid_privacy_request');
   const requestId = uuidv7();
-  await transaction(env.DB_PRIVACY_FRESH, async (client) => {
-    await client.query(`INSERT INTO privacy.requests (id, subject_id, request_type) VALUES ($1, $2, $3)`, [requestId, user.userId, input.requestType]);
-    await client.query(`INSERT INTO privacy.request_events (id, request_id, event_type, metadata) VALUES ($1, $2, 'received', '{}'::jsonb)`, [uuidv7(), requestId]);
+  await transaction(env.DB_APP_FRESH, async (client) => {
     await client.query(`INSERT INTO system.outbox_events (id, event_type, aggregate_type, aggregate_id, actor_id, payload) VALUES ($1, 'privacy.request.created', 'privacy_request', $2, $3, $4::jsonb)`, [uuidv7(), requestId, user.userId, JSON.stringify({ requestType: input.requestType })]);
   });
   return privateResponse(request, env, { requestId, state: 'received' }, { status: 202 });
