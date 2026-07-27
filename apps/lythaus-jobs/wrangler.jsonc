@@ -12,7 +12,9 @@
     "HYPERDRIVE_QUERY_CACHE_MODE": "disabled",
     "HIVE_API_URL": "https://api.thehive.ai/api/v2/task/sync",
     "HIVE_MODEL_VERSION": "general_text_classification+hate_speech_detection_text+violence_text_detection",
-    "R2_ACCOUNT_ID": "REPLACE_WITH_DEDICATED_ACCOUNT_ID"
+    "R2_ACCOUNT_ID": "REPLACE_WITH_DEDICATED_ACCOUNT_ID",
+    "MEDIA_QUARANTINE_BUCKET": "lythaus-media-quarantine",
+    "MEDIA_APPROVED_BUCKET": "lythaus-media-approved"
   },
   "hyperdrive": [
     { "binding": "DB_JOBS_FRESH", "id": "REPLACE_WITH_DB_JOBS_FRESH_ID" },
@@ -67,7 +69,9 @@
         "HYPERDRIVE_QUERY_CACHE_MODE": "disabled",
         "HIVE_API_URL": "https://api.thehive.ai/api/v2/task/sync",
         "HIVE_MODEL_VERSION": "general_text_classification+hate_speech_detection_text+violence_text_detection",
-        "R2_ACCOUNT_ID": "e5b7ae46e04698f507b7e4b3d4ef1af0"
+        "R2_ACCOUNT_ID": "e5b7ae46e04698f507b7e4b3d4ef1af0",
+        "MEDIA_QUARANTINE_BUCKET": "lythaus-media-quarantine-dev",
+        "MEDIA_APPROVED_BUCKET": "lythaus-media-approved-dev"
       },
       "r2_buckets": [
         { "binding": "MEDIA_QUARANTINE", "bucket_name": "lythaus-media-quarantine-dev" },

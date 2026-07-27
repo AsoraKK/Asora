@@ -367,7 +367,7 @@ async function createUploadSession(request: Request, env: Env, user: Principal):
   const objectKey = `quarantine/${user.userId}/${uploadSessionId}`;
   const signed = await createPresignedPutUrl({
     accountId: env.R2_ACCOUNT_ID,
-    bucket: 'lythaus-media-quarantine',
+    bucket: env.MEDIA_QUARANTINE_BUCKET ?? 'lythaus-media-quarantine',
     key: objectKey,
     contentType: input.contentType as AllowedImageType,
     accessKeyId: env.R2_ACCESS_KEY_ID,

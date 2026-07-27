@@ -28,6 +28,8 @@ export interface EnvBindings {
   R2_SECRET_ACCESS_KEY?: string;
   R2_ACCOUNT_ID?: string;
   MEDIA_QUOTA_BYTES?: string;
+  MEDIA_QUARANTINE_BUCKET?: string;
+  MEDIA_APPROVED_BUCKET?: string;
   AUTH_PASSWORD_PEPPER_V1?: string;
   JWT_PRIVATE_KEY?: string;
   JWT_KEY_ID?: string;

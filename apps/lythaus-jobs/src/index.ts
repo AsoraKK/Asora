@@ -227,7 +227,7 @@ async function processMediaUpload(message: QueueMessage, env: Env): Promise<void
   try {
     const signed = await createPresignedGetUrl({
       accountId: env.R2_ACCOUNT_ID,
-      bucket: 'lythaus-media-approved',
+      bucket: env.MEDIA_APPROVED_BUCKET ?? 'lythaus-media-approved',
       key: approvedKey,
       accessKeyId: env.R2_ACCESS_KEY_ID,
       secretAccessKey: env.R2_SECRET_ACCESS_KEY,
