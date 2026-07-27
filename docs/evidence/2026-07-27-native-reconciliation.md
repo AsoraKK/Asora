@@ -8,7 +8,7 @@ tokens, credentials, connection strings, or application records.
 
 - Branch: `codex/cloudflare-planetscale-provisioning`
 - Remote refresh: completed 2026-07-27
-- Open PRs: existing historical/dependabot PRs only; no native-platform PR
+- Native implementation PR: draft #474, current head `62e6e7af`
 - Native validation before this reconciliation: passed
 - Azure compatibility files: retained and not used by native Workers
 
