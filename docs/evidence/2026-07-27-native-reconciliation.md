@@ -8,7 +8,7 @@ tokens, credentials, connection strings, or application records.
 
 - Branch: `codex/cloudflare-planetscale-provisioning`
 - Remote refresh: completed 2026-07-27
-- Native implementation PR: draft #474, current head `62e6e7af`
+- Native implementation PR: draft #474, current head `ca5b5c8f`
 - Native validation before this reconciliation: passed
 - Azure compatibility files: retained and not used by native Workers
 
@@ -35,7 +35,7 @@ They are not production resources and must not receive production data.
 - Dead-letter queues: six `lythaus-*-dlq-dev` queues
 - R2 location hint: `WEUR`; jurisdiction: default (not an EU-jurisdiction guarantee)
 - Email Service preview for `notify.lythaus.co`: API returned required MX/SPF/DKIM/DMARC records; DNS records are not yet applied and no sending subdomain was created
-- Turnstile widget inventory: blocked by Cloudflare API authentication error; no widget was created
+- Turnstile widget inventory: blocked by Cloudflare API authentication error `10000`; no widget was created
 
 ## PlanetScale
 
@@ -51,6 +51,17 @@ They are not production resources and must not receive production data.
 - Non-platform schemas: `public`, `pscale_extensions` only
 - Application extensions: none; platform extensions only (`hypopg`, `plpgsql`)
 - Database replacement status: eligible by emptiness evidence, but not executed because no supported create/reprovision API is exposed through the authenticated MCP surface and main-branch DDL remains prohibited by repository policy
+
+## Native implementation additions
+
+- Media finalisation now emits `media.upload.finalised` to the dedicated media queue.
+- Jobs validate image magic bytes and dimensions, re-encode through the Images
+  binding, publish only approved WebP derivatives, update the media ledger, and
+  remove quarantine objects.
+- Privacy events start deterministic export/delete Workflows. Delete handles
+  session revocation, legal holds, redaction, media purge, locator reconciliation,
+  and a deletion tombstone. Export writes a hashed `lythaus-data-passport-v1`
+  package to private R2 and records its manifest.
 
 ## Data disposition
 
