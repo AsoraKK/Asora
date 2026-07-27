@@ -136,3 +136,13 @@ test('jobs Worker exposes durable privacy and appeal workflows', () => {
   assert.match(source, /class BackupValidationWorkflow/);
   assert.match(source, /independent_backup_healthcheck_not_configured/);
 });
+
+test('temporary PlanetScale CI is branch-scoped and cleans up safely', () => {
+  const workflow = fs.readFileSync(path.join(root, '.github/workflows/native-planetscale-ci.yml'), 'utf8');
+  const script = fs.readFileSync(path.join(root, 'scripts/ci/apply-planetscale-migrations.mjs'), 'utf8');
+  assert.match(workflow, /PSCALE_BRANCH_NAME: ci-\$\{\{ github\.run_id \}\}/);
+  assert.match(workflow, /--from main --major-version 18/);
+  assert.match(workflow, /branch delete/);
+  assert.match(script, /refusing to run outside a ci-\* PlanetScale branch/);
+  assert.doesNotMatch(workflow, /branch delete.*main/s);
+});

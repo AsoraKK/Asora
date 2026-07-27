@@ -1,0 +1,91 @@
+name: Native PlanetScale temporary branch validation
+
+on:
+  workflow_dispatch:
+  workflow_call:
+    secrets:
+      PLANETSCALE_SERVICE_TOKEN_ID:
+        required: true
+      PLANETSCALE_SERVICE_TOKEN:
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  PLANETSCALE_ORG: lythaus
+  PLANETSCALE_DATABASE: lythaus-core
+  PSCALE_BRANCH_NAME: ci-${{ github.run_id }}-${{ github.run_attempt }}
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: planetscale/setup-pscale-action@v1
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client jq
+      - name: Validate repository contracts
+        run: |
+          npm ci --ignore-scripts
+          npm run validate:planetscale-migrations
+          npm run validate:planetscale-extensions
+      - name: Create isolated ci branch and short-lived roles
+        env:
+          PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
+          PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          pscale branch create "$PLANETSCALE_DATABASE" "$PSCALE_BRANCH_NAME" \
+            --org "$PLANETSCALE_ORG" --from main --major-version 18 --region eu-central --wait
+          create_role() {
+            local role="$1"
+            local inherited="${2:-}"
+            if [[ -n "$inherited" ]]; then
+              pscale role create "$PLANETSCALE_DATABASE" "$PSCALE_BRANCH_NAME" "$role" \
+                --org "$PLANETSCALE_ORG" --inherited-roles "$inherited" --ttl 2h -f json
+            else
+              pscale role create "$PLANETSCALE_DATABASE" "$PSCALE_BRANCH_NAME" "$role" \
+                --org "$PLANETSCALE_ORG" --ttl 2h -f json
+            fi
+          }
+          create_role ci-admin postgres > "$RUNNER_TEMP/ci-admin-role.json"
+          for role in lythaus_runtime lythaus_admin lythaus_jobs lythaus_privacy lythaus_migrations; do
+            create_role "$role" > "$RUNNER_TEMP/$role-role.json"
+          done
+          admin_url="$(jq -er '.access_host_url' "$RUNNER_TEMP/ci-admin-role.json")"
+          echo '::add-mask::'"$admin_url"
+          echo "PLANETSCALE_ADMIN_DATABASE_URL=$admin_url" >> "$GITHUB_ENV"
+          role_urls='{}'
+          for role in lythaus_runtime lythaus_admin lythaus_jobs lythaus_privacy lythaus_migrations; do
+            role_url="$(jq -er '.access_host_url' "$RUNNER_TEMP/$role-role.json")"
+            echo '::add-mask::'"$role_url"
+            role_urls="$(jq -c --arg role "$role" --arg url "$role_url" '. + {($role): $url}' <<< "$role_urls")"
+          done
+          echo '::add-mask::'"$role_urls"
+          echo "PSCALE_ROLE_URLS=$role_urls" >> "$GITHUB_ENV"
+      - name: Apply migrations and verify direct connections
+        run: node scripts/ci/apply-planetscale-migrations.mjs
+      - name: Cleanup temporary branch
+        if: always()
+        env:
+          PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
+          PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$PSCALE_BRANCH_NAME" =~ ^ci-[0-9]+-[0-9]+$ ]]; then
+            pscale branch delete "$PLANETSCALE_DATABASE" "$PSCALE_BRANCH_NAME" \
+              --org "$PLANETSCALE_ORG" --force
+          else
+            echo 'Refusing cleanup because branch name is outside ci-* safety boundary.'
+            exit 1
+          fi

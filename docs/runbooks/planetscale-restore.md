@@ -4,7 +4,8 @@
 2. Re-enable `postgis`, `pg_trgm`, `unaccent`, and `pgcrypto`; restore any
    post-restore role/default-privilege configuration.
 3. Apply the immutable migrations and record the migration checksum.
-4. Run `database/planetscale/verification/restore-check.sql`.
+4. Run `database/planetscale/verification/restore-check.sql` and the
+   assertion-only `database/planetscale/recovery/restore-verify.sql`.
 5. Reconcile schema/table counts, constraints, indexes, and representative
    identity, content, moderation, and privacy queries.
 6. Run the native smoke suite and record hashes/statuses without recording data.

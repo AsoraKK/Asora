@@ -5,6 +5,7 @@ const root = process.cwd();
 const migrationDir = path.join(root, 'database', 'planetscale', 'migrations');
 const requiredMigrations = ['0000_preflight.sql', '0001_extensions_and_schemas.sql', '0002_core_tables.sql', '0003_domain_extensions.sql', '0004_launch_contract.sql', '0005_auth_revocation.sql', '0006_admin_role_expansion.sql'];
 const requiredSeeds = ['0001_feature_flags.sql'];
+const requiredRecoveryFiles = ['restore-verify.sql'];
 const requiredSchemas = ['identity', 'content', 'social', 'feed', 'moderation', 'privacy', 'trust', 'media', 'editorial', 'system'];
 const requiredTables = [
   'identity.users', 'identity.provider_links', 'identity.handles', 'identity.email_credentials', 'identity.refresh_token_families',
@@ -35,6 +36,9 @@ for (const file of requiredMigrations) {
 }
 for (const file of requiredSeeds) {
   if (!fs.existsSync(path.join(root, 'database', 'planetscale', 'seeds', file))) failures.push(`missing seed: ${file}`);
+}
+for (const file of requiredRecoveryFiles) {
+  if (!fs.existsSync(path.join(root, 'database', 'planetscale', 'recovery', file))) failures.push(`missing recovery script: ${file}`);
 }
 const source = requiredMigrations.map((file) => fs.readFileSync(path.join(migrationDir, file), 'utf8')).join('\n');
 for (const schema of requiredSchemas) {
