@@ -1917,6 +1917,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RateLimitError'
+  # Retained as deprecated compatibility surface during the native migration.
   /auth/email:
     post:
       deprecated: true
