@@ -25,7 +25,6 @@
     { "binding": "MEDIA_QUARANTINE", "bucket_name": "lythaus-media-quarantine" },
     { "binding": "MEDIA_APPROVED", "bucket_name": "lythaus-media-approved" }
   ],
-  "images": { "binding": "IMAGES" },
   "queues": {
     "producers": [
       { "binding": "MODERATION_QUEUE", "queue": "lythaus-moderation" },
@@ -52,7 +51,6 @@
         { "binding": "MEDIA_QUARANTINE", "bucket_name": "lythaus-media-quarantine-dev" },
         { "binding": "MEDIA_APPROVED", "bucket_name": "lythaus-media-approved-dev" }
       ],
-      "images": { "binding": "IMAGES" },
       "queues": {
         "producers": [
           { "binding": "MODERATION_QUEUE", "queue": "lythaus-moderation-dev" },
