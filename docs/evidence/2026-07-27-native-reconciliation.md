@@ -8,10 +8,10 @@ tokens, credentials, connection strings, or application records.
 
 - Branch: `codex/cloudflare-planetscale-provisioning`
 - Remote refresh: completed 2026-07-27
-- Native implementation PR: draft #474; native implementation code head tested
-  by the remote checks was `af2d17a1` (later commits are evidence-only).
-- Native validation before this reconciliation: passed locally and remotely at
-  `af2d17a1` (native workers, migrations, and secret scan)
+- Native implementation PR: draft #474; current native implementation head is
+  `fd9b7e90`.
+- Native validation: passed locally and remotely at `fd9b7e90` (native workers,
+  migrations, and secret scan; runs `30308269343`, `30308271520`, `30308273594`).
 - Azure compatibility files: retained and not used by native Workers
 
 ## Cloudflare
@@ -19,10 +19,13 @@ tokens, credentials, connection strings, or application records.
 - Current account: shared account (`…e4b3d4ef1af0`), not production-safe
 - `lythaus.co` zone: active in the shared account (`…176c29382`)
 - Dedicated-account attempt: blocked by Cloudflare API `1002 Forbidden: Account creation is not allowed`
+- Cloudflare read inventory: verified through the authenticated MCP; no production
+  mutation was attempted because the account boundary remains shared
 - Workers Paid: active in the shared account (account-level PAYGO subscription)
 - PlanetScale Workers integration: active in the shared account
 - R2 Paid: active in the shared account
-- Existing native resources before this run: one over-privileged Hyperdrive, one unrelated KV, one unrelated R2 bucket, no queues, no workflows
+- Existing native resources: one over-privileged Hyperdrive retained pending
+  role-specific replacement; synthetic development resources are listed below
 - Existing Hyperdrive: `lythaus-core-fresh` (`…9d51f200`), cache disabled, retained until replacement bindings pass
 - Existing unrelated resources remain out of scope
 
@@ -37,7 +40,8 @@ They are not production resources and must not receive production data.
 - Dead-letter queues: six `lythaus-*-dlq-dev` queues
 - R2 location hint: `WEUR`; jurisdiction: default (not an EU-jurisdiction guarantee)
 - Email Service preview for `notify.lythaus.co`: API returned required MX/SPF/DKIM/DMARC records; DNS records are not yet applied and no sending subdomain was created
-- Turnstile widget inventory: blocked by Cloudflare API authentication error `10000`; no widget was created
+- Turnstile widget inventory: no widget created; production widget remains gated on
+  dedicated-account setup
 
 ## PlanetScale
 
@@ -64,6 +68,11 @@ They are not production resources and must not receive production data.
   session revocation, legal holds, redaction, media purge, locator reconciliation,
   and a deletion tombstone. Export writes a hashed `lythaus-data-passport-v1`
   package to private R2 and records its manifest.
+- Email/password auth now has versioned password hashing, verification tokens,
+  ES256 access tokens, refresh-family rotation, logout, and a provider adapter
+  boundary. Provider secrets and delivery acceptance remain gated.
+- Media reservations enforce configured quotas; retention, geography, personal
+  feeds, follower fan-out, and moderation declaration conflicts are implemented.
 
 ## Data disposition
 
