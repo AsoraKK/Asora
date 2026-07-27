@@ -106,3 +106,15 @@ after the provider dashboard reported the temporary extension outage.
   zero Lythaus schemas, and installed extensions `hypopg, plpgsql` only.
 - `get_branch_schema` for `development` returned no application schema objects.
 - This recheck issued no writes or DDL and does not change the Gate 2/3 blockers.
+
+## Current region and SKU metadata — 2026-07-28
+
+- PlanetScale MCP lists Frankfurt (`eu-central`), Dublin (`eu-west`) and
+  London (`aws-eu-west-2`) as enabled PostgreSQL regions; no African region is
+  listed.
+- Current autoscaling ARM rates reported by MCP are: PS-DEV `$15/mo`, PS-5
+  `$15/mo` plus `$5/mo` per replica, and PS-10 `$30/mo` plus `$10/mo` per
+  replica. Storage, backup, egress and regional adjustments remain separate.
+- The live PS-DEV rate supersedes the earlier provisional `$5/mo` development
+  estimate. Cost approval remains blocked until the actual production topology
+  and billing account are selected.
