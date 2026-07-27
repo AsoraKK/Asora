@@ -9,9 +9,9 @@ tokens, credentials, connection strings, or application records.
 - Branch: `codex/cloudflare-planetscale-provisioning`
 - Remote refresh: completed 2026-07-27
 - Native implementation PR: draft #474; current native implementation head is
-  `fd9b7e90`.
-- Native validation: passed locally and remotely at `fd9b7e90` (native workers,
-  migrations, and secret scan; runs `30308269343`, `30308271520`, `30308273594`).
+  `1a055d6e`.
+- Native validation: passed locally and remotely at `1a055d6e` (native workers,
+  migrations, and secret scan; runs `30308669047`, `30308671209`, `30308673407`).
 - Azure compatibility files: retained and not used by native Workers
 
 ## Cloudflare
@@ -69,8 +69,9 @@ They are not production resources and must not receive production data.
   and a deletion tombstone. Export writes a hashed `lythaus-data-passport-v1`
   package to private R2 and records its manifest.
 - Email/password auth now has versioned password hashing, verification tokens,
-  ES256 access tokens, refresh-family rotation, logout, and a provider adapter
-  boundary. Provider secrets and delivery acceptance remain gated.
+  ES256 access tokens, refresh-family rotation, logout, Google PKCE/OIDC linking,
+  password reset, and a Cloudflare Email binding with provider fallback. Provider
+  secrets and delivery acceptance remain gated.
 - Media reservations enforce configured quotas; retention, geography, personal
   feeds, follower fan-out, and moderation declaration conflicts are implemented.
 
