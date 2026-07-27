@@ -55,6 +55,14 @@ async function issueSession(env: Env, userId: string, roles: string[] = []): Pro
 }
 
 async function deliverAuthEmail(env: Env, input: { type: 'verification' | 'password_reset' | 'security'; to: string; token?: string; reason?: string }): Promise<void> {
+  if (env.EMAIL && env.EMAIL_FROM) {
+    const subject = input.type === 'verification' ? 'Verify your Lythaus email' : input.type === 'password_reset' ? 'Reset your Lythaus password' : 'Lythaus security notice';
+    const action = input.token && env.EMAIL_VERIFICATION_BASE_URL
+      ? `<p><a href="${env.EMAIL_VERIFICATION_BASE_URL}${encodeURIComponent(input.token)}">Continue securely</a></p>`
+      : '';
+    await env.EMAIL.send({ to: input.to, from: env.EMAIL_FROM, subject, html: `<p>${subject}.</p>${action}` });
+    return;
+  }
   if (!env.EMAIL_PROVIDER_URL || !env.EMAIL_PROVIDER_TOKEN || !env.EMAIL_FROM) throw new Error('email_delivery_not_configured');
   const response = await fetch(env.EMAIL_PROVIDER_URL, {
     method: 'POST',

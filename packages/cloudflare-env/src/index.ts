@@ -37,6 +37,8 @@ export interface EnvBindings {
   EMAIL_PROVIDER_URL?: string;
   EMAIL_PROVIDER_TOKEN?: string;
   EMAIL_FROM?: string;
+  EMAIL_VERIFICATION_BASE_URL?: string;
+  EMAIL?: SendEmailLike;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   GOOGLE_REDIRECT_URI?: string;
@@ -48,6 +50,10 @@ export interface EnvBindings {
   ACCESS_TEAM_DOMAIN?: string;
   ACCESS_AUDIENCE?: string;
   ACCESS_JWKS_URL?: string;
+}
+
+export interface SendEmailLike {
+  send(message: { to: string; from: string; subject: string; html: string }): Promise<void>;
 }
 
 export interface R2ObjectLike {
