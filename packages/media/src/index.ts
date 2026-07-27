@@ -32,3 +32,24 @@ export async function createPresignedPutUrl(input: {
     expiresAt: new Date(Date.now() + expiresInSeconds * 1000).toISOString(),
   };
 }
+
+export async function createPresignedGetUrl(input: {
+  accountId: string;
+  bucket: string;
+  key: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+  expiresInSeconds?: number;
+}): Promise<{ url: string; expiresAt: string }> {
+  const expiresInSeconds = input.expiresInSeconds ?? 600;
+  const endpoint = new URL(`https://${input.accountId}.r2.cloudflarestorage.com/${input.bucket}/${input.key}`);
+  endpoint.searchParams.set('X-Amz-Expires', String(expiresInSeconds));
+  const client = new AwsClient({
+    accessKeyId: input.accessKeyId,
+    secretAccessKey: input.secretAccessKey,
+    service: 's3',
+    region: 'auto',
+  });
+  const signed = await client.sign(new Request(endpoint, { method: 'GET' }), { aws: { signQuery: true } });
+  return { url: signed.url, expiresAt: new Date(Date.now() + expiresInSeconds * 1000).toISOString() };
+}

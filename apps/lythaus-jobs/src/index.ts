@@ -1,5 +1,6 @@
 import { query, transaction, type HyperdriveBinding } from '@lythaus/db';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
+import { createPresignedGetUrl } from '@lythaus/media';
 import { json, logEvent } from '@lythaus/observability';
 import { WorkflowEntrypoint } from 'cloudflare:workers';
 import type { WorkflowEvent, WorkflowStep } from 'cloudflare:workers';
@@ -59,6 +60,28 @@ async function moderateTextWithHive(text: string, userId: string, contentId: str
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Token ${env.HIVE_API_KEY}`, 'x-content-id': contentId },
       body: JSON.stringify({ text_data: text, models: HIVE_DEFAULT_MODELS, user_id: userId }),
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error(`hive_http_${response.status}`);
+    const payload = await response.json() as { code?: number; status?: Array<{ response?: { output?: Array<{ classes?: HiveClass[] }> } }> };
+    if (payload.code !== 200 || !Array.isArray(payload.status)) throw new Error('hive_response_invalid');
+    const classes = payload.status.flatMap((status) => status.response?.output?.flatMap((item) => item.classes ?? []) ?? []);
+    const highestScore = classes.reduce((highest, item) => Math.max(highest, typeof item.score === 'number' ? item.score : 0), 0);
+    return { highestScore, classes, action: highestScore >= 0.85 ? 'block' : highestScore >= 0.5 ? 'queue' : 'allow' };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function moderateImageWithHive(imageUrl: string, userId: string, contentId: string, env: Env): Promise<HiveResult> {
+  if (!env.HIVE_API_KEY) throw new Error('hive_not_configured');
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20_000);
+  try {
+    const response = await fetch(env.HIVE_API_URL ?? 'https://api.thehive.ai/api/v2/task/sync', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Token ${env.HIVE_API_KEY}`, 'x-content-id': contentId },
+      body: JSON.stringify({ image_url: imageUrl, models: ['general_image_classification', 'nudity_image_detection', 'violence_image_detection'], user_id: userId }),
       signal: controller.signal,
     });
     if (!response.ok) throw new Error(`hive_http_${response.status}`);
@@ -173,12 +196,41 @@ async function processMediaUpload(message: QueueMessage, env: Env): Promise<void
   const sha256 = Array.from(new Uint8Array(digest), (value) => value.toString(16).padStart(2, '0')).join('');
   const approvedKey = `approved/${row.user_id}/${sessionId}.webp`;
   await env.MEDIA_APPROVED.put(approvedKey, approvedBytes, { httpMetadata: { contentType: 'image/webp' } });
+  if (!env.R2_ACCOUNT_ID || !env.R2_ACCESS_KEY_ID || !env.R2_SECRET_ACCESS_KEY) {
+    await env.MEDIA_APPROVED.delete(approvedKey);
+    throw new Error('media_signing_not_configured');
+  }
+  let moderation: HiveResult;
+  try {
+    const signed = await createPresignedGetUrl({
+      accountId: env.R2_ACCOUNT_ID,
+      bucket: 'lythaus-media-approved',
+      key: approvedKey,
+      accessKeyId: env.R2_ACCESS_KEY_ID,
+      secretAccessKey: env.R2_SECRET_ACCESS_KEY,
+      expiresInSeconds: 300,
+    });
+    moderation = await moderateImageWithHive(signed.url, row.user_id, sessionId, env);
+  } catch (error) {
+    await env.MEDIA_APPROVED.delete(approvedKey);
+    throw error;
+  }
+  if (moderation.action === 'block') {
+    await env.MEDIA_APPROVED.delete(approvedKey);
+    await transaction(env.DB_JOBS_FRESH, async (client) => {
+      await client.query(`UPDATE media.upload_sessions SET status = 'rejected' WHERE id = $1 AND status = 'queued'`, [sessionId]);
+      await client.query(`INSERT INTO media.storage_ledger (user_id, bytes_rejected) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET bytes_rejected = media.storage_ledger.bytes_rejected + EXCLUDED.bytes_rejected, last_reconciled_at = now()`, [row.user_id, approvedBytes.byteLength]);
+    });
+    return;
+  }
+  const moderationState = moderation.action === 'allow' ? 'approved' : 'review';
+  const moderationSignal = JSON.stringify({ highestScore: moderation.highestScore, classes: moderation.classes, action: moderation.action });
 
   await transaction(env.DB_JOBS_FRESH, async (client) => {
     const inserted = await client.query<{ id: string }>(
       `INSERT INTO media.objects (owner_id, object_key, content_type, byte_size, sha256, state)
-       VALUES ($1, $2, 'image/webp', $3, $4, 'approved') ON CONFLICT (object_key) DO NOTHING RETURNING id`,
-      [row.user_id, approvedKey, approvedBytes.byteLength, sha256]
+       VALUES ($1, $2, 'image/webp', $3, $4, $5) ON CONFLICT (object_key) DO NOTHING RETURNING id`,
+      [row.user_id, approvedKey, approvedBytes.byteLength, sha256, moderationState]
     );
     if (inserted.rowCount !== 0) {
       const objectId = inserted.rows[0].id;
@@ -189,13 +241,17 @@ async function processMediaUpload(message: QueueMessage, env: Env): Promise<void
         [objectId, approvedKey, approvedBytes.byteLength, sourceInfo.width, sourceInfo.height]
       );
       await client.query(
+        `INSERT INTO media.moderation_results (object_id, provider, model_version, signal) VALUES ($1, 'hive', $2, $3::jsonb)`,
+        [objectId, env.HIVE_MODEL_VERSION ?? 'image_classification_v1', moderationSignal]
+      );
+      await client.query(
         `INSERT INTO media.storage_ledger (user_id, bytes_uploaded, bytes_approved, object_count)
-         VALUES ($1, $2, $2, 1)
+         VALUES ($1, $2, $3, 1)
          ON CONFLICT (user_id) DO UPDATE SET bytes_uploaded = media.storage_ledger.bytes_uploaded + EXCLUDED.bytes_uploaded,
            bytes_approved = media.storage_ledger.bytes_approved + EXCLUDED.bytes_approved,
            object_count = media.storage_ledger.object_count + 1,
            last_reconciled_at = now()`,
-        [row.user_id, approvedBytes.byteLength]
+        [row.user_id, approvedBytes.byteLength, moderationState === 'approved' ? approvedBytes.byteLength : 0]
       );
     }
     await client.query(`UPDATE media.upload_sessions SET status = 'approved' WHERE id = $1 AND status = 'queued'`, [sessionId]);

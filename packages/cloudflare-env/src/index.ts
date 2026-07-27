@@ -26,6 +26,7 @@ export interface EnvBindings {
   HIVE_MODEL_VERSION?: string;
   R2_ACCESS_KEY_ID?: string;
   R2_SECRET_ACCESS_KEY?: string;
+  R2_ACCOUNT_ID?: string;
   AUTH_PASSWORD_PEPPER_V1?: string;
   JWT_PRIVATE_KEY?: string;
   JWT_KEY_ID?: string;
