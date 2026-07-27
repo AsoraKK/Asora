@@ -56,6 +56,8 @@ export interface EnvBindings {
   ACCESS_JWKS_URL?: string;
   TURNSTILE_SECRET_KEY?: string;
   TURNSTILE_REQUIRED?: string;
+  EXTERNAL_BACKUP_HEALTHCHECK_URL?: string;
+  EXTERNAL_BACKUP_HEALTHCHECK_TOKEN?: string;
 }
 
 export interface SendEmailLike {

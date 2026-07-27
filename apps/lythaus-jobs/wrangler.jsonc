@@ -14,7 +14,8 @@
     "HIVE_MODEL_VERSION": "general_text_classification+hate_speech_detection_text+violence_text_detection",
     "R2_ACCOUNT_ID": "REPLACE_WITH_DEDICATED_ACCOUNT_ID",
     "MEDIA_QUARANTINE_BUCKET": "lythaus-media-quarantine",
-    "MEDIA_APPROVED_BUCKET": "lythaus-media-approved"
+    "MEDIA_APPROVED_BUCKET": "lythaus-media-approved",
+    "EXTERNAL_BACKUP_HEALTHCHECK_URL": "REPLACE_WITH_EXTERNAL_BACKUP_HEALTHCHECK_URL"
   },
   "hyperdrive": [
     { "binding": "DB_JOBS_FRESH", "id": "REPLACE_WITH_DB_JOBS_FRESH_ID" },
@@ -53,7 +54,8 @@
     { "name": "lythaus-account-delete", "binding": "ACCOUNT_DELETE", "class_name": "AccountDeleteWorkflow" },
     { "name": "lythaus-account-export", "binding": "ACCOUNT_EXPORT", "class_name": "AccountExportWorkflow" },
     { "name": "lythaus-retention-cleanup", "binding": "RETENTION_CLEANUP", "class_name": "RetentionCleanupWorkflow" },
-    { "name": "lythaus-appeal-lifecycle", "binding": "APPEAL_LIFECYCLE", "class_name": "AppealLifecycleWorkflow" }
+    { "name": "lythaus-appeal-lifecycle", "binding": "APPEAL_LIFECYCLE", "class_name": "AppealLifecycleWorkflow" },
+    { "name": "lythaus-backup-validation", "binding": "BACKUP_VALIDATION", "class_name": "BackupValidationWorkflow" }
   ],
   "env": {
     "development": {
@@ -72,7 +74,8 @@
         "HIVE_MODEL_VERSION": "general_text_classification+hate_speech_detection_text+violence_text_detection",
         "R2_ACCOUNT_ID": "e5b7ae46e04698f507b7e4b3d4ef1af0",
         "MEDIA_QUARANTINE_BUCKET": "lythaus-media-quarantine-dev",
-        "MEDIA_APPROVED_BUCKET": "lythaus-media-approved-dev"
+        "MEDIA_APPROVED_BUCKET": "lythaus-media-approved-dev",
+        "EXTERNAL_BACKUP_HEALTHCHECK_URL": ""
       },
       "r2_buckets": [
         { "binding": "MEDIA_QUARANTINE", "bucket_name": "lythaus-media-quarantine-dev" },
@@ -104,7 +107,8 @@
         { "name": "lythaus-account-delete-dev", "binding": "ACCOUNT_DELETE", "class_name": "AccountDeleteWorkflow" },
         { "name": "lythaus-account-export-dev", "binding": "ACCOUNT_EXPORT", "class_name": "AccountExportWorkflow" },
         { "name": "lythaus-retention-cleanup-dev", "binding": "RETENTION_CLEANUP", "class_name": "RetentionCleanupWorkflow" },
-        { "name": "lythaus-appeal-lifecycle-dev", "binding": "APPEAL_LIFECYCLE", "class_name": "AppealLifecycleWorkflow" }
+        { "name": "lythaus-appeal-lifecycle-dev", "binding": "APPEAL_LIFECYCLE", "class_name": "AppealLifecycleWorkflow" },
+        { "name": "lythaus-backup-validation-dev", "binding": "BACKUP_VALIDATION", "class_name": "BackupValidationWorkflow" }
       ]
     }
   }

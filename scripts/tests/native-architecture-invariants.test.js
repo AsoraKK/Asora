@@ -132,4 +132,7 @@ test('jobs Worker exposes durable privacy and appeal workflows', () => {
   assert.match(source, /class AppealLifecycleWorkflow/);
   assert.match(source, /moderation\.appeal\.created/);
   assert.match(source, /ON CONFLICT DO NOTHING/);
+  assert.match(config, /BACKUP_VALIDATION/);
+  assert.match(source, /class BackupValidationWorkflow/);
+  assert.match(source, /independent_backup_healthcheck_not_configured/);
 });

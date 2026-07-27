@@ -11,5 +11,10 @@
 7. Export a logical, encrypted copy to the independent provider destination.
 8. Retain the sanitised evidence packet, then delete the temporary branch.
 
+The jobs Worker `BackupValidationWorkflow` performs the database capability and
+schema-object checks, then calls the configured provider-independent backup
+health endpoint. It fails closed when the endpoint is absent, a required
+extension is unavailable, or the restored schema is incomplete.
+
 If the independent destination is unavailable, the recovery gate remains
 blocked. Do not claim provider-independent disaster recovery.

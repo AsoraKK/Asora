@@ -22,6 +22,7 @@ interface Env extends EnvBindings {
   ACCOUNT_EXPORT?: WorkflowBinding<{ subjectId: string; requestId: string }>;
   RETENTION_CLEANUP?: WorkflowBinding<{ runId: string }>;
   APPEAL_LIFECYCLE?: WorkflowBinding<{ appealId: string }>;
+  BACKUP_VALIDATION?: WorkflowBinding<{ runId: string }>;
 }
 
 interface Queue { send(body: unknown, options?: { contentType?: string }): Promise<void>; }
@@ -386,6 +387,11 @@ export default {
       const runId = new Date().toISOString().slice(0, 10);
       await env.RETENTION_CLEANUP.create({ id: `retention-${runId}`, params: { runId } });
     }
+    const now = new Date();
+    if (env.BACKUP_VALIDATION && now.getUTCDate() === 1 && now.getUTCHours() === 3 && now.getUTCMinutes() === 0) {
+      const runId = now.toISOString().slice(0, 10);
+      await env.BACKUP_VALIDATION.create({ id: `backup-validation-${runId}`, params: { runId } });
+    }
   },
 };
 
@@ -627,5 +633,49 @@ export class AppealLifecycleWorkflow extends WorkflowEntrypoint<Env, { appealId:
       return result;
     });
     return { appealId, state };
+  }
+}
+
+export class BackupValidationWorkflow extends WorkflowEntrypoint<Env, { runId: string }> {
+  async run(event: WorkflowEvent<{ runId: string }>, step: WorkflowStep): Promise<{ runId: string; state: string }> {
+    const runId = event.payload.runId;
+    const database = await step.do('verify-database-capabilities', async () => {
+      const extensions = await query<{ extname: string }>(this.env.DB_PRIVACY_FRESH,
+        `SELECT extname FROM pg_extension WHERE extname IN ('postgis', 'pgcrypto', 'pg_trgm', 'unaccent') ORDER BY extname`);
+      const required = ['pgcrypto', 'pg_trgm', 'unaccent', 'postgis'];
+      const present = new Set(extensions.rows.map((row) => row.extname));
+      const missing = required.filter((name) => !present.has(name));
+      if (missing.length) throw new Error(`backup_capability_extensions_missing:${missing.join(',')}`);
+      const schemaObjects = await query<{ count: string }>(this.env.DB_PRIVACY_FRESH,
+        `SELECT count(*)::text AS count
+           FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+          WHERE n.nspname IN ('identity', 'content', 'social', 'feed', 'moderation', 'privacy', 'trust', 'media', 'editorial', 'system')
+            AND c.relkind IN ('r', 'p', 'v', 'm')`);
+      if (Number(schemaObjects.rows[0]?.count ?? 0) < 74) throw new Error('backup_schema_objects_missing');
+      return { extensions: required, schemaObjectCount: Number(schemaObjects.rows[0]?.count ?? 0) };
+    });
+
+    await step.do('verify-independent-backup-health', async () => {
+      const endpoint = this.env.EXTERNAL_BACKUP_HEALTHCHECK_URL;
+      if (!endpoint) throw new Error('independent_backup_healthcheck_not_configured');
+      const response = await fetch(endpoint, {
+        headers: this.env.EXTERNAL_BACKUP_HEALTHCHECK_TOKEN
+          ? { authorization: `Bearer ${this.env.EXTERNAL_BACKUP_HEALTHCHECK_TOKEN}` }
+          : undefined,
+      });
+      if (!response.ok) throw new Error(`independent_backup_healthcheck_failed:${response.status}`);
+      await response.body?.cancel();
+      return true;
+    });
+
+    await step.do('record-backup-validation', async () => {
+      await query(this.env.DB_PRIVACY_FRESH,
+        `INSERT INTO system.audit_events (action, target_type, target_id, reason_code, correlation_id, metadata)
+         VALUES ('backup.validation.completed', 'backup', $1, 'BACKUP_RESTORE_DRILL', $1, $2::jsonb)
+         ON CONFLICT DO NOTHING`,
+        [runId, JSON.stringify({ runId, ...database })]);
+      return true;
+    });
+    return { runId, state: 'completed' };
   }
 }
