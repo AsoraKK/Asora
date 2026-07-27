@@ -39,6 +39,11 @@ export interface PasswordHash {
   pepperVersion: string;
 }
 
+export interface EncryptedField {
+  ciphertext: string;
+  encryptionKeyVersion: string;
+}
+
 export function hashPassword(
   password: string,
   pepper: string,
@@ -79,5 +84,26 @@ export function hmacLookup(value: string, key: string): string {
   return encode(hmac(sha256, new TextEncoder().encode(key), value.trim().toLowerCase()));
 }
 
-export { verifyAccessToken, type Principal } from './jwt';
+function decodeKey(value: string): Uint8Array {
+  const decoded = decode(value);
+  if (decoded.byteLength !== 32) throw new Error('aes256_key_required');
+  return decoded;
+}
+
+export async function encryptField(plaintext: string, base64Key: string, encryptionKeyVersion: string): Promise<EncryptedField> {
+  const key = await crypto.subtle.importKey('raw', decodeKey(base64Key), { name: 'AES-GCM' }, false, ['encrypt']);
+  const nonce = randomBytes(12);
+  const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce }, key, new TextEncoder().encode(plaintext));
+  return { ciphertext: `${encode(nonce)}.${encode(new Uint8Array(ciphertext))}`, encryptionKeyVersion };
+}
+
+export async function decryptField(field: EncryptedField, base64Key: string): Promise<string> {
+  const [encodedNonce, encodedCiphertext] = field.ciphertext.split('.');
+  if (!encodedNonce || !encodedCiphertext) throw new Error('encrypted_field_invalid');
+  const key = await crypto.subtle.importKey('raw', decodeKey(base64Key), { name: 'AES-GCM' }, false, ['decrypt']);
+  const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: decode(encodedNonce) }, key, decode(encodedCiphertext));
+  return new TextDecoder().decode(plaintext);
+}
+
+export { signAccessToken, verifyAccessToken, type Principal } from './jwt';
 export { uuidv7 } from './uuidv7';

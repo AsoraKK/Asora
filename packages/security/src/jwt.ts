@@ -1,8 +1,25 @@
-import { createLocalJWKSet, jwtVerify, type JSONWebKeySet } from 'jose';
+import { createLocalJWKSet, importPKCS8, jwtVerify, SignJWT, type JSONWebKeySet } from 'jose';
 
 export interface Principal {
   userId: string;
   roles: string[];
+}
+
+export async function signAccessToken(input: {
+  userId: string;
+  roles?: string[];
+  privateKeyPem: string;
+  keyId: string;
+  expiresInSeconds?: number;
+}): Promise<string> {
+  const privateKey = await importPKCS8(input.privateKeyPem, 'ES256');
+  const expiresInSeconds = input.expiresInSeconds ?? 900;
+  return new SignJWT({ roles: input.roles ?? [] })
+    .setProtectedHeader({ alg: 'ES256', kid: input.keyId, typ: 'JWT' })
+    .setSubject(input.userId)
+    .setIssuedAt()
+    .setExpirationTime(`${expiresInSeconds}s`)
+    .sign(privateKey);
 }
 
 export async function verifyAccessToken(token: string, jwksJson: string): Promise<Principal> {
