@@ -94,3 +94,6 @@ after the provider dashboard reported the temporary extension outage.
 - The new scope validator and native Worker validator both pass in
   pre-production mode. Production mode correctly fails closed until protected
   dedicated-account identifiers and the production environment are supplied.
+- A later read-only Cloudflare MCP inventory attempt returned API error `10000`
+  (authentication error); no Cloudflare state was changed and email/Turnstile
+  readiness remains unverified until the MCP session is reauthenticated.
