@@ -9,9 +9,9 @@ tokens, credentials, connection strings, or application records.
 - Branch: `codex/cloudflare-planetscale-provisioning`
 - Remote refresh: completed 2026-07-27
 - Native implementation PR: draft #474; current native implementation head is
-  `fcbfa4fa`.
-- Native validation: passed locally and remotely at `fcbfa4fa` (native workers,
-  migrations, and secret scan; runs `30309316229`, `30309317943`, `30309319624`).
+  `0460eb17`.
+- Native validation: passed locally and remotely at `0460eb17` (native workers,
+  migrations, and secret scan; runs `30310556528`, `30310558289`, `30310560298`).
 - Azure compatibility files: retained and not used by native Workers
 
 ## Cloudflare
@@ -50,7 +50,8 @@ They are not production resources and must not receive production data.
 - Cloudflare billing account: shared account (`…e4b3d4ef1af0`)
 - Region: Frankfurt (`eu-central`)
 - State: ready
-- Version: PostgreSQL 17.10 (`server_version_num=170010`)
+- Version: PostgreSQL 17.10 (`server_version_num=170010`), reverified read-only
+  2026-07-28; this remains below the required PG18 provisioning target
 - Cluster: PS-5 ARM, production branch with zero replicas
 - Branches: `main` only
 - User tables: zero
@@ -74,6 +75,12 @@ They are not production resources and must not receive production data.
   secrets and delivery acceptance remain gated.
 - Media reservations enforce configured quotas; retention, geography, personal
   feeds, follower fan-out, and moderation declaration conflicts are implemented.
+- Account-level token-version revocation, administrator status controls, block,
+  mute, bookmark, and follow-removal controls are implemented.
+- Appeal-created events now start an idempotent AppealLifecycle Workflow; privacy
+  export/delete and retention Workflows remain enabled.
+- Production routing validation rejects legacy/public preview hosts and requires
+  the approved custom API domains; jobs has no production route.
 
 ## Data disposition
 
@@ -86,6 +93,6 @@ No Azure data was exported, deleted, or modified by this run.
 | --- | --- | --- | --- |
 | 1 | BLOCKED | Shared account and forbidden account-create response | Owner-side dedicated Cloudflare account and data-disposition signature |
 | 2 | BLOCKED | Frankfurt PS-5/main-only snapshot | Region/tier benchmark and HA topology |
-| 3 | IN PROGRESS | Empty-state proof and native migration artefacts | Development branch, roles, grants, Hyperdrive replacements |
-| 4 | IN PROGRESS | Native Workers scaffold and dev resources | Deploy and end-to-end validation |
+| 3 | IN PROGRESS | Empty-state proof and native migration artefacts; exact-head checks pass | Development branch, roles, grants, Hyperdrive replacements |
+| 4 | IN PROGRESS | Native Workers scaffold, dev resources, and exact-head CI pass | Provisioned deploy and end-to-end validation |
 | 5 | BLOCKED | No restore/cutover executed | Independent backup, recovery drills, domains, rollback rehearsal |
