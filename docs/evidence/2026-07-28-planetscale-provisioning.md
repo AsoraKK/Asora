@@ -149,3 +149,11 @@ after the provider dashboard reported the temporary extension outage.
 - Gate 1 remains blocked by account isolation and the owner Azure
   data-disposition decision. Gates 2–5 remain gated by benchmark, extension,
   credential, deployment and recovery evidence.
+
+## Exact-head CI refresh — 2026-07-28
+
+- Current head `90e14997bcc4b15c61b72950f083736f70e2ee67` passed native
+  validation run `30315612296`, PlanetScale migration-contract run
+  `30315614015`, and secret-scan run `30315615763`.
+- These checks validate repository contracts only; they do not satisfy the
+  live account, extension, benchmark, deployment, backup or cutover gates.
