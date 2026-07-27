@@ -612,8 +612,12 @@ export class AppealLifecycleWorkflow extends WorkflowEntrypoint<Env, { appealId:
           await client.query(`UPDATE moderation.appeals SET state = 'resolved', resolved_at = COALESCE(resolved_at, now()) WHERE id = $1 AND state = 'open'`, [appealId]);
           await client.query(
             `INSERT INTO system.audit_events (action, target_type, target_id, reason_code, correlation_id, metadata)
-             VALUES ('moderation.appeal.resolved', 'appeal', $1, 'CASE_RESOLVED', $1, $2::jsonb)
-             ON CONFLICT DO NOTHING`,
+             SELECT 'moderation.appeal.resolved', 'appeal', $1, 'CASE_RESOLVED', $1, $2::jsonb
+              WHERE NOT EXISTS (
+                SELECT 1 FROM system.audit_events
+                 WHERE action = 'moderation.appeal.resolved' AND target_type = 'appeal'
+                   AND target_id = $1 AND reason_code = 'CASE_RESOLVED'
+              )`,
             [appealId, JSON.stringify({ appealId })]
           );
           return 'resolved';
