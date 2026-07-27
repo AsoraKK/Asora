@@ -47,8 +47,9 @@ function hasMagicBytes(bytes: Uint8Array, contentType: string): boolean {
 }
 
 async function processMediaUpload(message: QueueMessage, env: Env): Promise<void> {
-  const sessionId = typeof message.body.uploadSessionId === 'string' ? message.body.uploadSessionId : undefined;
-  const objectKey = typeof message.body.objectKey === 'string' ? message.body.objectKey : undefined;
+  const payload = (message.body.payload ?? message.body) as { uploadSessionId?: unknown; objectKey?: unknown };
+  const sessionId = typeof payload.uploadSessionId === 'string' ? payload.uploadSessionId : undefined;
+  const objectKey = typeof payload.objectKey === 'string' ? payload.objectKey : undefined;
   if (!sessionId || !objectKey || !env.MEDIA_QUARANTINE || !env.MEDIA_APPROVED || !env.IMAGES) throw new Error('media_processing_not_configured');
 
   const session = await query<{ user_id: string; content_type: string; expected_bytes: number; status: string }>(

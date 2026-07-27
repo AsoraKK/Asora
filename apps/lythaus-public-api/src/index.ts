@@ -9,7 +9,6 @@ interface Env extends EnvBindings {
   DB_APP_FRESH: HyperdriveBinding;
   MEDIA_QUARANTINE: NonNullable<EnvBindings['MEDIA_QUARANTINE']>;
   MODERATION_QUEUE: NonNullable<EnvBindings['MODERATION_QUEUE']>;
-  MEDIA_QUEUE: NonNullable<EnvBindings['MEDIA_QUEUE']>;
   R2_ACCOUNT_ID: string;
 }
 
@@ -119,12 +118,21 @@ async function finaliseUpload(request: Request, env: Env, user: Principal, sessi
   if (!session || session.status !== 'pending') throw new Error('upload_session_invalid');
   const object = await env.MEDIA_QUARANTINE.head(session.object_key);
   if (!object || object.size !== Number(session.expected_bytes)) throw new Error('upload_object_invalid');
-  await query(env.DB_APP_FRESH,
-    `UPDATE media.upload_sessions SET status = 'queued', observed_bytes = $1, finalised_at = now() WHERE id = $2`,
-    [object.size, sessionId]
-  );
-  await env.MEDIA_QUEUE.send({ eventId: uuidv7(), eventType: 'media.upload.finalised', uploadSessionId: sessionId, objectKey: session.object_key });
-  return privateResponse(request, env, { uploadSessionId: sessionId, status: 'queued' });
+  const eventId = uuidv7();
+  await transaction(env.DB_APP_FRESH, async (client) => {
+    const updated = await client.query(
+      `UPDATE media.upload_sessions SET status = 'queued', observed_bytes = $1, finalised_at = now()
+        WHERE id = $2 AND user_id = $3 AND status = 'pending'`,
+      [object.size, sessionId, user.userId]
+    );
+    if (updated.rowCount === 0) throw new Error('upload_session_invalid');
+    await client.query(
+      `INSERT INTO system.outbox_events (id, event_type, aggregate_type, aggregate_id, actor_id, payload)
+       VALUES ($1, 'media.upload.finalised', 'upload_session', $2, $3, $4::jsonb)`,
+      [eventId, sessionId, user.userId, JSON.stringify({ uploadSessionId: sessionId, objectKey: session.object_key })]
+    );
+  });
+  return privateResponse(request, env, { uploadSessionId: sessionId, status: 'queued', eventId });
 }
 
 async function getUserProfile(request: Request, env: Env, userId: string, privateView = false): Promise<Response> {

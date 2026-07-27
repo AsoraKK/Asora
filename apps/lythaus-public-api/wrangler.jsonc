@@ -30,8 +30,7 @@
     "producers": [
       { "binding": "MODERATION_QUEUE", "queue": "lythaus-moderation" },
       { "binding": "FEED_QUEUE", "queue": "lythaus-feed" },
-      { "binding": "PRIVACY_QUEUE", "queue": "lythaus-privacy" },
-      { "binding": "MEDIA_QUEUE", "queue": "lythaus-media" }
+      { "binding": "PRIVACY_QUEUE", "queue": "lythaus-privacy" }
     ]
   },
   "env": {
@@ -58,8 +57,7 @@
         "producers": [
           { "binding": "MODERATION_QUEUE", "queue": "lythaus-moderation-dev" },
           { "binding": "FEED_QUEUE", "queue": "lythaus-feed-dev" },
-          { "binding": "PRIVACY_QUEUE", "queue": "lythaus-privacy-dev" },
-          { "binding": "MEDIA_QUEUE", "queue": "lythaus-media-dev" }
+          { "binding": "PRIVACY_QUEUE", "queue": "lythaus-privacy-dev" }
         ]
       }
     }
