@@ -7,6 +7,15 @@ CREATE TABLE identity.email_verification_tokens (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE TABLE identity.password_reset_tokens (
+  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  user_id uuid NOT NULL REFERENCES identity.users(id) ON DELETE CASCADE,
+  token_hash bytea NOT NULL UNIQUE,
+  expires_at timestamptz NOT NULL,
+  consumed_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
 CREATE TABLE identity.account_events (
   id uuid PRIMARY KEY DEFAULT uuidv7(),
   user_id uuid NOT NULL REFERENCES identity.users(id),
@@ -229,6 +238,7 @@ ALTER TABLE system.outbox_events
   ADD COLUMN IF NOT EXISTS correlation_id text;
 
 CREATE INDEX email_verification_active_idx ON identity.email_verification_tokens (user_id, expires_at) WHERE consumed_at IS NULL;
+CREATE INDEX password_reset_active_idx ON identity.password_reset_tokens (user_id, expires_at) WHERE consumed_at IS NULL;
 CREATE INDEX blocks_blocked_idx ON social.blocks (blocked_id, created_at DESC);
 CREATE INDEX mutes_muted_idx ON social.mutes (muted_id, created_at DESC);
 CREATE INDEX feed_events_recipient_idx ON feed.feed_events (recipient_id, created_at DESC);

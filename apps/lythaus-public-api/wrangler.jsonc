@@ -18,6 +18,7 @@
     "EMAIL_PROVIDER_URL": "REPLACE_WITH_EMAIL_PROVIDER_URL",
     "EMAIL_FROM": "REPLACE_WITH_EMAIL_FROM",
     "EMAIL_VERIFICATION_BASE_URL": "https://api.lythaus.co/api/auth/email/verify?token=",
+    "EMAIL_PASSWORD_RESET_BASE_URL": "https://api.lythaus.co/api/auth/password/reset/complete?token=",
     "GOOGLE_CLIENT_ID": "REPLACE_WITH_GOOGLE_CLIENT_ID",
     "GOOGLE_REDIRECT_URI": "https://api.lythaus.co/api/auth/google/callback",
     "GOOGLE_JWKS_URL": "https://www.googleapis.com/oauth2/v3/certs"
@@ -55,6 +56,7 @@
         "EMAIL_PROVIDER_URL": "http://localhost:8788/email",
         "EMAIL_FROM": "no-reply@localhost",
         "EMAIL_VERIFICATION_BASE_URL": "http://localhost:8787/api/auth/email/verify?token=",
+        "EMAIL_PASSWORD_RESET_BASE_URL": "http://localhost:8787/api/auth/password/reset/complete?token=",
         "GOOGLE_CLIENT_ID": "REPLACE_WITH_GOOGLE_CLIENT_ID",
         "GOOGLE_REDIRECT_URI": "http://localhost:8787/api/auth/google/callback",
         "GOOGLE_JWKS_URL": "https://www.googleapis.com/oauth2/v3/certs",

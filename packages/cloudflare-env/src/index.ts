@@ -38,6 +38,7 @@ export interface EnvBindings {
   EMAIL_PROVIDER_TOKEN?: string;
   EMAIL_FROM?: string;
   EMAIL_VERIFICATION_BASE_URL?: string;
+  EMAIL_PASSWORD_RESET_BASE_URL?: string;
   EMAIL?: SendEmailLike;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;

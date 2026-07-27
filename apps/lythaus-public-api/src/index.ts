@@ -57,8 +57,9 @@ async function issueSession(env: Env, userId: string, roles: string[] = []): Pro
 async function deliverAuthEmail(env: Env, input: { type: 'verification' | 'password_reset' | 'security'; to: string; token?: string; reason?: string }): Promise<void> {
   if (env.EMAIL && env.EMAIL_FROM) {
     const subject = input.type === 'verification' ? 'Verify your Lythaus email' : input.type === 'password_reset' ? 'Reset your Lythaus password' : 'Lythaus security notice';
-    const action = input.token && env.EMAIL_VERIFICATION_BASE_URL
-      ? `<p><a href="${env.EMAIL_VERIFICATION_BASE_URL}${encodeURIComponent(input.token)}">Continue securely</a></p>`
+    const baseUrl = input.type === 'password_reset' ? env.EMAIL_PASSWORD_RESET_BASE_URL : env.EMAIL_VERIFICATION_BASE_URL;
+    const action = input.token && baseUrl
+      ? `<p><a href="${baseUrl}${encodeURIComponent(input.token)}">Continue securely</a></p>`
       : '';
     await env.EMAIL.send({ to: input.to, from: env.EMAIL_FROM, subject, html: `<p>${subject}.</p>${action}` });
     return;
@@ -231,6 +232,45 @@ async function googleAuthCallback(request: Request, env: Env): Promise<Response>
   if (!userId || accountStatus === 'suspended' || accountStatus === 'deleted') throw new Error('account_unavailable');
   const tokens = await issueSession(env, userId);
   return privateResponse(request, env, { ...tokens, tokenType: 'Bearer' });
+}
+
+async function requestPasswordReset(request: Request, env: Env): Promise<Response> {
+  const input = await readJson<{ email?: string }>(request, 8 * 1024);
+  const email = normalizeEmail(input.email ?? '');
+  if (!env.PII_HMAC_KEY_V1) throw new Error('authentication_not_configured');
+  const lookup = hmacLookup(email, env.PII_HMAC_KEY_V1);
+  const account = await query<{ id: string }>(env.DB_APP_FRESH,
+    `SELECT u.id FROM identity.email_credentials c JOIN identity.users u ON u.id = c.user_id
+      WHERE c.email_lookup_hmac = decode($1, 'base64') AND u.status = 'active'`, [lookup]);
+  if (account.rows[0]) {
+    const token = randomToken(32);
+    await query(env.DB_APP_FRESH,
+      `INSERT INTO identity.password_reset_tokens (user_id, token_hash, expires_at) VALUES ($1, decode($2, 'base64'), now() + interval '30 minutes')`,
+      [account.rows[0].id, hashResetToken(token)]);
+    await deliverAuthEmail(env, { type: 'password_reset', to: email, token });
+  }
+  return response(request, env, { state: 'reset_if_eligible' }, { status: 202 });
+}
+
+async function completePasswordReset(request: Request, env: Env): Promise<Response> {
+  const url = new URL(request.url);
+  const input = await readJson<{ token?: string; password?: string }>(request, 16 * 1024);
+  const token = url.searchParams.get('token') ?? input.token;
+  const password = input.password ?? '';
+  if (!token || token.length < 32) throw new Error('reset_token_invalid');
+  if (password.length < 12 || password.length > 128) throw new Error('invalid_password');
+  const secrets = requireAuthSecrets(env);
+  const passwordHash = hashPassword(password, secrets.pepper, { fallbackToScrypt: true });
+  await transaction(env.DB_APP_FRESH, async (client) => {
+    const found = await client.query<{ user_id: string }>(`SELECT user_id FROM identity.password_reset_tokens WHERE token_hash = decode($1, 'base64') AND consumed_at IS NULL AND expires_at > now()`, [hashResetToken(token)]);
+    if (!found.rows[0]) throw new Error('reset_token_invalid');
+    await client.query(`UPDATE identity.password_reset_tokens SET consumed_at = now() WHERE token_hash = decode($1, 'base64') AND consumed_at IS NULL`, [hashResetToken(token)]);
+    await client.query(`UPDATE identity.email_credentials SET password_hash = $1::jsonb, updated_at = now() WHERE user_id = $2`, [JSON.stringify(passwordHash), found.rows[0].user_id]);
+    await client.query(`UPDATE identity.auth_sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [found.rows[0].user_id]);
+    await client.query(`UPDATE identity.refresh_token_families SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [found.rows[0].user_id]);
+    await client.query(`INSERT INTO identity.account_events (user_id, event_type, metadata) VALUES ($1, 'password_reset_completed', '{}'::jsonb)`, [found.rows[0].user_id]);
+  });
+  return response(request, env, { state: 'password_reset_completed' });
 }
 
 function corsOrigin(request: Request, env: Env): string | undefined {
@@ -609,6 +649,8 @@ export default {
       if (request.method === 'GET' && url.pathname === '/api/auth/userinfo') return getUserProfile(request, env, (await principal(request, env)).userId, true);
       if (request.method === 'POST' && (url.pathname === '/api/auth/email' || url.pathname === '/api/authEmail')) return emailAuth(request, env);
       if ((request.method === 'GET' || request.method === 'POST') && url.pathname === '/api/auth/email/verify') return verifyEmail(request, env);
+      if (request.method === 'POST' && (url.pathname === '/api/auth/password/reset/request' || url.pathname === '/api/auth/password-reset')) return requestPasswordReset(request, env);
+      if (request.method === 'POST' && url.pathname === '/api/auth/password/reset/complete') return completePasswordReset(request, env);
       if (request.method === 'POST' && url.pathname === '/api/auth/refresh') return refreshSession(request, env);
       if (request.method === 'POST' && url.pathname === '/api/auth/logout') return logout(request, env);
       if (request.method === 'GET' && url.pathname === '/api/auth/google') return googleAuthStart(request, env);

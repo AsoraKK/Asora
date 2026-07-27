@@ -435,6 +435,8 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
       await transaction(this.env.DB_PRIVACY_FRESH, async (client) => {
         await client.query(`DELETE FROM identity.provider_links WHERE user_id = $1`, [subjectId]);
         await client.query(`DELETE FROM identity.email_credentials WHERE user_id = $1`, [subjectId]);
+        await client.query(`DELETE FROM identity.email_verification_tokens WHERE user_id = $1`, [subjectId]);
+        await client.query(`DELETE FROM identity.password_reset_tokens WHERE user_id = $1`, [subjectId]);
         await client.query(`DELETE FROM identity.handles WHERE user_id = $1`, [subjectId]);
         await client.query(`DELETE FROM social.profile_private_fields WHERE user_id = $1`, [subjectId]);
         await client.query(`UPDATE identity.users SET status = 'deleted', display_name = '[deleted]', deleted_at = COALESCE(deleted_at, now()), updated_at = now() WHERE id = $1`, [subjectId]);
