@@ -45,6 +45,8 @@
     "validate:native-scope": "node scripts/validate-native-scope.mjs",
     "validate:native-scope:production": "node scripts/validate-native-scope.mjs --production",
     "validate:native-azure-dependencies": "node scripts/validate-native-azure-dependencies.mjs",
+    "validate:production-gates": "node scripts/validate-production-gates.mjs",
+    "validate:production-gates:require-pass": "node scripts/validate-production-gates.mjs --require-pass",
     "typecheck:native": "tsc -p tsconfig.native.json --noEmit",
     "test:native-architecture": "node --test scripts/tests/native-architecture-invariants.test.js",
     "validate:planetscale-migrations": "node scripts/validate-migration-baseline.mjs",

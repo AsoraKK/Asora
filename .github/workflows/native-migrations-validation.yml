@@ -8,6 +8,8 @@ on:
       - 'scripts/validate-migration-baseline.mjs'
       - 'scripts/validate-planetscale-extensions.mjs'
       - 'scripts/ci/apply-planetscale-production-migrations.mjs'
+      - 'scripts/validate-production-gates.mjs'
+      - 'infrastructure/cloudflare/production-gates.json'
       - 'database/planetscale/extensions/**'
       - 'package.json'
       - 'package-lock.json'
@@ -18,6 +20,8 @@ on:
       - 'scripts/validate-migration-baseline.mjs'
       - 'scripts/validate-planetscale-extensions.mjs'
       - 'scripts/ci/apply-planetscale-production-migrations.mjs'
+      - 'scripts/validate-production-gates.mjs'
+      - 'infrastructure/cloudflare/production-gates.json'
       - 'database/planetscale/extensions/**'
 
 permissions:

@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "lythaus-production-gates-v1",
+  "releaseSha": "2ab310e6f2cc8b62a2f8a9fcdb343f2edf03b19b",
+  "cutoverAuthorized": false,
+  "azureDeletionAuthorized": false,
+  "gates": {
+    "gate1OwnershipIsolation": {
+      "status": "BLOCKED",
+      "evidence": ["docs/architecture/data-disposition-adr.md", "docs/evidence/2026-07-28-planetscale-provisioning.md"]
+    },
+    "gate2RegionTopology": {
+      "status": "BLOCKED",
+      "evidence": ["database/planetscale/benchmarks/README.md", "docs/evidence/2026-07-28-planetscale-provisioning.md"]
+    },
+    "gate3DatabaseCryptography": {
+      "status": "BLOCKED",
+      "evidence": ["database/planetscale/extensions/required-extensions.json", "docs/architecture/password-hashing-adr.md"]
+    },
+    "gate4RuntimeProduct": {
+      "status": "IN PROGRESS",
+      "evidence": ["scripts/tests/native-architecture-invariants.test.js", "docs/evidence/2026-07-28-planetscale-provisioning.md"]
+    },
+    "gate5RecoveryCutover": {
+      "status": "BLOCKED",
+      "evidence": ["docs/runbooks/planetscale-restore.md", "docs/evidence/2026-07-28-planetscale-provisioning.md"]
+    }
+  }
+}

@@ -176,6 +176,17 @@ test('production migrations are explicit, TLS-verified, and approval-gated', () 
   assert.doesNotMatch(script, /0001_feature_flags/);
 });
 
+test('production deployment is fail-closed on the five acceptance gates', () => {
+  const workflow = fs.readFileSync(path.join(root, '.github/workflows/native-workers-deploy.yml'), 'utf8');
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, 'infrastructure/cloudflare/production-gates.json'), 'utf8'));
+  const validator = fs.readFileSync(path.join(root, 'scripts/validate-production-gates.mjs'), 'utf8');
+  assert.match(workflow, /Validate all production acceptance gates/);
+  assert.equal(Object.keys(manifest.gates).length, 5);
+  assert.equal(manifest.cutoverAuthorized, false);
+  assert.equal(manifest.azureDeletionAuthorized, false);
+  assert.match(validator, /--require-pass/);
+});
+
 test('jobs role can read trust ledgers required by Data Passport exports', () => {
   const grants = fs.readFileSync(path.join(root, 'database/planetscale/grants/roles.sql'), 'utf8');
   const jobs = fs.readFileSync(path.join(root, 'apps/lythaus-jobs/src/index.ts'), 'utf8');

@@ -44,6 +44,10 @@ jobs:
           CLOUDFLARE_SHARED_ACCOUNT_ID: ${{ vars.CLOUDFLARE_SHARED_ACCOUNT_ID }}
           CLOUDFLARE_ENVIRONMENT: production
         run: npm run validate:native-scope:production
+      - name: Validate all production acceptance gates
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: npm run validate:production-gates:require-pass
       - name: Validate migrations and generated Worker types
         run: |
           npm run validate:planetscale-migrations
