@@ -125,6 +125,14 @@ test('production deployment is manually gated and provisioned-only', () => {
   assert.doesNotMatch(workflow, /on:\s*\n\s*push:/);
 });
 
+test('Cloudflare scope manifest forbids known shared and unrelated resources', () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, 'infrastructure/cloudflare/native-scope.json'), 'utf8'));
+  assert.ok(manifest.forbiddenAccountIds.includes(manifest.preproduction.accountId));
+  assert.ok(manifest.forbiddenZoneIds.includes(manifest.preproduction.zoneId));
+  assert.ok(manifest.forbiddenResourcePrefixes.includes('nite-owl-'));
+  assert.ok(manifest.approvedLegacyResourcePrefixes.includes('asora-azure-compat'));
+});
+
 test('jobs Worker exposes durable privacy and appeal workflows', () => {
   const config = fs.readFileSync(path.join(root, 'apps/lythaus-jobs/wrangler.jsonc'), 'utf8');
   const source = fs.readFileSync(path.join(root, 'apps/lythaus-jobs/src/index.ts'), 'utf8');

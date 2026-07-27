@@ -37,6 +37,8 @@ if (production) {
   if (!productionAccount) failures.push(`${manifest.production.accountIdEnv} is required for production validation`);
   if (!productionZone) failures.push(`${manifest.production.zoneIdEnv} is required for production validation`);
   if (productionAccount && productionAccount === sharedAccount) failures.push('production account must differ from the shared pre-production account');
+  if (productionAccount && manifest.forbiddenAccountIds?.includes(productionAccount)) failures.push('production account is explicitly forbidden by the scope manifest');
+  if (productionZone && manifest.forbiddenZoneIds?.includes(productionZone)) failures.push('production zone is explicitly forbidden by the scope manifest');
   if (process.env.CLOUDFLARE_ENVIRONMENT !== manifest.production.requiredEnvironment) failures.push('CLOUDFLARE_ENVIRONMENT=production is required');
 } else if (productionAccount && productionAccount === sharedAccount) {
   failures.push('configured production account matches the shared pre-production account');
