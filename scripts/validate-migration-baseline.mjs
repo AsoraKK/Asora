@@ -6,7 +6,7 @@ const migrationDir = path.join(root, 'database', 'planetscale', 'migrations');
 const requiredMigrations = ['0000_preflight.sql', '0001_extensions_and_schemas.sql', '0002_core_tables.sql', '0003_domain_extensions.sql', '0004_launch_contract.sql'];
 const requiredSeeds = ['0001_feature_flags.sql'];
 const requiredTables = [
-  'identity.users', 'identity.email_verification_tokens', 'content.posts', 'content.content_declarations',
+  'identity.users', 'identity.email_verification_tokens', 'identity.password_reset_tokens', 'content.posts', 'content.content_declarations',
   'social.profiles', 'social.follows', 'feed.user_inbox', 'feed.notifications',
   'moderation.detector_runs', 'moderation.enforcement_events', 'privacy.subject_data_locations',
   'trust.provenance_events', 'media.upload_sessions', 'media.storage_ledger',
