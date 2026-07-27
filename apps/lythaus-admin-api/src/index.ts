@@ -58,6 +58,7 @@ async function decideModeration(request: Request, env: Env, actor: { userId: str
       [caseId, input.outcome, publicLabel ?? null, moderationCase.policy_version, actor.userId]
     );
     await client.query(`UPDATE moderation.cases SET state = $1, resolved_at = CASE WHEN $1 = 'open' THEN NULL ELSE now() END WHERE id = $2`, [input.outcome === 'queue' ? 'open' : 'resolved', caseId]);
+    await client.query(`UPDATE moderation.appeals SET state = $1, resolved_at = CASE WHEN $1 = 'resolved' THEN now() ELSE NULL END WHERE case_id = $2 AND state = 'open'`, [input.outcome === 'queue' ? 'open' : 'resolved', caseId]);
     if (moderationCase.content_type === 'post') {
       await client.query(`UPDATE content.posts SET moderation_state = $1, published_at = CASE WHEN $1 = 'allowed' THEN COALESCE(published_at, now()) ELSE NULL END, updated_at = now() WHERE id = $2`, [input.outcome === 'allow' ? 'allowed' : input.outcome === 'block' ? 'blocked' : 'under_review', moderationCase.content_id]);
       if (publicLabel) await client.query(`UPDATE content.content_declarations SET public_label = $1, review_required = $2, updated_at = now() WHERE post_id = $3`, [publicLabel, input.outcome !== 'allow', moderationCase.content_id]);

@@ -205,6 +205,32 @@ async function createFlag(request: Request, env: Env, user: Principal): Promise<
   return privateResponse(request, env, { flagId }, { status: 201 });
 }
 
+async function createAppeal(request: Request, env: Env, user: Principal): Promise<Response> {
+  const input = await readJson<{ caseId?: string }>(request, 16 * 1024);
+  if (!input.caseId) throw new Error('case_id_required');
+  const eligible = await query<{ id: string }>(env.DB_APP_FRESH,
+    `SELECT c.id FROM moderation.cases c
+      LEFT JOIN content.posts p ON c.content_type = 'post' AND p.id = c.content_id
+      LEFT JOIN content.comments m ON c.content_type = 'comment' AND m.id = c.content_id
+     WHERE c.id = $1 AND (p.author_id = $2 OR m.author_id = $2)`, [input.caseId, user.userId]);
+  if (eligible.rowCount !== 1) throw new Error('appeal_not_allowed');
+  const existing = await query<{ id: string }>(env.DB_APP_FRESH, `SELECT id FROM moderation.appeals WHERE case_id = $1 AND appellant_id = $2 AND state = 'open' LIMIT 1`, [input.caseId, user.userId]);
+  if (existing.rows[0]) return privateResponse(request, env, { appealId: existing.rows[0].id, state: 'open' });
+  const appealId = uuidv7();
+  await transaction(env.DB_APP_FRESH, async (client) => {
+    await client.query(`INSERT INTO moderation.appeals (id, case_id, appellant_id) VALUES ($1, $2, $3)`, [appealId, input.caseId, user.userId]);
+    await client.query(`INSERT INTO system.outbox_events (id, event_type, aggregate_type, aggregate_id, actor_id, payload) VALUES ($1, 'moderation.appeal.created', 'appeal', $2, $3, $4::jsonb)`, [uuidv7(), appealId, user.userId, JSON.stringify({ appealId, caseId: input.caseId })]);
+  });
+  return privateResponse(request, env, { appealId, state: 'open' }, { status: 201 });
+}
+
+async function getAppeal(request: Request, env: Env, user: Principal, appealId: string): Promise<Response> {
+  const result = await query(env.DB_APP_FRESH,
+    `SELECT a.id, a.case_id, a.state, a.created_at, a.resolved_at FROM moderation.appeals a WHERE a.id = $1 AND a.appellant_id = $2`, [appealId, user.userId]);
+  if (!result.rows[0]) throw new Error('appeal_not_found');
+  return privateResponse(request, env, { appeal: result.rows[0] });
+}
+
 async function createPrivacyRequest(request: Request, env: Env, user: Principal): Promise<Response> {
   const input = await readJson<{ requestType?: 'export' | 'delete' | 'rectify' }>(request, 8 * 1024);
   if (!input.requestType || !['export', 'delete', 'rectify'].includes(input.requestType)) throw new Error('invalid_privacy_request');
@@ -267,6 +293,9 @@ export default {
       const reaction = url.pathname.match(/^\/api\/posts\/([^/]+)\/reactions$/);
       if (request.method === 'POST' && reaction) return createReaction(request, env, await principal(request, env), reaction[1]);
       if (request.method === 'POST' && (url.pathname === '/api/flags' || url.pathname === '/api/content/flags')) return createFlag(request, env, await principal(request, env));
+      if (request.method === 'POST' && url.pathname === '/api/appeals') return createAppeal(request, env, await principal(request, env));
+      const appeal = url.pathname.match(/^\/api\/appeals\/([^/]+)$/);
+      if (request.method === 'GET' && appeal) return getAppeal(request, env, await principal(request, env), appeal[1]);
       if (request.method === 'POST' && (url.pathname === '/api/privacy/requests' || url.pathname === '/api/privacy/request')) return createPrivacyRequest(request, env, await principal(request, env));
       if (request.method === 'GET' && (url.pathname === '/api/storage' || url.pathname === '/api/storage/usage')) return getStorage(request, env, await principal(request, env));
       if (request.method === 'GET' && url.pathname === '/api/auth/userinfo') return getUserProfile(request, env, (await principal(request, env)).userId, true);

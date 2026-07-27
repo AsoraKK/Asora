@@ -16,6 +16,7 @@ GRANT SELECT, INSERT, DELETE ON social.follows, social.reactions, social.blocks,
 GRANT SELECT, INSERT, UPDATE, DELETE ON social.profiles, social.profile_private_fields, social.custom_feeds, social.custom_feed_rules TO lythaus_runtime;
 GRANT SELECT, INSERT, UPDATE, DELETE ON feed.user_inbox, feed.feed_events, feed.notifications TO lythaus_runtime;
 GRANT SELECT, INSERT ON media.upload_sessions, media.objects, media.storage_ledger TO lythaus_runtime;
+GRANT SELECT, INSERT ON moderation.content_flags, moderation.cases, moderation.appeals TO lythaus_runtime;
 GRANT SELECT, INSERT ON system.outbox_events, system.idempotency_keys TO lythaus_runtime;
 
 GRANT USAGE ON SCHEMA identity, content, moderation, trust, editorial, system TO lythaus_admin;
