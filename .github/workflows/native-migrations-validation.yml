@@ -7,6 +7,7 @@ on:
       - 'database/planetscale/**'
       - 'scripts/validate-migration-baseline.mjs'
       - 'scripts/validate-planetscale-extensions.mjs'
+      - 'scripts/ci/apply-planetscale-production-migrations.mjs'
       - 'database/planetscale/extensions/**'
       - 'package.json'
       - 'package-lock.json'
@@ -16,6 +17,7 @@ on:
       - 'database/planetscale/**'
       - 'scripts/validate-migration-baseline.mjs'
       - 'scripts/validate-planetscale-extensions.mjs'
+      - 'scripts/ci/apply-planetscale-production-migrations.mjs'
       - 'database/planetscale/extensions/**'
 
 permissions:

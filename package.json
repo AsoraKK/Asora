@@ -51,7 +51,9 @@
     "validate:planetscale-extensions": "node scripts/validate-planetscale-extensions.mjs",
     "validate:planetscale-extensions:live": "node scripts/validate-planetscale-extensions.mjs --require-catalog",
     "benchmark:native-endpoints": "node scripts/benchmarks/native-endpoint-benchmark.mjs",
-    "validate:planetscale-ci-script": "node --check scripts/ci/apply-planetscale-migrations.mjs"
+    "validate:planetscale-ci-script": "node --check scripts/ci/apply-planetscale-migrations.mjs",
+    "validate:planetscale-production-script": "node --check scripts/ci/apply-planetscale-production-migrations.mjs",
+    "apply:planetscale-production-migrations": "node scripts/ci/apply-planetscale-production-migrations.mjs"
   },
   "devDependencies": {
     "@openapitools/openapi-generator-cli": "^2.25.0",

@@ -163,6 +163,19 @@ test('temporary PlanetScale CI is branch-scoped and cleans up safely', () => {
   assert.doesNotMatch(workflow, /branch delete.*main/s);
 });
 
+test('production migrations are explicit, TLS-verified, and approval-gated', () => {
+  const workflow = fs.readFileSync(path.join(root, '.github/workflows/native-workers-deploy.yml'), 'utf8');
+  const script = fs.readFileSync(path.join(root, 'scripts/ci/apply-planetscale-production-migrations.mjs'), 'utf8');
+  assert.match(workflow, /Apply approved production migrations/);
+  assert.match(workflow, /PLANETSCALE_PRODUCTION_MIGRATIONS_APPROVED/);
+  assert.match(workflow, /PSCALE_BRANCH_NAME: main/);
+  assert.match(script, /branch !== 'main'/);
+  assert.match(script, /approval !== 'approved'/);
+  assert.match(script, /sslmode.*verify-full/);
+  assert.match(script, /migration checksum mismatch/);
+  assert.doesNotMatch(script, /0001_feature_flags/);
+});
+
 test('jobs role can read trust ledgers required by Data Passport exports', () => {
   const grants = fs.readFileSync(path.join(root, 'database/planetscale/grants/roles.sql'), 'utf8');
   const jobs = fs.readFileSync(path.join(root, 'apps/lythaus-jobs/src/index.ts'), 'utf8');

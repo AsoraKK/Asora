@@ -52,6 +52,12 @@ jobs:
           npx wrangler types --check apps/lythaus-public-api/src/worker-configuration.d.ts --config apps/lythaus-public-api/wrangler.jsonc --env development
           npx wrangler types --check apps/lythaus-admin-api/src/worker-configuration.d.ts --config apps/lythaus-admin-api/wrangler.jsonc --env development
           npx wrangler types --check apps/lythaus-jobs/src/worker-configuration.d.ts --config apps/lythaus-jobs/wrangler.jsonc --env development
+      - name: Apply approved production migrations
+        env:
+          PLANETSCALE_ADMIN_DATABASE_URL: ${{ secrets.PLANETSCALE_ADMIN_DATABASE_URL }}
+          PLANETSCALE_PRODUCTION_MIGRATIONS_APPROVED: ${{ secrets.PLANETSCALE_PRODUCTION_MIGRATIONS_APPROVED }}
+          PSCALE_BRANCH_NAME: main
+        run: npm run apply:planetscale-production-migrations
       - name: Deploy public API
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PRODUCTION_API_TOKEN }}
