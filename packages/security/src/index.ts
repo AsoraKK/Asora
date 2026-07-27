@@ -5,6 +5,7 @@ import { sha256 } from '@noble/hashes/sha2';
 
 export const ARGON2ID_PROFILE = { m: 19_456, t: 2, p: 1 } as const;
 export const SCRYPT_PROFILE = { N: 2 ** 14, r: 8, p: 5 } as const;
+export const PASSWORD_HASH_VERSION = 1 as const;
 
 function encode(bytes: Uint8Array): string {
   return btoa(String.fromCharCode(...bytes));
@@ -38,7 +39,7 @@ function pepperDigest(hash: Uint8Array, pepper: string): Uint8Array {
 
 export interface PasswordHash {
   algorithm: 'argon2id' | 'scrypt';
-  version: 1;
+  version: typeof PASSWORD_HASH_VERSION;
   salt: string;
   digest: string;
   pepperVersion: string;
@@ -66,11 +67,17 @@ export function hashPassword(
   }
   return {
     algorithm,
-    version: 1,
+    version: PASSWORD_HASH_VERSION,
     salt: encode(salt),
     digest: encode(pepperDigest(derived, pepper)),
     pepperVersion: options.pepperVersion ?? 'v1',
   };
+}
+
+export function needsPasswordRehash(stored: PasswordHash, pepperVersion = 'v1'): boolean {
+  return stored.algorithm !== 'argon2id'
+    || stored.version !== PASSWORD_HASH_VERSION
+    || stored.pepperVersion !== pepperVersion;
 }
 
 export function verifyPassword(password: string, stored: PasswordHash, pepper: string): boolean {

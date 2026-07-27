@@ -3,7 +3,7 @@ import type { EnvBindings } from '@lythaus/cloudflare-env';
 import type { CreatePostInput, EmailDeliveryReference, TransactionalEmailProvider } from '@lythaus/contracts';
 import { createPresignedPutUrl, ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES, type AllowedImageType } from '@lythaus/media';
 import { correlationId, json, logEvent } from '@lythaus/observability';
-import { encryptField, hashPassword, hashResetToken, hmacLookup, randomToken, signAccessToken, uuidv7, verifyAccessToken, verifyPassword, type PasswordHash, type Principal } from '@lythaus/security';
+import { encryptField, hashPassword, hashResetToken, hmacLookup, needsPasswordRehash, randomToken, signAccessToken, uuidv7, verifyAccessToken, verifyPassword, type PasswordHash, type Principal } from '@lythaus/security';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 
 interface Env extends EnvBindings {
@@ -169,6 +169,12 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
   }
   if (!account || account.status !== 'active' || !verifyPassword(password, account.password_hash, secrets.pepper)) throw new Error('invalid_credentials');
   if (!account.verified_at) throw new Error('email_verification_required');
+  if (needsPasswordRehash(account.password_hash, 'v1')) {
+    const upgradedHash = hashConfiguredPassword(env, password, secrets.pepper);
+    await query(env.DB_APP_FRESH,
+      `UPDATE identity.email_credentials SET password_hash = $1::jsonb, updated_at = now() WHERE user_id = $2`,
+      [JSON.stringify(upgradedHash), account.id]);
+  }
   const tokens = await issueSession(env, account.id);
   return privateResponse(request, env, { ...tokens, tokenType: 'Bearer' });
 }
