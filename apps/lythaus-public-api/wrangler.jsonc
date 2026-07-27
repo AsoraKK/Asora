@@ -13,7 +13,10 @@
     "EXPECTED_HOSTNAMES": "api.lythaus.co",
     "CORS_ALLOWED_ORIGINS": "https://app.lythaus.co",
     "HYPERDRIVE_QUERY_CACHE_MODE": "disabled",
-    "R2_ACCOUNT_ID": "REPLACE_WITH_DEDICATED_ACCOUNT_ID"
+    "R2_ACCOUNT_ID": "REPLACE_WITH_DEDICATED_ACCOUNT_ID",
+    "MEDIA_QUOTA_BYTES": "REPLACE_WITH_MEDIA_QUOTA_BYTES",
+    "EMAIL_PROVIDER_URL": "REPLACE_WITH_EMAIL_PROVIDER_URL",
+    "EMAIL_FROM": "REPLACE_WITH_EMAIL_FROM"
   },
   "hyperdrive": [
     { "binding": "DB_APP_FRESH", "id": "REPLACE_WITH_DB_APP_FRESH_ID" }
@@ -43,6 +46,9 @@
         "ENVIRONMENT": "development",
         "EXPECTED_HOSTNAMES": "lythaus-public-api-development.workers.dev",
         "R2_ACCOUNT_ID": "e5b7ae46e04698f507b7e4b3d4ef1af0",
+        "MEDIA_QUOTA_BYTES": "1073741824",
+        "EMAIL_PROVIDER_URL": "http://localhost:8788/email",
+        "EMAIL_FROM": "no-reply@localhost",
         "CORS_ALLOWED_ORIGINS": "http://localhost:3000",
         "HYPERDRIVE_QUERY_CACHE_MODE": "disabled"
       },

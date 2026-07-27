@@ -20,6 +20,7 @@ interface Env extends EnvBindings {
   PRIVATE_EXPORTS?: NonNullable<EnvBindings['PRIVATE_EXPORTS']>;
   ACCOUNT_DELETE?: WorkflowBinding<{ subjectId: string; requestId: string }>;
   ACCOUNT_EXPORT?: WorkflowBinding<{ subjectId: string; requestId: string }>;
+  RETENTION_CLEANUP?: WorkflowBinding<{ runId: string }>;
 }
 
 interface Queue { send(body: unknown, options?: { contentType?: string }): Promise<void>; }
@@ -110,7 +111,11 @@ async function processPostModeration(message: QueueMessage, env: Env): Promise<v
   if (prior.rowCount !== 0) return;
   const result = await moderateTextWithHive(post.body, post.author_id, postId, env);
   const modelVersion = env.HIVE_MODEL_VERSION ?? HIVE_DEFAULT_MODELS.join('+');
-  const publicLabel = result.action === 'allow'
+  const detectedContentClass = result.classes[0]?.class ?? null;
+  const declarationConflict = post.declared_creation_mode === 'human'
+    && result.classes.some((item) => typeof item.class === 'string' && /(^|[_:-])(ai|generated|synthetic)([_:-]|$)/i.test(item.class));
+  const effectiveAction = declarationConflict && result.action === 'allow' ? 'queue' : result.action;
+  const publicLabel = effectiveAction === 'allow'
     ? ({ human: 'Human-authored', ai_assisted: 'AI-assisted', ai_generated: 'AI-generated' } as const)[post.declared_creation_mode]
     : 'Under review';
   const signal = JSON.stringify({ highestScore: result.highestScore, classes: result.classes, action: result.action });
@@ -123,11 +128,11 @@ async function processPostModeration(message: QueueMessage, env: Env): Promise<v
     );
     await client.query(
       `INSERT INTO content.content_declarations (post_id, declared_creation_mode, public_label, detector_provider, detector_model_version, detector_signal, declaration_conflict, review_required)
-       VALUES ($1, $2, $3, 'hive', $4, $5::jsonb, false, $6)
+       VALUES ($1, $2, $3, 'hive', $4, $5::jsonb, $6, $7)
        ON CONFLICT (post_id) DO UPDATE SET public_label = EXCLUDED.public_label, detector_provider = EXCLUDED.detector_provider,
          detector_model_version = EXCLUDED.detector_model_version, detector_signal = EXCLUDED.detector_signal,
          declaration_conflict = EXCLUDED.declaration_conflict, review_required = EXCLUDED.review_required, updated_at = now()`,
-      [postId, post.declared_creation_mode, publicLabel, modelVersion, signal, result.action !== 'allow']
+      [postId, post.declared_creation_mode, publicLabel, modelVersion, signal, declarationConflict, effectiveAction !== 'allow']
     );
     const caseResult = await client.query<{ id: string }>(
       `INSERT INTO moderation.cases (content_type, content_id, state, policy_version) VALUES ('post', $1, $2, 'hive-v1') RETURNING id`,
@@ -140,18 +145,27 @@ async function processPostModeration(message: QueueMessage, env: Env): Promise<v
     await client.query(
       `INSERT INTO trust.provenance_events (content_id, author_id, declared_creation_mode, detected_content_class, detector_provider, detector_model_version, policy_version, final_decision)
        VALUES ($1, $2, $3, $4, 'hive', $5, 'hive-v1', $6)`,
-      [postId, post.author_id, post.declared_creation_mode, result.classes[0]?.class ?? null, modelVersion, result.action]
+      [postId, post.author_id, post.declared_creation_mode, detectedContentClass, modelVersion, effectiveAction]
     );
-    if (result.action === 'allow') {
+    if (effectiveAction === 'allow') {
       await client.query(`UPDATE content.posts SET moderation_state = 'allowed', published_at = COALESCE(published_at, now()), updated_at = now() WHERE id = $1`, [postId]);
       await client.query(`INSERT INTO feed.author_outbox (post_id, author_id, published_at) VALUES ($1, $2, COALESCE((SELECT published_at FROM content.posts WHERE id = $1), now())) ON CONFLICT (post_id) DO NOTHING`, [postId, post.author_id]);
+      await client.query(
+        `INSERT INTO feed.user_inbox (user_id, post_id, source, explanation_basis)
+         SELECT follower_id, $1, 'follow', jsonb_build_object('source', 'follow', 'authorId', $2)
+           FROM social.follows
+          WHERE followed_id = $2
+            AND (SELECT count(*) FROM social.follows WHERE followed_id = $2) <= 10000
+         ON CONFLICT (user_id, post_id) DO NOTHING`,
+        [postId, post.author_id]
+      );
       if (post.declared_creation_mode !== 'ai_generated') {
         await client.query(
           `INSERT INTO trust.human_contribution_events (subject_user_id, content_id, human_authorship_eligibility, policy_version, points_delta)
            VALUES ($1, $2, true, 'hive-v1', 0)`, [post.author_id, postId]
         );
       }
-    } else if (result.action === 'block') {
+    } else if (effectiveAction === 'block') {
       await client.query(`UPDATE content.posts SET moderation_state = 'blocked', updated_at = now() WHERE id = $1`, [postId]);
     }
   });
@@ -173,18 +187,27 @@ async function processMediaUpload(message: QueueMessage, env: Env): Promise<void
   if (row.status === 'approved') return;
   if (row.status !== 'queued') throw new Error('upload_session_not_queued');
 
+  const settleRejected = async (): Promise<void> => {
+    await transaction(env.DB_JOBS_FRESH, async (client) => {
+      const updated = await client.query(`UPDATE media.upload_sessions SET status = 'rejected' WHERE id = $1 AND status = 'queued'`, [sessionId]);
+      if (updated.rowCount !== 0) await client.query(
+        `UPDATE media.storage_ledger SET bytes_reserved = greatest(bytes_reserved - $1, 0), bytes_rejected = bytes_rejected + $1, last_reconciled_at = now() WHERE user_id = $2`,
+        [row.expected_bytes, row.user_id]);
+    });
+  };
+
   const source = await env.MEDIA_QUARANTINE.get(objectKey);
   if (!source) throw new Error('quarantine_object_missing');
   const bytes = new Uint8Array(await new Response(source.body).arrayBuffer());
   if (bytes.byteLength !== Number(row.expected_bytes) || !hasMagicBytes(bytes, row.content_type)) {
-    await query(env.DB_JOBS_FRESH, `UPDATE media.upload_sessions SET status = 'rejected' WHERE id = $1 AND status = 'queued'`, [sessionId]);
+    await settleRejected();
     await env.MEDIA_QUARANTINE.delete(objectKey);
     return;
   }
 
   const sourceInfo = await env.IMAGES.info(new Response(bytes).body!);
   if (!sourceInfo.width || !sourceInfo.height || sourceInfo.width * sourceInfo.height > MAX_IMAGE_PIXELS) {
-    await query(env.DB_JOBS_FRESH, `UPDATE media.upload_sessions SET status = 'rejected' WHERE id = $1 AND status = 'queued'`, [sessionId]);
+    await settleRejected();
     await env.MEDIA_QUARANTINE.delete(objectKey);
     return;
   }
@@ -218,8 +241,8 @@ async function processMediaUpload(message: QueueMessage, env: Env): Promise<void
   if (moderation.action === 'block') {
     await env.MEDIA_APPROVED.delete(approvedKey);
     await transaction(env.DB_JOBS_FRESH, async (client) => {
-      await client.query(`UPDATE media.upload_sessions SET status = 'rejected' WHERE id = $1 AND status = 'queued'`, [sessionId]);
-      await client.query(`INSERT INTO media.storage_ledger (user_id, bytes_rejected) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET bytes_rejected = media.storage_ledger.bytes_rejected + EXCLUDED.bytes_rejected, last_reconciled_at = now()`, [row.user_id, approvedBytes.byteLength]);
+      const updated = await client.query(`UPDATE media.upload_sessions SET status = 'rejected' WHERE id = $1 AND status = 'queued'`, [sessionId]);
+      if (updated.rowCount !== 0) await client.query(`UPDATE media.storage_ledger SET bytes_reserved = greatest(bytes_reserved - $1, 0), bytes_rejected = bytes_rejected + $1, last_reconciled_at = now() WHERE user_id = $2`, [row.expected_bytes, row.user_id]);
     });
     return;
   }
@@ -248,10 +271,11 @@ async function processMediaUpload(message: QueueMessage, env: Env): Promise<void
         `INSERT INTO media.storage_ledger (user_id, bytes_uploaded, bytes_approved, object_count)
          VALUES ($1, $2, $3, 1)
          ON CONFLICT (user_id) DO UPDATE SET bytes_uploaded = media.storage_ledger.bytes_uploaded + EXCLUDED.bytes_uploaded,
+           bytes_reserved = greatest(media.storage_ledger.bytes_reserved - $4, 0),
            bytes_approved = media.storage_ledger.bytes_approved + EXCLUDED.bytes_approved,
            object_count = media.storage_ledger.object_count + 1,
            last_reconciled_at = now()`,
-        [row.user_id, approvedBytes.byteLength, moderationState === 'approved' ? approvedBytes.byteLength : 0]
+        [row.user_id, approvedBytes.byteLength, approvedBytes.byteLength, row.expected_bytes]
       );
     }
     await client.query(`UPDATE media.upload_sessions SET status = 'approved' WHERE id = $1 AND status = 'queued'`, [sessionId]);
@@ -352,6 +376,10 @@ export default {
 
   async scheduled(_event: unknown, env: Env): Promise<void> {
     await relayOutbox(env);
+    if (env.RETENTION_CLEANUP) {
+      const runId = new Date().toISOString().slice(0, 10);
+      await env.RETENTION_CLEANUP.create({ id: `retention-${runId}`, params: { runId } });
+    }
   },
 };
 
@@ -469,12 +497,28 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
         query(this.env.DB_PRIVACY_FRESH, `SELECT id, display_name, status, created_at, deleted_at FROM identity.users WHERE id = $1`, [subjectId]),
         query(this.env.DB_PRIVACY_FRESH, `SELECT store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class, legal_hold_state, deletion_state, last_verified_at FROM privacy.subject_data_locations WHERE subject_id = $1`, [subjectId]),
       ]);
-      const [posts, comments, follows] = await Promise.all([
+      const [posts, comments, follows, media, provenance, contributions, reputation] = await Promise.all([
         query(this.env.DB_JOBS_FRESH, `SELECT id, body, declared_creation_mode, visibility, moderation_state, geo_scope, place_id, published_at, created_at FROM content.posts WHERE author_id = $1 ORDER BY created_at`, [subjectId]),
         query(this.env.DB_JOBS_FRESH, `SELECT id, post_id, parent_id, body, moderation_state, created_at FROM content.comments WHERE author_id = $1 ORDER BY created_at`, [subjectId]),
         query(this.env.DB_JOBS_FRESH, `SELECT follower_id, followed_id, created_at FROM social.follows WHERE follower_id = $1 OR followed_id = $1 ORDER BY created_at`, [subjectId]),
+        query(this.env.DB_JOBS_FRESH, `SELECT id, object_key, content_type, byte_size, sha256, state, created_at, deleted_at FROM media.objects WHERE owner_id = $1 ORDER BY created_at`, [subjectId]),
+        query(this.env.DB_JOBS_FRESH, `SELECT content_id, declared_creation_mode, detected_content_class, detector_provider, detector_model_version, policy_version, appeal_state, final_decision, created_at FROM trust.provenance_events WHERE author_id = $1 ORDER BY created_at`, [subjectId]),
+        query(this.env.DB_JOBS_FRESH, `SELECT content_id, human_authorship_eligibility, quality_signal, source_signal, behaviour_signal, policy_version, points_delta, reversal_reference, created_at FROM trust.human_contribution_events WHERE subject_user_id = $1 ORDER BY created_at`, [subjectId]),
+        query(this.env.DB_JOBS_FRESH, `SELECT content_id, event_type, policy_version, points_delta, reversal_reference, created_at FROM trust.reputation_events WHERE subject_user_id = $1 ORDER BY created_at`, [subjectId]),
       ]);
-      return { schemaVersion: 'lythaus-data-passport-v1', generatedAt: new Date().toISOString(), profile: identity.rows[0] ?? null, posts: posts.rows, comments: comments.rows, follows: follows.rows, subjectDataLocations: locations.rows };
+      return {
+        schemaVersion: 'lythaus-data-passport-v1',
+        generatedAt: new Date().toISOString(),
+        profile: identity.rows[0] ?? null,
+        posts: posts.rows,
+        comments: comments.rows,
+        follows: follows.rows,
+        media: media.rows,
+        provenance: provenance.rows,
+        humanContribution: contributions.rows,
+        reputation: reputation.rows,
+        subjectDataLocations: locations.rows,
+      };
     });
 
     await step.do('store-export-and-complete-request', async () => {
@@ -494,5 +538,52 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
       return packageHash;
     });
     return { subjectId, state: 'completed' };
+  }
+}
+
+export class RetentionCleanupWorkflow extends WorkflowEntrypoint<Env, { runId: string }> {
+  async run(event: WorkflowEvent<{ runId: string }>, step: WorkflowStep): Promise<{ runId: string; redactedPosts: number; deletedMedia: number }> {
+    const candidates = await step.do('find-retention-candidates', async () => {
+      const result = await query<{ user_id: string; content_type: string; retention_period: string }>(this.env.DB_PRIVACY_FRESH,
+        `SELECT user_id, content_type, retention_period::text FROM privacy.retention_rules ORDER BY created_at LIMIT 100`);
+      return result.rows;
+    });
+    let redactedPosts = 0;
+    let deletedMedia = 0;
+    for (const [index, candidate] of candidates.entries()) {
+      const result = await step.do(`apply-retention-${index}`, async () => {
+        const hold = await query(this.env.DB_PRIVACY_FRESH, `SELECT 1 FROM privacy.legal_holds WHERE subject_id = $1 AND active LIMIT 1`, [candidate.user_id]);
+        if (hold.rowCount !== 0) return { posts: 0, media: 0 };
+        if (candidate.content_type === 'post' || candidate.content_type === 'posts') {
+          const updated = await query<{ id: string }>(this.env.DB_JOBS_FRESH,
+            `UPDATE content.posts SET body = '[retention policy]', visibility = 'private', moderation_state = 'blocked', published_at = NULL, updated_at = now()
+              WHERE author_id = $1 AND created_at < now() - $2::interval AND body <> '[retention policy]' RETURNING id`,
+            [candidate.user_id, candidate.retention_period]);
+          if (updated.rowCount !== 0) await query(this.env.DB_JOBS_FRESH,
+            `INSERT INTO system.audit_events (action, target_type, reason_code, correlation_id, metadata) VALUES ('retention.posts_redacted', 'user', 'RETENTION_POLICY', $1, $2::jsonb)`,
+            [event.payload.runId, JSON.stringify({ subjectId: candidate.user_id, count: updated.rowCount })]);
+          return { posts: updated.rowCount ?? 0, media: 0 };
+        }
+        if (candidate.content_type === 'media') {
+          const objects = await query<{ id: string; object_key: string; byte_size: number }>(this.env.DB_JOBS_FRESH,
+            `SELECT id, object_key, byte_size FROM media.objects WHERE owner_id = $1 AND created_at < now() - $2::interval AND deleted_at IS NULL`,
+            [candidate.user_id, candidate.retention_period]);
+          if (!this.env.MEDIA_APPROVED) throw new Error('media_purge_not_configured');
+          for (const object of objects.rows) await this.env.MEDIA_APPROVED.delete(object.object_key);
+          for (const object of objects.rows) {
+            await query(this.env.DB_JOBS_FRESH, `UPDATE media.objects SET state = 'deleted', deleted_at = COALESCE(deleted_at, now()) WHERE id = $1 AND deleted_at IS NULL`, [object.id]);
+            await query(this.env.DB_JOBS_FRESH, `UPDATE media.storage_ledger SET bytes_approved = greatest(bytes_approved - $1, 0), object_count = greatest(object_count - 1, 0), last_reconciled_at = now() WHERE user_id = $2`, [object.byte_size, candidate.user_id]);
+          }
+          if (objects.rowCount !== 0) await query(this.env.DB_JOBS_FRESH,
+            `INSERT INTO system.audit_events (action, target_type, reason_code, correlation_id, metadata) VALUES ('retention.media_deleted', 'user', 'RETENTION_POLICY', $1, $2::jsonb)`,
+            [event.payload.runId, JSON.stringify({ subjectId: candidate.user_id, count: objects.rowCount })]);
+          return { posts: 0, media: objects.rowCount ?? 0 };
+        }
+        return { posts: 0, media: 0 };
+      });
+      redactedPosts += result.posts;
+      deletedMedia += result.media;
+    }
+    return { runId: event.payload.runId, redactedPosts, deletedMedia };
   }
 }

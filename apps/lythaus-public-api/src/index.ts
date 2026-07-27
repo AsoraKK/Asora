@@ -3,13 +3,147 @@ import type { EnvBindings } from '@lythaus/cloudflare-env';
 import type { CreatePostInput } from '@lythaus/contracts';
 import { createPresignedPutUrl, ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES, type AllowedImageType } from '@lythaus/media';
 import { correlationId, json, logEvent } from '@lythaus/observability';
-import { uuidv7, verifyAccessToken, type Principal } from '@lythaus/security';
+import { encryptField, hashPassword, hashResetToken, hmacLookup, randomToken, signAccessToken, uuidv7, verifyAccessToken, verifyPassword, type PasswordHash, type Principal } from '@lythaus/security';
 
 interface Env extends EnvBindings {
   DB_APP_FRESH: HyperdriveBinding;
   MEDIA_QUARANTINE: NonNullable<EnvBindings['MEDIA_QUARANTINE']>;
   MODERATION_QUEUE: NonNullable<EnvBindings['MODERATION_QUEUE']>;
   R2_ACCOUNT_ID: string;
+}
+
+interface EmailAuthInput {
+  mode?: 'register' | 'login' | 'resend_verification';
+  email?: string;
+  password?: string;
+}
+
+function normalizeEmail(value: string): string {
+  const email = value.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 320) throw new Error('invalid_email');
+  return email;
+}
+
+function requireAuthSecrets(env: Env): { pepper: string; encryptionKey: string; hmacKey: string; privateKey: string; keyId: string } {
+  if (!env.AUTH_PASSWORD_PEPPER_V1 || !env.PII_ENCRYPTION_KEY_V1 || !env.PII_HMAC_KEY_V1 || !env.JWT_PRIVATE_KEY || !env.JWT_KEY_ID) {
+    throw new Error('authentication_not_configured');
+  }
+  return { pepper: env.AUTH_PASSWORD_PEPPER_V1, encryptionKey: env.PII_ENCRYPTION_KEY_V1, hmacKey: env.PII_HMAC_KEY_V1, privateKey: env.JWT_PRIVATE_KEY, keyId: env.JWT_KEY_ID };
+}
+
+async function issueSession(env: Env, userId: string, roles: string[] = []): Promise<{ accessToken: string; refreshToken: string; expiresIn: number }> {
+  const secrets = requireAuthSecrets(env);
+  const refreshToken = randomToken(32);
+  const refreshHash = hashResetToken(refreshToken);
+  const familyId = uuidv7();
+  await transaction(env.DB_APP_FRESH, async (client) => {
+    await client.query(`INSERT INTO identity.refresh_token_families (id, user_id) VALUES ($1, $2)`, [familyId, userId]);
+    await client.query(`INSERT INTO identity.auth_sessions (user_id, refresh_family_id, refresh_token_hash, expires_at) VALUES ($1, $2, decode($3, 'base64'), now() + interval '30 days')`, [userId, familyId, refreshHash]);
+  });
+  const accessToken = await signAccessToken({ userId, roles, privateKeyPem: secrets.privateKey, keyId: secrets.keyId });
+  return { accessToken, refreshToken, expiresIn: 900 };
+}
+
+async function deliverAuthEmail(env: Env, input: { type: 'verification' | 'password_reset' | 'security'; to: string; token?: string; reason?: string }): Promise<void> {
+  if (!env.EMAIL_PROVIDER_URL || !env.EMAIL_PROVIDER_TOKEN || !env.EMAIL_FROM) throw new Error('email_delivery_not_configured');
+  const response = await fetch(env.EMAIL_PROVIDER_URL, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${env.EMAIL_PROVIDER_TOKEN}` },
+    body: JSON.stringify({ from: env.EMAIL_FROM, type: input.type, to: input.to, token: input.token, reason: input.reason }),
+  });
+  if (!response.ok) throw new Error(`email_delivery_failed_${response.status}`);
+}
+
+async function emailAuth(request: Request, env: Env): Promise<Response> {
+  const input = await readJson<EmailAuthInput>(request, 16 * 1024);
+  const email = normalizeEmail(input.email ?? '');
+  const password = input.password ?? '';
+  if (input.mode !== 'resend_verification' && (password.length < 12 || password.length > 128)) throw new Error('invalid_password');
+  const secrets = requireAuthSecrets(env);
+  const lookup = hmacLookup(email, secrets.hmacKey);
+  const existing = await query<{ id: string; status: string; password_hash: PasswordHash; verified_at: string | null }>(env.DB_APP_FRESH,
+    `SELECT u.id, u.status, c.password_hash, c.verified_at
+       FROM identity.email_credentials c JOIN identity.users u ON u.id = c.user_id
+      WHERE c.email_lookup_hmac = decode($1, 'base64')`, [lookup]);
+  const account = existing.rows[0];
+  if (input.mode === 'resend_verification') {
+    if (!account || account.verified_at) return privateResponse(request, env, { state: 'verification_required' }, { status: 202 });
+    const verificationToken = randomToken(32);
+    await query(env.DB_APP_FRESH,
+      `INSERT INTO identity.email_verification_tokens (user_id, token_hash, expires_at) VALUES ($1, decode($2, 'base64'), now() + interval '30 minutes')`,
+      [account.id, hashResetToken(verificationToken)]);
+    await deliverAuthEmail(env, { type: 'verification', to: email, token: verificationToken });
+    return privateResponse(request, env, { state: 'verification_required' }, { status: 202 });
+  }
+  if ((input.mode ?? 'login') === 'register') {
+    if (account) throw new Error('account_exists');
+    const userId = uuidv7();
+    const encrypted = await encryptField(email, secrets.encryptionKey, 'v1');
+    const passwordHash = hashPassword(password, secrets.pepper, { fallbackToScrypt: true });
+    const verificationToken = randomToken(32);
+    await transaction(env.DB_APP_FRESH, async (client) => {
+      await client.query(`INSERT INTO identity.users (id) VALUES ($1)`, [userId]);
+      await client.query(`INSERT INTO identity.email_credentials (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, hmac_key_version, password_hash) VALUES ($1, convert_to($2, 'utf8'), decode($3, 'base64'), 'v1', 'v1', $4::jsonb)`, [userId, encrypted.ciphertext, lookup, JSON.stringify(passwordHash)]);
+      await client.query(`INSERT INTO identity.email_verification_tokens (user_id, token_hash, expires_at) VALUES ($1, decode($2, 'base64'), now() + interval '30 minutes')`, [userId, hashResetToken(verificationToken)]);
+      await client.query(`INSERT INTO identity.account_events (user_id, event_type, metadata) VALUES ($1, 'email_registration_started', '{}'::jsonb)`, [userId]);
+    });
+    await deliverAuthEmail(env, { type: 'verification', to: email, token: verificationToken });
+    return privateResponse(request, env, { userId, state: 'verification_required' }, { status: 202 });
+  }
+  if (!account || account.status !== 'active' || !verifyPassword(password, account.password_hash, secrets.pepper)) throw new Error('invalid_credentials');
+  if (!account.verified_at) throw new Error('email_verification_required');
+  const tokens = await issueSession(env, account.id);
+  return privateResponse(request, env, { ...tokens, tokenType: 'Bearer' });
+}
+
+async function verifyEmail(request: Request, env: Env): Promise<Response> {
+  const url = new URL(request.url);
+  const token = url.searchParams.get('token') ?? (await readJson<{ token?: string }>(request, 8 * 1024)).token;
+  if (!token || token.length < 32) throw new Error('verification_token_invalid');
+  const result = await transaction(env.DB_APP_FRESH, async (client) => {
+    const found = await client.query<{ user_id: string }>(`SELECT user_id FROM identity.email_verification_tokens WHERE token_hash = decode($1, 'base64') AND consumed_at IS NULL AND expires_at > now()`, [hashResetToken(token)]);
+    if (!found.rows[0]) throw new Error('verification_token_invalid');
+    await client.query(`UPDATE identity.email_verification_tokens SET consumed_at = now() WHERE token_hash = decode($1, 'base64') AND consumed_at IS NULL`, [hashResetToken(token)]);
+    await client.query(`UPDATE identity.email_credentials SET verified_at = COALESCE(verified_at, now()), updated_at = now() WHERE user_id = $1`, [found.rows[0].user_id]);
+    await client.query(`INSERT INTO identity.account_events (user_id, event_type, metadata) VALUES ($1, 'email_verified', '{}'::jsonb)`, [found.rows[0].user_id]);
+    return found.rows[0].user_id;
+  });
+  return response(request, env, { userId: result, state: 'verified' });
+}
+
+async function refreshSession(request: Request, env: Env): Promise<Response> {
+  const input = await readJson<{ refreshToken?: string; refresh_token?: string }>(request, 16 * 1024);
+  const refreshToken = input.refreshToken ?? input.refresh_token;
+  if (!refreshToken) throw new Error('refresh_token_required');
+  requireAuthSecrets(env);
+  const tokenHash = hashResetToken(refreshToken);
+  const current = await query<{ session_id: string; user_id: string; family_id: string; status: string }>(env.DB_APP_FRESH,
+    `SELECT s.id AS session_id, s.user_id, s.refresh_family_id AS family_id, u.status
+       FROM identity.auth_sessions s JOIN identity.refresh_token_families f ON f.id = s.refresh_family_id
+       JOIN identity.users u ON u.id = s.user_id
+      WHERE s.refresh_token_hash = decode($1, 'base64') AND s.revoked_at IS NULL AND s.expires_at > now() AND f.revoked_at IS NULL`, [tokenHash]);
+  const session = current.rows[0];
+  if (!session || session.status !== 'active') throw new Error('refresh_token_invalid');
+  const replacement = randomToken(32);
+  await transaction(env.DB_APP_FRESH, async (client) => {
+    const revoked = await client.query(`UPDATE identity.auth_sessions SET revoked_at = now() WHERE id = $1 AND revoked_at IS NULL`, [session.session_id]);
+    if (revoked.rowCount !== 1) {
+      await client.query(`UPDATE identity.refresh_token_families SET revoked_at = now() WHERE id = $1`, [session.family_id]);
+      throw new Error('refresh_token_reuse');
+    }
+    await client.query(`UPDATE identity.refresh_token_families SET last_used_at = now() WHERE id = $1`, [session.family_id]);
+    await client.query(`INSERT INTO identity.auth_sessions (user_id, refresh_family_id, refresh_token_hash, expires_at) VALUES ($1, $2, decode($3, 'base64'), now() + interval '30 days')`, [session.user_id, session.family_id, hashResetToken(replacement)]);
+  });
+  const secrets = requireAuthSecrets(env);
+  const accessToken = await signAccessToken({ userId: session.user_id, privateKeyPem: secrets.privateKey, keyId: secrets.keyId });
+  return privateResponse(request, env, { accessToken, refreshToken: replacement, expiresIn: 900, tokenType: 'Bearer' });
+}
+
+async function logout(request: Request, env: Env): Promise<Response> {
+  const user = await principal(request, env);
+  await query(env.DB_APP_FRESH, `UPDATE identity.auth_sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [user.userId]);
+  await query(env.DB_APP_FRESH, `UPDATE identity.refresh_token_families SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [user.userId]);
+  return privateResponse(request, env, { loggedOut: true });
 }
 
 function corsOrigin(request: Request, env: Env): string | undefined {
@@ -68,6 +202,16 @@ async function createPost(request: Request, env: Env, user: Principal): Promise<
        VALUES ($1, $2, $3, $4, $5, $6, 'under_review')`,
       [postId, user.userId, input.body.trim(), input.declaredCreationMode, input.geoScope, input.placeId ?? null]
     );
+    if (input.placeId && input.geoScope !== 'none' && input.geoScope !== 'global') {
+      const precision = input.geoScope === 'country' ? 'country'
+        : input.geoScope === 'province' ? 'province'
+          : input.geoScope === 'municipality' ? 'municipality' : 'community';
+      await client.query(
+        `INSERT INTO content.post_locations (post_id, place_id, location_source, location_precision)
+         VALUES ($1, $2, 'user_selected', $3)`,
+        [postId, input.placeId, precision]
+      );
+    }
     await client.query(
       `INSERT INTO system.outbox_events (id, event_type, aggregate_type, aggregate_id, actor_id, payload)
        VALUES ($1, 'content.post.created', 'post', $2, $3, $4::jsonb)`,
@@ -83,11 +227,15 @@ async function createUploadSession(request: Request, env: Env, user: Principal):
     throw new Error('unsupported_media_type');
   }
   if (!input.size || input.size < 1 || input.size > MAX_IMAGE_BYTES) throw new Error('media_size_exceeded');
+  const requestedBytes = input.size;
+  const requestedContentType = input.contentType as AllowedImageType;
   const checksumSha256 = typeof (input as { checksumSha256?: unknown }).checksumSha256 === 'string'
     ? (input as { checksumSha256: string }).checksumSha256.toLowerCase()
     : '';
   if (!/^[0-9a-f]{64}$/.test(checksumSha256)) throw new Error('checksum_required');
   if (!env.R2_ACCESS_KEY_ID || !env.R2_SECRET_ACCESS_KEY) throw new Error('media_signing_not_configured');
+  const quotaBytes = Number(env.MEDIA_QUOTA_BYTES);
+  if (!Number.isSafeInteger(quotaBytes) || quotaBytes < 1) throw new Error('storage_quota_not_configured');
   const uploadSessionId = uuidv7();
   const objectKey = `quarantine/${user.userId}/${uploadSessionId}`;
   const signed = await createPresignedPutUrl({
@@ -98,11 +246,22 @@ async function createUploadSession(request: Request, env: Env, user: Principal):
     accessKeyId: env.R2_ACCESS_KEY_ID,
     secretAccessKey: env.R2_SECRET_ACCESS_KEY,
   });
-  await query(env.DB_APP_FRESH,
-    `INSERT INTO media.upload_sessions (id, user_id, object_key, content_type, expected_bytes, checksum_sha256, expires_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-    [uploadSessionId, user.userId, objectKey, input.contentType, input.size, checksumSha256, signed.expiresAt]
-  );
+  await transaction(env.DB_APP_FRESH, async (client) => {
+    const ledger = await client.query<{ bytes_reserved: number; bytes_approved: number }>(
+      `SELECT bytes_reserved, bytes_approved FROM media.storage_ledger WHERE user_id = $1 FOR UPDATE`, [user.userId]);
+    const current = ledger.rows[0] ?? { bytes_reserved: 0, bytes_approved: 0 };
+    if (Number(current.bytes_reserved) + Number(current.bytes_approved) + requestedBytes > quotaBytes) throw new Error('storage_quota_exceeded');
+    await client.query(
+      `INSERT INTO media.storage_ledger (user_id, bytes_reserved) VALUES ($1, $2)
+       ON CONFLICT (user_id) DO UPDATE SET bytes_reserved = media.storage_ledger.bytes_reserved + EXCLUDED.bytes_reserved`,
+      [user.userId, requestedBytes]
+    );
+    await client.query(
+      `INSERT INTO media.upload_sessions (id, user_id, object_key, content_type, expected_bytes, checksum_sha256, expires_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [uploadSessionId, user.userId, objectKey, requestedContentType, requestedBytes, checksumSha256, signed.expiresAt]
+    );
+  });
   return privateResponse(request, env, {
     uploadSessionId,
     objectKey,
@@ -122,12 +281,18 @@ async function finaliseUpload(request: Request, env: Env, user: Principal, sessi
   const session = result.rows[0];
   if (!session || session.status !== 'pending') throw new Error('upload_session_invalid');
   const object = await env.MEDIA_QUARANTINE.head(session.object_key);
-  if (!object || object.size !== Number(session.expected_bytes)) throw new Error('upload_object_invalid');
+  if (!object || object.size !== Number(session.expected_bytes)) {
+    await rejectUploadReservation(env, user.userId, sessionId, Number(session.expected_bytes));
+    throw new Error('upload_object_invalid');
+  }
   const source = await env.MEDIA_QUARANTINE.get(session.object_key);
   if (!source) throw new Error('upload_object_invalid');
   const digest = await crypto.subtle.digest('SHA-256', await new Response(source.body).arrayBuffer());
   const checksum = Array.from(new Uint8Array(digest), (value) => value.toString(16).padStart(2, '0')).join('');
-  if (checksum !== session.checksum_sha256) throw new Error('upload_checksum_invalid');
+  if (checksum !== session.checksum_sha256) {
+    await rejectUploadReservation(env, user.userId, sessionId, Number(session.expected_bytes));
+    throw new Error('upload_checksum_invalid');
+  }
   const eventId = uuidv7();
   await transaction(env.DB_APP_FRESH, async (client) => {
     const updated = await client.query(
@@ -143,6 +308,17 @@ async function finaliseUpload(request: Request, env: Env, user: Principal, sessi
     );
   });
   return privateResponse(request, env, { uploadSessionId: sessionId, status: 'queued', eventId });
+}
+
+async function rejectUploadReservation(env: Env, userId: string, sessionId: string, bytes: number): Promise<void> {
+  await transaction(env.DB_APP_FRESH, async (client) => {
+    const updated = await client.query(
+      `UPDATE media.upload_sessions SET status = 'rejected' WHERE id = $1 AND user_id = $2 AND status = 'pending'`,
+      [sessionId, userId]);
+    if (updated.rowCount !== 0) await client.query(
+      `UPDATE media.storage_ledger SET bytes_reserved = greatest(bytes_reserved - $1, 0), bytes_rejected = bytes_rejected + $1, last_reconciled_at = now() WHERE user_id = $2`,
+      [bytes, userId]);
+  });
 }
 
 async function getUserProfile(request: Request, env: Env, userId: string, privateView = false): Promise<Response> {
@@ -246,6 +422,48 @@ async function getStorage(request: Request, env: Env, user: Principal): Promise<
   return privateResponse(request, env, { storage: result.rows[0] ?? { bytes_reserved: 0, bytes_uploaded: 0, bytes_approved: 0, bytes_rejected: 0, bytes_exports: 0, object_count: 0 } });
 }
 
+async function updateRegionPreferences(request: Request, env: Env, user: Principal): Promise<Response> {
+  const input = await readJson<{ countryCode?: string | null; regionCode?: string | null; municipalityCode?: string | null; visibilityLevel?: 'private' | 'region' | 'country' }>(request, 8 * 1024);
+  const code = (value: string | null | undefined, name: string): string | null => {
+    if (value === null || value === undefined || value === '') return null;
+    if (!/^[A-Za-z0-9-]{2,32}$/.test(value)) throw new Error(`invalid_${name}`);
+    return value.toUpperCase();
+  };
+  const visibility = input.visibilityLevel ?? 'private';
+  if (!['private', 'region', 'country'].includes(visibility)) throw new Error('invalid_visibility_level');
+  await query(env.DB_APP_FRESH,
+    `INSERT INTO identity.user_region_preferences (user_id, country_code, region_code, municipality_code, visibility_level)
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (user_id) DO UPDATE SET country_code = EXCLUDED.country_code, region_code = EXCLUDED.region_code,
+       municipality_code = EXCLUDED.municipality_code, visibility_level = EXCLUDED.visibility_level, updated_at = now()`,
+    [user.userId, code(input.countryCode, 'country_code'), code(input.regionCode, 'region_code'), code(input.municipalityCode, 'municipality_code'), visibility]);
+  return privateResponse(request, env, { updated: true });
+}
+
+async function updateRetentionRule(request: Request, env: Env, user: Principal): Promise<Response> {
+  const input = await readJson<{ contentType?: 'post' | 'posts' | 'media'; retentionDays?: number }>(request, 8 * 1024);
+  const contentType = input.contentType === 'posts' ? 'post' : input.contentType;
+  if (!contentType || !['post', 'media'].includes(contentType)) throw new Error('invalid_retention_content_type');
+  if (!Number.isInteger(input.retentionDays) || (input.retentionDays ?? 0) < 30 || (input.retentionDays ?? 0) > 3650) {
+    throw new Error('invalid_retention_period');
+  }
+  await query(env.DB_APP_FRESH,
+    `SELECT privacy.set_retention_rule($1, $2, make_interval(days => $3::integer), $4)`,
+    [user.userId, contentType, input.retentionDays, 'user-v1']);
+  return privateResponse(request, env, { contentType, retentionDays: input.retentionDays });
+}
+
+async function getPersonalFeed(request: Request, env: Env, user: Principal): Promise<Response> {
+  const result = await query(env.DB_APP_FRESH,
+    `SELECT p.id, p.author_id, p.body, p.declared_creation_mode, p.visibility, p.moderation_state,
+            p.geo_scope, p.place_id, p.published_at, p.created_at, i.source, i.explanation_basis
+       FROM feed.user_inbox i
+       JOIN content.posts p ON p.id = i.post_id
+      WHERE i.user_id = $1 AND p.visibility IN ('public', 'followers') AND p.moderation_state = 'allowed'
+      ORDER BY i.created_at DESC LIMIT 100`, [user.userId]);
+  return privateResponse(request, env, { items: result.rows });
+}
+
 async function getPost(request: Request, env: Env, postId: string): Promise<Response> {
   const result = await query(env.DB_APP_FRESH, `SELECT id, author_id, body, declared_creation_mode, visibility, moderation_state, geo_scope, place_id, published_at, created_at FROM content.posts WHERE id = $1 AND visibility = 'public' AND moderation_state = 'allowed'`, [postId]);
   if (!result.rows[0]) throw new Error('post_not_found');
@@ -279,6 +497,7 @@ export default {
         resultResponse.headers.set('cache-control', 'public, s-maxage=30, stale-while-revalidate=60');
         return resultResponse;
       }
+      if (request.method === 'GET' && url.pathname === '/api/feed') return getPersonalFeed(request, env, await principal(request, env));
       const post = url.pathname.match(/^\/api\/posts\/([^/]+)$/);
       if (request.method === 'GET' && post) return getPost(request, env, post[1]);
       const comments = url.pathname.match(/^\/api\/posts\/([^/]+)\/comments$/);
@@ -298,10 +517,14 @@ export default {
       if (request.method === 'GET' && appeal) return getAppeal(request, env, await principal(request, env), appeal[1]);
       if (request.method === 'POST' && (url.pathname === '/api/privacy/requests' || url.pathname === '/api/privacy/request')) return createPrivacyRequest(request, env, await principal(request, env));
       if (request.method === 'GET' && (url.pathname === '/api/storage' || url.pathname === '/api/storage/usage')) return getStorage(request, env, await principal(request, env));
+      if (request.method === 'PUT' && (url.pathname === '/api/users/me/region' || url.pathname === '/api/privacy/region')) return updateRegionPreferences(request, env, await principal(request, env));
+      if (request.method === 'PUT' && (url.pathname === '/api/users/me/retention' || url.pathname === '/api/privacy/retention')) return updateRetentionRule(request, env, await principal(request, env));
       if (request.method === 'GET' && url.pathname === '/api/auth/userinfo') return getUserProfile(request, env, (await principal(request, env)).userId, true);
-      if (url.pathname === '/api/auth/google' || url.pathname === '/api/auth/email' || url.pathname === '/api/authEmail' || url.pathname === '/api/auth/refresh' || url.pathname === '/api/auth/logout') {
-        return response(request, env, { error: 'provider_unavailable', provider: url.pathname.includes('google') ? 'google' : 'email', correlationId: id }, { status: 503 });
-      }
+      if (request.method === 'POST' && (url.pathname === '/api/auth/email' || url.pathname === '/api/authEmail')) return emailAuth(request, env);
+      if ((request.method === 'GET' || request.method === 'POST') && url.pathname === '/api/auth/email/verify') return verifyEmail(request, env);
+      if (request.method === 'POST' && url.pathname === '/api/auth/refresh') return refreshSession(request, env);
+      if (request.method === 'POST' && url.pathname === '/api/auth/logout') return logout(request, env);
+      if (url.pathname === '/api/auth/google') return response(request, env, { error: 'provider_unavailable', provider: 'google', correlationId: id }, { status: 503 });
       if (request.method === 'POST' && url.pathname === '/api/posts') return createPost(request, env, await principal(request, env));
       if (request.method === 'POST' && url.pathname === '/api/media/uploads') return createUploadSession(request, env, await principal(request, env));
       const finalise = url.pathname.match(/^\/api\/media\/uploads\/([^/]+)\/finalise$/);

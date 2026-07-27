@@ -235,3 +235,28 @@ CREATE INDEX feed_events_recipient_idx ON feed.feed_events (recipient_id, create
 CREATE INDEX notifications_recipient_idx ON feed.notifications (recipient_id, created_at DESC);
 CREATE INDEX moderation_enforcement_subject_idx ON moderation.enforcement_events (subject_id, created_at DESC);
 CREATE INDEX media_deletion_owner_idx ON media.deletion_events (owner_id, created_at DESC);
+
+CREATE OR REPLACE FUNCTION privacy.set_retention_rule(
+  p_user_id uuid,
+  p_content_type text,
+  p_retention_period interval,
+  p_policy_version text
+) RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = privacy, pg_temp
+AS $$
+BEGIN
+  IF p_content_type NOT IN ('post', 'posts', 'media') THEN
+    RAISE EXCEPTION 'invalid retention content type';
+  END IF;
+  IF p_retention_period < interval '30 days' OR p_retention_period > interval '10 years' THEN
+    RAISE EXCEPTION 'retention period outside allowed range';
+  END IF;
+  DELETE FROM retention_rules WHERE user_id = p_user_id AND content_type = p_content_type;
+  INSERT INTO retention_rules (user_id, content_type, retention_period, policy_version)
+  VALUES (p_user_id, p_content_type, p_retention_period, p_policy_version);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION privacy.set_retention_rule(uuid, text, interval, text) FROM PUBLIC;

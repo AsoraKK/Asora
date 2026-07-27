@@ -48,6 +48,20 @@ test('launch schema and media boundary are explicit', () => {
   assert.doesNotMatch(media, /arrayBuffer\(\).*MEDIA_QUARANTINE\.put/s);
 });
 
+test('native auth and user controls are implemented behind configured secrets', () => {
+  const source = fs.readFileSync(path.join(root, 'apps/lythaus-public-api/src/index.ts'), 'utf8');
+  const grants = fs.readFileSync(path.join(root, 'database/planetscale/grants/roles.sql'), 'utf8');
+  const migration = fs.readFileSync(path.join(root, 'database/planetscale/migrations/0004_launch_contract.sql'), 'utf8');
+  assert.match(source, /hashPassword/);
+  assert.match(source, /refresh_token_hash/);
+  assert.match(source, /email_verification_tokens/);
+  assert.match(source, /MEDIA_QUOTA_BYTES/);
+  assert.match(source, /privacy\.set_retention_rule/);
+  assert.match(source, /feed\.user_inbox/);
+  assert.match(grants, /GRANT EXECUTE ON FUNCTION privacy\.set_retention_rule/);
+  assert.match(migration, /SECURITY DEFINER/);
+});
+
 test('admin verifies Access JWTs independently', () => {
   const source = fs.readFileSync(path.join(root, 'apps/lythaus-admin-api/src/index.ts'), 'utf8');
   assert.match(source, /createRemoteJWKSet/);

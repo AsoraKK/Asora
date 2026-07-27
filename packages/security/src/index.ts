@@ -20,6 +20,11 @@ function randomBytes(size: number): Uint8Array {
   return result;
 }
 
+export function randomToken(size = 32): string {
+  const bytes = randomBytes(size);
+  return Array.from(bytes, (value) => value.toString(16).padStart(2, '0')).join('');
+}
+
 function equalBytes(left: Uint8Array, right: Uint8Array): boolean {
   if (left.length !== right.length) return false;
   let difference = 0;

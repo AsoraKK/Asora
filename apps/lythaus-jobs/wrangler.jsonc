@@ -49,7 +49,8 @@
   "triggers": { "crons": ["*/15 * * * *"] },
   "workflows": [
     { "name": "lythaus-account-delete", "binding": "ACCOUNT_DELETE", "class_name": "AccountDeleteWorkflow" },
-    { "name": "lythaus-account-export", "binding": "ACCOUNT_EXPORT", "class_name": "AccountExportWorkflow" }
+    { "name": "lythaus-account-export", "binding": "ACCOUNT_EXPORT", "class_name": "AccountExportWorkflow" },
+    { "name": "lythaus-retention-cleanup", "binding": "RETENTION_CLEANUP", "class_name": "RetentionCleanupWorkflow" }
   ],
   "env": {
     "development": {
@@ -96,7 +97,8 @@
       },
       "workflows": [
         { "name": "lythaus-account-delete-dev", "binding": "ACCOUNT_DELETE", "class_name": "AccountDeleteWorkflow" },
-        { "name": "lythaus-account-export-dev", "binding": "ACCOUNT_EXPORT", "class_name": "AccountExportWorkflow" }
+        { "name": "lythaus-account-export-dev", "binding": "ACCOUNT_EXPORT", "class_name": "AccountExportWorkflow" },
+        { "name": "lythaus-retention-cleanup-dev", "binding": "RETENTION_CLEANUP", "class_name": "RetentionCleanupWorkflow" }
       ]
     }
   }

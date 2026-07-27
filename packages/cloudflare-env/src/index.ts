@@ -27,12 +27,16 @@ export interface EnvBindings {
   R2_ACCESS_KEY_ID?: string;
   R2_SECRET_ACCESS_KEY?: string;
   R2_ACCOUNT_ID?: string;
+  MEDIA_QUOTA_BYTES?: string;
   AUTH_PASSWORD_PEPPER_V1?: string;
   JWT_PRIVATE_KEY?: string;
   JWT_KEY_ID?: string;
   JWT_PUBLIC_JWKS?: string;
   PII_ENCRYPTION_KEY_V1?: string;
   PII_HMAC_KEY_V1?: string;
+  EMAIL_PROVIDER_URL?: string;
+  EMAIL_PROVIDER_TOKEN?: string;
+  EMAIL_FROM?: string;
   ACCESS_SUBJECT_HMAC_KEY?: string;
   ENVIRONMENT?: string;
   CORS_ALLOWED_ORIGINS?: string;
