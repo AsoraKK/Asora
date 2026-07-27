@@ -93,10 +93,10 @@ Unknown. Cost Management data was unavailable; no estimate is presented as fact.
 
 ## 21. Evidence Manifest
 
-See `evidence-manifest.sha256` after final validation.
+The committed packet contains 39 files. The SHA-256 manifest contains 38 entries because it intentionally excludes the manifest file itself. The manifest was recomputed and verified. The sanitized packet was also copied and byte-for-byte hash-verified into `C:\Users\kylee\.codex\azure-exit-primary` and `C:\Users\kylee\.codex\azure-exit-secondary`. These are both on the same `C:` disk and are temporary execution copies, not independent disaster-recovery copies. No raw production data was placed in either destination.
 
 ## 22. Final Recommendation
 
 **NOT READY FOR AZURE SHUTDOWN**
 
-The estate is not eligible for `READY FOR CONTROLLED DATA EXPORT` until approved encrypted destinations, data-plane permissions, and export operators are available. It is not eligible for human-approved decommissioning because PostgreSQL and Cosmos exports, restore tests, privacy-state reconciliation, sensitive storage classification, operational migration, and unknown dependencies remain open. See `operational-migration-readiness.md` for the separate Azure-runtime replacement gate.
+The estate is not eligible for `READY FOR CONTROLLED DATA EXPORT` until PostgreSQL/Cosmos data destinations are explicitly approved for their actual production-data classification, data-plane permissions are available, and export operators are ready. It is not eligible for human-approved decommissioning because PostgreSQL and Cosmos exports, restore tests, privacy-state reconciliation, sensitive storage classification, operational migration, and unknown dependencies remain open. See `operational-migration-readiness.md` for the separate Azure-runtime replacement gate.

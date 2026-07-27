@@ -1,4 +1,4 @@
-# Azure Exit Evidence — 2026-07-26
+# Azure Exit Evidence - 2026-07-26
 
 This packet is a non-destructive audit of Azure dependencies for Lythaus (formerly Asora).
 
@@ -9,4 +9,11 @@ This packet is a non-destructive audit of Azure dependencies for Lythaus (former
 - Secret values, queue bodies, database records, and personal data: excluded
 - Historical evidence reconciled: `docs/evidence/cloudflare/2026-07-13-azure-mvp-audit.json`
 
-The packet is not shutdown authorization. It remains `NOT READY FOR AZURE SHUTDOWN` because backups, restore tests, cost evidence, queue depth, and several permissions remain unresolved.
+The packet is not shutdown authorization. It remains `NOT READY FOR AZURE SHUTDOWN` because backups, restore tests, cost evidence, privacy-record access, operational migration, and several permissions remain unresolved.
+
+The 39-file sanitized packet was copied and hash-verified into temporary local destinations:
+
+- `C:\Users\kylee\.codex\azure-exit-primary`
+- `C:\Users\kylee\.codex\azure-exit-secondary`
+
+Both are on the same `C:` disk. They are execution copies, not independent disaster-recovery locations.

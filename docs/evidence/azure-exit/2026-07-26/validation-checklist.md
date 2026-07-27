@@ -18,4 +18,7 @@
 | Restore tests | Pending; no PostgreSQL dump |
 | Evidence secret scan | Required after packet creation |
 | Checksums | Required after packet creation |
+| Sanitized packet copied to primary workspace destination | Passed; 39 files and hashes agree |
+| Sanitized packet copied to secondary workspace destination | Passed; 39 files and hashes agree |
+| Destination independence | Failed by design; both copies are on `C:` |
 | Azure modifications | None intended or observed |
