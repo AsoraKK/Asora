@@ -17,8 +17,8 @@ interface Env extends EnvBindings {
   MEDIA_APPROVED?: NonNullable<EnvBindings['MEDIA_APPROVED']>;
   IMAGES?: NonNullable<EnvBindings['IMAGES']>;
   PRIVATE_EXPORTS?: NonNullable<EnvBindings['PRIVATE_EXPORTS']>;
-  ACCOUNT_DELETE?: WorkflowBinding<{ subjectId: string }>;
-  ACCOUNT_EXPORT?: WorkflowBinding<{ subjectId: string }>;
+  ACCOUNT_DELETE?: WorkflowBinding<{ subjectId: string; requestId: string }>;
+  ACCOUNT_EXPORT?: WorkflowBinding<{ subjectId: string; requestId: string }>;
 }
 
 interface Queue { send(body: unknown, options?: { contentType?: string }): Promise<void>; }
@@ -137,10 +137,10 @@ async function processMessage(message: QueueMessage, env: Env): Promise<void> {
        VALUES ($1, $2, 'received', $3::jsonb)
        ON CONFLICT (id) DO NOTHING`, [eventId, payload.requestId, JSON.stringify({ eventId })]);
     if (payload.requestType === 'delete' && env.ACCOUNT_DELETE) {
-      await env.ACCOUNT_DELETE.create({ id: `privacy-delete-${payload.requestId}`, params: { subjectId } });
+      await env.ACCOUNT_DELETE.create({ id: `privacy-delete-${payload.requestId}`, params: { subjectId, requestId: payload.requestId } });
     }
     if (payload.requestType === 'export' && env.ACCOUNT_EXPORT) {
-      await env.ACCOUNT_EXPORT.create({ id: `privacy-export-${payload.requestId}`, params: { subjectId } });
+      await env.ACCOUNT_EXPORT.create({ id: `privacy-export-${payload.requestId}`, params: { subjectId, requestId: payload.requestId } });
     }
   }
   await query(env.DB_JOBS_FRESH,
@@ -209,15 +209,18 @@ export default {
   },
 };
 
-export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: string }> {
-  async run(event: WorkflowEvent<{ subjectId: string }>, step: WorkflowStep): Promise<{ subjectId: string; state: string }> {
+export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: string; requestId: string }> {
+  async run(event: WorkflowEvent<{ subjectId: string; requestId: string }>, step: WorkflowStep): Promise<{ subjectId: string; state: string }> {
     const subjectId = event.payload.subjectId;
+    const requestedId = event.payload.requestId;
     const requestId = await step.do('resolve-request', async () => {
       const result = await query<{ id: string }>(this.env.DB_PRIVACY_FRESH,
-        `SELECT id FROM privacy.requests WHERE subject_id = $1 AND request_type = 'delete' AND state NOT IN ('completed', 'blocked') ORDER BY created_at DESC LIMIT 1`, [subjectId]);
+        `SELECT id FROM privacy.requests WHERE id = $1 AND subject_id = $2 AND request_type = 'delete'`, [requestedId, subjectId]);
       if (!result.rows[0]) throw new Error('privacy_delete_request_not_found');
       await query(this.env.DB_PRIVACY_FRESH,
-        `INSERT INTO privacy.request_events (request_id, event_type, metadata) VALUES ($1, 'workflow_started', $2::jsonb)`,
+        `INSERT INTO privacy.request_events (request_id, event_type, metadata)
+         SELECT $1, 'workflow_started', $2::jsonb
+          WHERE NOT EXISTS (SELECT 1 FROM privacy.request_events WHERE request_id = $1 AND event_type = 'workflow_started')`,
         [result.rows[0].id, JSON.stringify({ subjectId })]);
       return result.rows[0].id;
     });
@@ -237,7 +240,9 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
         await query(this.env.DB_PRIVACY_FRESH,
           `UPDATE privacy.requests SET state = 'blocked' WHERE id = $1 AND state <> 'completed'`, [requestId]);
         await query(this.env.DB_PRIVACY_FRESH,
-          `INSERT INTO privacy.request_events (request_id, event_type, metadata) VALUES ($1, 'blocked_legal_hold', $2::jsonb)`,
+          `INSERT INTO privacy.request_events (request_id, event_type, metadata)
+           SELECT $1, 'blocked_legal_hold', $2::jsonb
+            WHERE NOT EXISTS (SELECT 1 FROM privacy.request_events WHERE request_id = $1 AND event_type = 'blocked_legal_hold')`,
           [requestId, JSON.stringify({ legalHoldId: result.rows[0].id })]);
         return true;
       }
@@ -285,7 +290,9 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
       await transaction(this.env.DB_PRIVACY_FRESH, async (client) => {
         await client.query(`INSERT INTO privacy.deletion_tombstones (subject_id, evidence_hash) VALUES ($1, $2) ON CONFLICT (subject_id) DO UPDATE SET completed_at = now(), evidence_hash = EXCLUDED.evidence_hash`, [subjectId, evidenceHash]);
         await client.query(`UPDATE privacy.requests SET state = 'completed', completed_at = now() WHERE id = $1`, [requestId]);
-        await client.query(`INSERT INTO privacy.request_events (request_id, event_type, metadata) VALUES ($1, 'completed', $2::jsonb)`, [requestId, JSON.stringify({ evidenceHash })]);
+        await client.query(`INSERT INTO privacy.request_events (request_id, event_type, metadata)
+          SELECT $1, 'completed', $2::jsonb
+           WHERE NOT EXISTS (SELECT 1 FROM privacy.request_events WHERE request_id = $1 AND event_type = 'completed')`, [requestId, JSON.stringify({ evidenceHash })]);
       });
       return evidenceHash;
     });
@@ -293,17 +300,20 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
   }
 }
 
-export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: string }> {
-  async run(event: WorkflowEvent<{ subjectId: string }>, step: WorkflowStep): Promise<{ subjectId: string; state: string }> {
+export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: string; requestId: string }> {
+  async run(event: WorkflowEvent<{ subjectId: string; requestId: string }>, step: WorkflowStep): Promise<{ subjectId: string; state: string }> {
     const subjectId = event.payload.subjectId;
+    const requestedId = event.payload.requestId;
     const exportsBucket = this.env.PRIVATE_EXPORTS;
     if (!exportsBucket) throw new Error('private_exports_not_configured');
     const requestId = await step.do('resolve-export-request', async () => {
       const result = await query<{ id: string }>(this.env.DB_PRIVACY_FRESH,
-        `SELECT id FROM privacy.requests WHERE subject_id = $1 AND request_type = 'export' AND state NOT IN ('completed', 'blocked') ORDER BY created_at DESC LIMIT 1`, [subjectId]);
+        `SELECT id FROM privacy.requests WHERE id = $1 AND subject_id = $2 AND request_type = 'export'`, [requestedId, subjectId]);
       if (!result.rows[0]) throw new Error('privacy_export_request_not_found');
       await query(this.env.DB_PRIVACY_FRESH,
-        `INSERT INTO privacy.request_events (request_id, event_type, metadata) VALUES ($1, 'workflow_started', $2::jsonb)`,
+        `INSERT INTO privacy.request_events (request_id, event_type, metadata)
+         SELECT $1, 'workflow_started', $2::jsonb
+          WHERE NOT EXISTS (SELECT 1 FROM privacy.request_events WHERE request_id = $1 AND event_type = 'workflow_started')`,
         [result.rows[0].id, JSON.stringify({ subjectId })]);
       return result.rows[0].id;
     });
@@ -331,7 +341,9 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
       await transaction(this.env.DB_PRIVACY_FRESH, async (client) => {
         await client.query(`INSERT INTO privacy.export_manifests (request_id, object_key, package_hash, expires_at) VALUES ($1, $2, $3, now() + interval '7 days') ON CONFLICT DO NOTHING`, [requestId, objectKey, packageHash]);
         await client.query(`UPDATE privacy.requests SET state = 'completed', completed_at = now() WHERE id = $1`, [requestId]);
-        await client.query(`INSERT INTO privacy.request_events (request_id, event_type, metadata) VALUES ($1, 'completed', $2::jsonb)`, [requestId, JSON.stringify({ objectKey, packageHash })]);
+        await client.query(`INSERT INTO privacy.request_events (request_id, event_type, metadata)
+          SELECT $1, 'completed', $2::jsonb
+           WHERE NOT EXISTS (SELECT 1 FROM privacy.request_events WHERE request_id = $1 AND event_type = 'completed')`, [requestId, JSON.stringify({ objectKey, packageHash })]);
       });
       return packageHash;
     });
