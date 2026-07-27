@@ -400,6 +400,7 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
     const subjectId = event.payload.subjectId;
     const requestedId = event.payload.requestId;
     const requestId = await step.do('resolve-request', async () => {
+      await query(this.env.DB_PRIVACY_FRESH, `SELECT privacy.reconcile_subject_data_locations($1)`, [subjectId]);
       const result = await query<{ id: string }>(this.env.DB_PRIVACY_FRESH,
         `SELECT id FROM privacy.requests WHERE id = $1 AND subject_id = $2 AND request_type = 'delete'`, [requestedId, subjectId]);
       if (!result.rows[0]) throw new Error('privacy_delete_request_not_found');
@@ -495,6 +496,7 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
     const exportsBucket = this.env.PRIVATE_EXPORTS;
     if (!exportsBucket) throw new Error('private_exports_not_configured');
     const requestId = await step.do('resolve-export-request', async () => {
+      await query(this.env.DB_PRIVACY_FRESH, `SELECT privacy.reconcile_subject_data_locations($1)`, [subjectId]);
       const result = await query<{ id: string }>(this.env.DB_PRIVACY_FRESH,
         `SELECT id FROM privacy.requests WHERE id = $1 AND subject_id = $2 AND request_type = 'export'`, [requestedId, subjectId]);
       if (!result.rows[0]) throw new Error('privacy_export_request_not_found');

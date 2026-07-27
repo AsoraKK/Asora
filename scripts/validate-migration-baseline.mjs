@@ -30,6 +30,7 @@ const requiredTables = [
   'system.schema_migrations',
 ];
 const requiredViews = ['media.storage_ledgers'];
+const requiredFunctions = ['privacy.set_retention_rule', 'privacy.reconcile_subject_data_locations'];
 const failures = [];
 for (const file of requiredMigrations) {
   if (!fs.existsSync(path.join(migrationDir, file))) failures.push(`missing migration: ${file}`);
@@ -51,6 +52,10 @@ for (const table of requiredTables) {
 for (const view of requiredViews) {
   const [schema, name] = view.split('.');
   if (!new RegExp(`CREATE VIEW ${schema}\\.${name}\\b`, 'i').test(source)) failures.push(`missing view: ${view}`);
+}
+for (const fn of requiredFunctions) {
+  const [schema, name] = fn.split('.');
+  if (!new RegExp(`CREATE (?:OR REPLACE )?FUNCTION ${schema}\\.${name}\\b`, 'i').test(source)) failures.push(`missing function: ${fn}`);
 }
 for (const required of ['postgis', 'pg_trgm', 'unaccent', 'pgcrypto', 'uuidv7']) {
   if (!source.toLowerCase().includes(required.toLowerCase())) failures.push(`missing extension/function reference: ${required}`);

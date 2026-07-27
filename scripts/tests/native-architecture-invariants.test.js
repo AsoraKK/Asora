@@ -172,3 +172,13 @@ test('jobs role can read trust ledgers required by Data Passport exports', () =>
   assert.match(jobs, /FROM trust\.human_contribution_events/);
   assert.match(jobs, /FROM trust\.reputation_events/);
 });
+
+test('privacy workflows reconcile the subject-data locator before export or deletion', () => {
+  const migration = fs.readFileSync(path.join(root, 'database/planetscale/migrations/0004_launch_contract.sql'), 'utf8');
+  const grants = fs.readFileSync(path.join(root, 'database/planetscale/grants/roles.sql'), 'utf8');
+  const jobs = fs.readFileSync(path.join(root, 'apps/lythaus-jobs/src/index.ts'), 'utf8');
+  assert.match(migration, /CREATE OR REPLACE FUNCTION privacy\.reconcile_subject_data_locations/);
+  assert.match(migration, /SECURITY DEFINER/);
+  assert.match(grants, /GRANT EXECUTE ON FUNCTION privacy\.reconcile_subject_data_locations\(uuid\) TO lythaus_privacy/);
+  assert.equal((jobs.match(/privacy\.reconcile_subject_data_locations/g) ?? []).length, 2);
+});

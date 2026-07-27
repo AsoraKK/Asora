@@ -27,6 +27,10 @@ BEGIN
   IF object_count < 74 THEN
     RAISE EXCEPTION 'restore has only % Lythaus schema objects; expected at least 74', object_count;
   END IF;
+
+  IF to_regprocedure('privacy.reconcile_subject_data_locations(uuid)') IS NULL THEN
+    RAISE EXCEPTION 'subject-data locator reconciliation function is missing after restore';
+  END IF;
 END $$;
 
 SELECT current_setting('server_version') AS server_version;

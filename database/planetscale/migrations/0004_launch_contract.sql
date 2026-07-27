@@ -270,3 +270,170 @@ END;
 $$;
 
 REVOKE ALL ON FUNCTION privacy.set_retention_rule(uuid, text, interval, text) FROM PUBLIC;
+
+CREATE OR REPLACE FUNCTION privacy.reconcile_subject_data_locations(p_subject_id uuid)
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, privacy, identity, content, social, feed, moderation, trust, media, editorial
+AS $$
+BEGIN
+  -- Reconciliation is retry-safe. Deletion evidence remains in the tombstone;
+  -- locator rows are rebuilt from authoritative stores on each run.
+  DELETE FROM privacy.subject_data_locations
+   WHERE subject_id = p_subject_id;
+
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'identity.users', 'user', u.id, 'authoritative', 'account'
+    FROM identity.users u WHERE u.id = p_subject_id;
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'identity.provider_links', 'provider_link', p.id, 'authoritative', 'account'
+    FROM identity.provider_links p WHERE p.user_id = p_subject_id;
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'identity.handles', 'handle', h.user_id, 'authoritative', 'account'
+    FROM identity.handles h WHERE h.user_id = p_subject_id;
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'identity.email_credentials', 'email_credential', e.user_id, 'authoritative', 'account'
+    FROM identity.email_credentials e WHERE e.user_id = p_subject_id;
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'identity.auth_sessions', 'auth_session', s.id, 'authoritative', 'security'
+    FROM identity.auth_sessions s WHERE s.user_id = p_subject_id;
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'identity.consent_records', 'consent', c.id, 'authoritative', 'account'
+    FROM identity.consent_records c WHERE c.user_id = p_subject_id;
+
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'social.profiles', 'profile', p.user_id, 'authoritative', 'account'
+    FROM social.profiles p WHERE p.user_id = p_subject_id;
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'social.profile_private_fields', 'private_profile', p.user_id, 'authoritative', 'privacy'
+    FROM social.profile_private_fields p WHERE p.user_id = p_subject_id;
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'social.follows', 'follow_edges', NULL, 'authoritative', 'social'
+   WHERE EXISTS (SELECT 1 FROM social.follows f WHERE f.follower_id = p_subject_id OR f.followed_id = p_subject_id);
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'social.reactions', 'reactions', NULL, 'authoritative', 'social'
+   WHERE EXISTS (SELECT 1 FROM social.reactions r WHERE r.user_id = p_subject_id);
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'social.bookmarks', 'bookmarks', NULL, 'authoritative', 'social'
+   WHERE EXISTS (SELECT 1 FROM social.bookmarks b WHERE b.user_id = p_subject_id);
+
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'content.posts', 'post', p.id, 'authoritative', 'content'
+    FROM content.posts p WHERE p.author_id = p_subject_id;
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'content.comments', 'comment', c.id, 'authoritative', 'content'
+    FROM content.comments c WHERE c.author_id = p_subject_id;
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'content.content_declarations', 'content_declaration', d.post_id, 'derived', 'content'
+    FROM content.content_declarations d JOIN content.posts p ON p.id = d.post_id WHERE p.author_id = p_subject_id;
+
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'feed.user_inbox', 'feed_inbox', NULL, 'derived', 'derived'
+   WHERE EXISTS (SELECT 1 FROM feed.user_inbox i WHERE i.user_id = p_subject_id);
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'feed.notifications', 'notifications', NULL, 'derived', 'derived'
+   WHERE EXISTS (SELECT 1 FROM feed.notifications n WHERE n.recipient_id = p_subject_id);
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'feed.author_outbox', 'author_outbox', o.post_id, 'derived', 'derived'
+    FROM feed.author_outbox o WHERE o.author_id = p_subject_id;
+
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'trust.provenance_events', 'provenance_event', e.id, 'authoritative', 'trust'
+    FROM trust.provenance_events e WHERE e.author_id = p_subject_id;
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'trust.human_contribution_events', 'human_contribution_event', e.id, 'authoritative', 'trust'
+    FROM trust.human_contribution_events e WHERE e.subject_user_id = p_subject_id;
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'trust.reputation_events', 'reputation_event', e.id, 'authoritative', 'trust'
+    FROM trust.reputation_events e WHERE e.subject_user_id = p_subject_id;
+
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'media.objects', 'media_object', o.id, 'authoritative', 'media'
+    FROM media.objects o WHERE o.owner_id = p_subject_id;
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'media.upload_sessions', 'upload_session', u.id, 'authoritative', 'media'
+    FROM media.upload_sessions u WHERE u.user_id = p_subject_id;
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'media.storage_ledger', 'storage_ledger', s.user_id, 'authoritative', 'media'
+    FROM media.storage_ledger s WHERE s.user_id = p_subject_id;
+
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'privacy.requests', 'privacy_request', r.id, 'authoritative', 'privacy'
+    FROM privacy.requests r WHERE r.subject_id = p_subject_id;
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'privacy.legal_holds', 'legal_hold', h.id, 'authoritative', 'privacy'
+    FROM privacy.legal_holds h WHERE h.subject_id = p_subject_id;
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'privacy.request_events', 'privacy_request_event', e.id, 'authoritative', 'privacy'
+    FROM privacy.request_events e JOIN privacy.requests r ON r.id = e.request_id WHERE r.subject_id = p_subject_id;
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'privacy.retention_rules', 'retention_rule', r.id, 'authoritative', 'privacy'
+    FROM privacy.retention_rules r WHERE r.user_id = p_subject_id;
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'privacy.deletion_tombstones', 'deletion_tombstone', t.subject_id, 'authoritative', 'audit'
+    FROM privacy.deletion_tombstones t WHERE t.subject_id = p_subject_id;
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'privacy.export_manifests', 'export_manifest', m.id, 'authoritative', 'privacy'
+    FROM privacy.export_manifests m JOIN privacy.requests r ON r.id = m.request_id WHERE r.subject_id = p_subject_id;
+
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'moderation.content_flags', 'content_flag', f.id, 'authoritative', 'moderation'
+    FROM moderation.content_flags f WHERE f.reporter_id = p_subject_id;
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'moderation.appeals', 'appeal', a.id, 'authoritative', 'moderation'
+    FROM moderation.appeals a WHERE a.appellant_id = p_subject_id;
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'moderation.enforcement_events', 'enforcement_event', e.id, 'authoritative', 'moderation'
+    FROM moderation.enforcement_events e WHERE e.subject_id = p_subject_id OR e.actor_id = p_subject_id;
+
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'editorial.applications', 'editorial_application', a.id, 'authoritative', 'editorial'
+    FROM editorial.applications a WHERE a.user_id = p_subject_id;
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'editorial.peer_reviews', 'editorial_peer_review', r.id, 'authoritative', 'editorial'
+    FROM editorial.peer_reviews r WHERE r.reviewer_id = p_subject_id;
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'editorial.publications', 'editorial_publication', p.id, 'authoritative', 'editorial'
+    FROM editorial.publications p WHERE p.membership_user_id = p_subject_id;
+
+  RETURN (SELECT count(*)::integer FROM privacy.subject_data_locations WHERE subject_id = p_subject_id);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION privacy.reconcile_subject_data_locations(uuid) FROM PUBLIC;

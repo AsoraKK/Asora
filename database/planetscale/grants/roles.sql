@@ -48,6 +48,7 @@ GRANT SELECT, INSERT, UPDATE ON privacy.requests, privacy.request_events, privac
 GRANT DELETE ON identity.provider_links, identity.email_credentials, identity.handles, identity.auth_sessions, identity.refresh_token_families, identity.email_verification_tokens, identity.password_reset_tokens TO lythaus_privacy;
 GRANT SELECT, DELETE ON social.profile_private_fields TO lythaus_privacy;
 GRANT SELECT, INSERT ON system.audit_events TO lythaus_privacy;
+GRANT EXECUTE ON FUNCTION privacy.reconcile_subject_data_locations(uuid) TO lythaus_privacy;
 
 GRANT USAGE, CREATE ON SCHEMA identity, content, social, feed, moderation, privacy, trust, media, editorial, system TO lythaus_migrations;
 
