@@ -118,3 +118,14 @@ after the provider dashboard reported the temporary extension outage.
 - The live PS-DEV rate supersedes the earlier provisional `$5/mo` development
   estimate. Cost approval remains blocked until the actual production topology
   and billing account are selected.
+
+## Repository implementation evidence — 2026-07-28
+
+- Native architecture invariants: `18/18` passed after subject-locator
+  reconciliation, trust-ledger grants, stale-password rehashing, and the
+  native Azure dependency scan.
+- Exact-head GitHub checks for commit `2cee518c`: native validation
+  `30314702225`, migrations `30314704112`, and secret scan `30314705687` all
+  passed.
+- The draft implementation remains pushed on branch
+  `codex/cloudflare-planetscale-provisioning`; production gates remain closed.
