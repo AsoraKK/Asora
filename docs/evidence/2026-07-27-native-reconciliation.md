@@ -8,10 +8,10 @@ tokens, credentials, connection strings, or application records.
 
 - Branch: `codex/cloudflare-planetscale-provisioning`
 - Remote refresh: completed 2026-07-27
-- Native implementation PR: draft #474; current native implementation head is
-  `0460eb17`.
-- Native validation: passed locally and remotely at `0460eb17` (native workers,
-  migrations, and secret scan; runs `30310556528`, `30310558289`, `30310560298`).
+- Native implementation PR: draft #474; current native implementation code head
+  is `8d2035d4` (this evidence update is documentation-only).
+- Native validation: passed locally and remotely at `8d2035d4` (native workers,
+  migrations, and secret scan; runs `30310667856`, `30310669902`, `30310671819`).
 - Azure compatibility files: retained and not used by native Workers
 
 ## Cloudflare
