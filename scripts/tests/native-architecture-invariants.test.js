@@ -162,3 +162,13 @@ test('temporary PlanetScale CI is branch-scoped and cleans up safely', () => {
   assert.match(script, /refusing to run outside a ci-\* PlanetScale branch/);
   assert.doesNotMatch(workflow, /branch delete.*main/s);
 });
+
+test('jobs role can read trust ledgers required by Data Passport exports', () => {
+  const grants = fs.readFileSync(path.join(root, 'database/planetscale/grants/roles.sql'), 'utf8');
+  const jobs = fs.readFileSync(path.join(root, 'apps/lythaus-jobs/src/index.ts'), 'utf8');
+  assert.match(grants, /GRANT SELECT, INSERT ON trust\.provenance_events, trust\.human_contribution_events TO lythaus_jobs/);
+  assert.match(grants, /GRANT SELECT ON trust\.reputation_events TO lythaus_jobs/);
+  assert.match(jobs, /FROM trust\.provenance_events/);
+  assert.match(jobs, /FROM trust\.human_contribution_events/);
+  assert.match(jobs, /FROM trust\.reputation_events/);
+});
