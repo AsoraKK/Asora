@@ -97,3 +97,12 @@ after the provider dashboard reported the temporary extension outage.
 - A later read-only Cloudflare MCP inventory attempt returned API error `10000`
   (authentication error); no Cloudflare state was changed and email/Turnstile
   readiness remains unverified until the MCP session is reauthenticated.
+
+## Exact MCP recheck — 2026-07-28
+
+- PlanetScale MCP list returned exactly two branches: `main` and
+  `development`; both are Frankfurt (`eu-central`) with zero replicas.
+- Read-only `development` probe returned PostgreSQL `18.4`, database `postgres`,
+  zero Lythaus schemas, and installed extensions `hypopg, plpgsql` only.
+- `get_branch_schema` for `development` returned no application schema objects.
+- This recheck issued no writes or DDL and does not change the Gate 2/3 blockers.
