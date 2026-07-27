@@ -48,6 +48,17 @@ test('launch schema and media boundary are explicit', () => {
   assert.doesNotMatch(media, /arrayBuffer\(\).*MEDIA_QUARANTINE\.put/s);
 });
 
+test('native media buckets are isolated by Wrangler environment', () => {
+  for (const relative of ['apps/lythaus-public-api/wrangler.jsonc', 'apps/lythaus-jobs/wrangler.jsonc']) {
+    const source = fs.readFileSync(path.join(root, relative), 'utf8');
+    const production = source.slice(0, source.indexOf('"env"'));
+    const development = source.slice(source.indexOf('"development"'));
+    assert.match(production, /MEDIA_(?:QUARANTINE|APPROVED)_BUCKET.*lythaus-media-(?:quarantine|approved)"/);
+    assert.doesNotMatch(production, /MEDIA_(?:QUARANTINE|APPROVED)_BUCKET[^\n]*-dev/);
+    assert.match(development, /MEDIA_(?:QUARANTINE|APPROVED)_BUCKET[^\n]*lythaus-media-(?:quarantine|approved)-dev/);
+  }
+});
+
 test('native auth and user controls are implemented behind configured secrets', () => {
   const source = fs.readFileSync(path.join(root, 'apps/lythaus-public-api/src/index.ts'), 'utf8');
   const grants = fs.readFileSync(path.join(root, 'database/planetscale/grants/roles.sql'), 'utf8');
