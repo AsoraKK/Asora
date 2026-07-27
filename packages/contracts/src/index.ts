@@ -45,4 +45,5 @@ export interface UploadSessionResponse {
   expiresAt: string;
   contentType: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/avif';
   maxBytes: number;
+  checksumSha256: string;
 }

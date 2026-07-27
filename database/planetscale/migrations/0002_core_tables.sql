@@ -306,6 +306,7 @@ CREATE TABLE media.upload_sessions (
   object_key text NOT NULL UNIQUE,
   content_type text NOT NULL,
   expected_bytes bigint NOT NULL CHECK (expected_bytes > 0),
+  checksum_sha256 text NOT NULL CHECK (checksum_sha256 ~ '^[0-9a-f]{64}$'),
   observed_bytes bigint,
   status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'queued', 'approved', 'rejected', 'expired')),
   expires_at timestamptz NOT NULL,

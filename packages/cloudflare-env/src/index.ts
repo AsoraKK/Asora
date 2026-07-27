@@ -40,6 +40,7 @@ export interface R2ObjectLike {
   key: string;
   size: number;
   httpEtag: string;
+  checksums?: { sha256?: ArrayBuffer };
 }
 
 export interface R2Bucket {

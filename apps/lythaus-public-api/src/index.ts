@@ -83,6 +83,10 @@ async function createUploadSession(request: Request, env: Env, user: Principal):
     throw new Error('unsupported_media_type');
   }
   if (!input.size || input.size < 1 || input.size > MAX_IMAGE_BYTES) throw new Error('media_size_exceeded');
+  const checksumSha256 = typeof (input as { checksumSha256?: unknown }).checksumSha256 === 'string'
+    ? (input as { checksumSha256: string }).checksumSha256.toLowerCase()
+    : '';
+  if (!/^[0-9a-f]{64}$/.test(checksumSha256)) throw new Error('checksum_required');
   if (!env.R2_ACCESS_KEY_ID || !env.R2_SECRET_ACCESS_KEY) throw new Error('media_signing_not_configured');
   const uploadSessionId = uuidv7();
   const objectKey = `quarantine/${user.userId}/${uploadSessionId}`;
@@ -95,9 +99,9 @@ async function createUploadSession(request: Request, env: Env, user: Principal):
     secretAccessKey: env.R2_SECRET_ACCESS_KEY,
   });
   await query(env.DB_APP_FRESH,
-    `INSERT INTO media.upload_sessions (id, user_id, object_key, content_type, expected_bytes, expires_at)
-     VALUES ($1, $2, $3, $4, $5, $6)`,
-    [uploadSessionId, user.userId, objectKey, input.contentType, input.size, signed.expiresAt]
+    `INSERT INTO media.upload_sessions (id, user_id, object_key, content_type, expected_bytes, checksum_sha256, expires_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    [uploadSessionId, user.userId, objectKey, input.contentType, input.size, checksumSha256, signed.expiresAt]
   );
   return privateResponse(request, env, {
     uploadSessionId,
@@ -106,18 +110,24 @@ async function createUploadSession(request: Request, env: Env, user: Principal):
     expiresAt: signed.expiresAt,
     contentType: input.contentType,
     maxBytes: MAX_IMAGE_BYTES,
+    checksumSha256,
   }, { status: 201 });
 }
 
 async function finaliseUpload(request: Request, env: Env, user: Principal, sessionId: string): Promise<Response> {
-  const result = await query<{ object_key: string; expected_bytes: number; status: string }>(env.DB_APP_FRESH,
-    `SELECT object_key, expected_bytes, status FROM media.upload_sessions WHERE id = $1 AND user_id = $2`,
+  const result = await query<{ object_key: string; expected_bytes: number; checksum_sha256: string; status: string }>(env.DB_APP_FRESH,
+    `SELECT object_key, expected_bytes, checksum_sha256, status FROM media.upload_sessions WHERE id = $1 AND user_id = $2`,
     [sessionId, user.userId]
   );
   const session = result.rows[0];
   if (!session || session.status !== 'pending') throw new Error('upload_session_invalid');
   const object = await env.MEDIA_QUARANTINE.head(session.object_key);
   if (!object || object.size !== Number(session.expected_bytes)) throw new Error('upload_object_invalid');
+  const source = await env.MEDIA_QUARANTINE.get(session.object_key);
+  if (!source) throw new Error('upload_object_invalid');
+  const digest = await crypto.subtle.digest('SHA-256', await new Response(source.body).arrayBuffer());
+  const checksum = Array.from(new Uint8Array(digest), (value) => value.toString(16).padStart(2, '0')).join('');
+  if (checksum !== session.checksum_sha256) throw new Error('upload_checksum_invalid');
   const eventId = uuidv7();
   await transaction(env.DB_APP_FRESH, async (client) => {
     const updated = await client.query(
