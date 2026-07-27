@@ -21,6 +21,7 @@
     { "binding": "PRIVATE_EXPORTS", "bucket_name": "lythaus-private-exports" },
     { "binding": "AUDIT_ARCHIVE", "bucket_name": "lythaus-audit-archive" }
   ],
+  "images": { "binding": "IMAGES" },
   "kv_namespaces": [
     { "binding": "LYTHAUS_CONFIG", "id": "REPLACE_WITH_LYTHAUS_CONFIG_PROD_ID" }
   ],
@@ -63,6 +64,7 @@
         { "binding": "PRIVATE_EXPORTS", "bucket_name": "lythaus-private-exports-dev" },
         { "binding": "AUDIT_ARCHIVE", "bucket_name": "lythaus-audit-archive-dev" }
       ],
+      "images": { "binding": "IMAGES" },
       "kv_namespaces": [{ "binding": "LYTHAUS_CONFIG", "id": "b02289a521bd40bd9112335a3e763b11" }],
       "queues": {
         "producers": [

@@ -9,6 +9,7 @@ interface Env extends EnvBindings {
   DB_APP_FRESH: HyperdriveBinding;
   MEDIA_QUARANTINE: NonNullable<EnvBindings['MEDIA_QUARANTINE']>;
   MODERATION_QUEUE: NonNullable<EnvBindings['MODERATION_QUEUE']>;
+  MEDIA_QUEUE: NonNullable<EnvBindings['MEDIA_QUEUE']>;
   R2_ACCOUNT_ID: string;
 }
 
@@ -122,7 +123,7 @@ async function finaliseUpload(request: Request, env: Env, user: Principal, sessi
     `UPDATE media.upload_sessions SET status = 'queued', observed_bytes = $1, finalised_at = now() WHERE id = $2`,
     [object.size, sessionId]
   );
-  await env.MODERATION_QUEUE.send({ eventId: uuidv7(), eventType: 'media.upload.finalised', uploadSessionId: sessionId, objectKey: session.object_key });
+  await env.MEDIA_QUEUE.send({ eventId: uuidv7(), eventType: 'media.upload.finalised', uploadSessionId: sessionId, objectKey: session.object_key });
   return privateResponse(request, env, { uploadSessionId: sessionId, status: 'queued' });
 }
 

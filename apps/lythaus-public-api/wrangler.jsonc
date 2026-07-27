@@ -25,11 +25,13 @@
     { "binding": "MEDIA_QUARANTINE", "bucket_name": "lythaus-media-quarantine" },
     { "binding": "MEDIA_APPROVED", "bucket_name": "lythaus-media-approved" }
   ],
+  "images": { "binding": "IMAGES" },
   "queues": {
     "producers": [
       { "binding": "MODERATION_QUEUE", "queue": "lythaus-moderation" },
       { "binding": "FEED_QUEUE", "queue": "lythaus-feed" },
-      { "binding": "PRIVACY_QUEUE", "queue": "lythaus-privacy" }
+      { "binding": "PRIVACY_QUEUE", "queue": "lythaus-privacy" },
+      { "binding": "MEDIA_QUEUE", "queue": "lythaus-media" }
     ]
   },
   "env": {
@@ -51,11 +53,13 @@
         { "binding": "MEDIA_QUARANTINE", "bucket_name": "lythaus-media-quarantine-dev" },
         { "binding": "MEDIA_APPROVED", "bucket_name": "lythaus-media-approved-dev" }
       ],
+      "images": { "binding": "IMAGES" },
       "queues": {
         "producers": [
           { "binding": "MODERATION_QUEUE", "queue": "lythaus-moderation-dev" },
           { "binding": "FEED_QUEUE", "queue": "lythaus-feed-dev" },
-          { "binding": "PRIVACY_QUEUE", "queue": "lythaus-privacy-dev" }
+          { "binding": "PRIVACY_QUEUE", "queue": "lythaus-privacy-dev" },
+          { "binding": "MEDIA_QUEUE", "queue": "lythaus-media-dev" }
         ]
       }
     }

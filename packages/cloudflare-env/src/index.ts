@@ -13,6 +13,7 @@ export interface EnvBindings {
   AUDIT_QUEUE?: Queue;
   NOTIFICATIONS_QUEUE?: Queue;
   MEDIA_QUEUE?: Queue;
+  IMAGES?: ImagesBindingLike;
   MODERATION_DLQ?: Queue;
   FEED_DLQ?: Queue;
   NOTIFICATIONS_DLQ?: Queue;
@@ -55,6 +56,16 @@ export interface R2ObjectBody extends R2ObjectLike {
 
 export interface Queue {
   send(body: unknown, options?: { contentType?: string }): Promise<void>;
+}
+
+export interface ImagesBindingLike {
+  info(stream: ReadableStream<Uint8Array>): Promise<{ format: string; fileSize?: number; width?: number; height?: number }>;
+  input(stream: ReadableStream<Uint8Array>): {
+    output(options: { format: 'image/webp'; quality?: number }): Promise<{
+      contentType(): string;
+      image(): ReadableStream<Uint8Array>;
+    }>;
+  };
 }
 
 export interface KVNamespaceLike {
