@@ -23,7 +23,8 @@
     "EMAIL_PASSWORD_RESET_BASE_URL": "https://api.lythaus.co/api/auth/password/reset/complete?token=",
     "GOOGLE_CLIENT_ID": "REPLACE_WITH_GOOGLE_CLIENT_ID",
     "GOOGLE_REDIRECT_URI": "https://api.lythaus.co/api/auth/google/callback",
-    "GOOGLE_JWKS_URL": "https://www.googleapis.com/oauth2/v3/certs"
+    "GOOGLE_JWKS_URL": "https://www.googleapis.com/oauth2/v3/certs",
+    "TURNSTILE_REQUIRED": "true"
   },
   "hyperdrive": [
     { "binding": "DB_APP_FRESH", "id": "REPLACE_WITH_DB_APP_FRESH_ID" }
@@ -64,6 +65,7 @@
         "GOOGLE_CLIENT_ID": "REPLACE_WITH_GOOGLE_CLIENT_ID",
         "GOOGLE_REDIRECT_URI": "http://localhost:8787/api/auth/google/callback",
         "GOOGLE_JWKS_URL": "https://www.googleapis.com/oauth2/v3/certs",
+        "TURNSTILE_REQUIRED": "false",
         "CORS_ALLOWED_ORIGINS": "http://localhost:3000",
         "HYPERDRIVE_QUERY_CACHE_MODE": "disabled"
       },

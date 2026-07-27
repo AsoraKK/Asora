@@ -11,4 +11,7 @@ SELECT COUNT(*) AS table_count
 SELECT to_regclass('system.outbox_events') AS outbox,
        to_regclass('privacy.subject_data_locations') AS subject_locator,
        to_regclass('media.upload_sessions') AS upload_sessions;
+SELECT to_regclass('identity.password_reset_tokens') AS password_reset_tokens;
+SELECT column_name FROM information_schema.columns
+ WHERE table_schema = 'identity' AND table_name = 'users' AND column_name = 'token_version';
 SELECT uuidv7() IS NOT NULL AS uuidv7_available;

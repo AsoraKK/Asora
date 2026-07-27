@@ -53,6 +53,8 @@ export interface EnvBindings {
   ACCESS_TEAM_DOMAIN?: string;
   ACCESS_AUDIENCE?: string;
   ACCESS_JWKS_URL?: string;
+  TURNSTILE_SECRET_KEY?: string;
+  TURNSTILE_REQUIRED?: string;
 }
 
 export interface SendEmailLike {

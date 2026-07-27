@@ -52,7 +52,8 @@
   "workflows": [
     { "name": "lythaus-account-delete", "binding": "ACCOUNT_DELETE", "class_name": "AccountDeleteWorkflow" },
     { "name": "lythaus-account-export", "binding": "ACCOUNT_EXPORT", "class_name": "AccountExportWorkflow" },
-    { "name": "lythaus-retention-cleanup", "binding": "RETENTION_CLEANUP", "class_name": "RetentionCleanupWorkflow" }
+    { "name": "lythaus-retention-cleanup", "binding": "RETENTION_CLEANUP", "class_name": "RetentionCleanupWorkflow" },
+    { "name": "lythaus-appeal-lifecycle", "binding": "APPEAL_LIFECYCLE", "class_name": "AppealLifecycleWorkflow" }
   ],
   "env": {
     "development": {
@@ -102,7 +103,8 @@
       "workflows": [
         { "name": "lythaus-account-delete-dev", "binding": "ACCOUNT_DELETE", "class_name": "AccountDeleteWorkflow" },
         { "name": "lythaus-account-export-dev", "binding": "ACCOUNT_EXPORT", "class_name": "AccountExportWorkflow" },
-        { "name": "lythaus-retention-cleanup-dev", "binding": "RETENTION_CLEANUP", "class_name": "RetentionCleanupWorkflow" }
+        { "name": "lythaus-retention-cleanup-dev", "binding": "RETENTION_CLEANUP", "class_name": "RetentionCleanupWorkflow" },
+        { "name": "lythaus-appeal-lifecycle-dev", "binding": "APPEAL_LIFECYCLE", "class_name": "AppealLifecycleWorkflow" }
       ]
     }
   }

@@ -1,6 +1,6 @@
 import { transaction, query, type HyperdriveBinding } from '@lythaus/db';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
-import type { CreatePostInput } from '@lythaus/contracts';
+import type { CreatePostInput, EmailDeliveryReference, TransactionalEmailProvider } from '@lythaus/contracts';
 import { createPresignedPutUrl, ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES, type AllowedImageType } from '@lythaus/media';
 import { correlationId, json, logEvent } from '@lythaus/observability';
 import { encryptField, hashPassword, hashResetToken, hmacLookup, randomToken, signAccessToken, uuidv7, verifyAccessToken, verifyPassword, type PasswordHash, type Principal } from '@lythaus/security';
@@ -18,6 +18,7 @@ interface EmailAuthInput {
   mode?: 'register' | 'login' | 'resend_verification';
   email?: string;
   password?: string;
+  turnstileToken?: string;
 }
 
 function normalizeEmail(value: string): string {
@@ -41,8 +42,25 @@ function requireAuthSecrets(env: Env): { pepper: string; encryptionKey: string; 
   return { pepper: env.AUTH_PASSWORD_PEPPER_V1, encryptionKey: env.PII_ENCRYPTION_KEY_V1, hmacKey: env.PII_HMAC_KEY_V1, privateKey: env.JWT_PRIVATE_KEY, keyId: env.JWT_KEY_ID };
 }
 
+async function verifyTurnstile(env: Env, token: unknown): Promise<void> {
+  if (env.TURNSTILE_REQUIRED !== 'true') return;
+  if (!env.TURNSTILE_SECRET_KEY || typeof token !== 'string' || token.length < 10) throw new Error('turnstile_required');
+  const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ secret: env.TURNSTILE_SECRET_KEY, response: token }),
+  });
+  if (!response.ok) throw new Error('turnstile_unavailable');
+  const result = await response.json() as { success?: boolean };
+  if (result.success !== true) throw new Error('turnstile_failed');
+}
+
 async function issueSession(env: Env, userId: string, roles: string[] = []): Promise<{ accessToken: string; refreshToken: string; expiresIn: number }> {
   const secrets = requireAuthSecrets(env);
+  const account = await query<{ status: string; token_version: number }>(env.DB_APP_FRESH,
+    `SELECT status, token_version FROM identity.users WHERE id = $1`, [userId]);
+  if (!account.rows[0] || account.rows[0].status !== 'active') throw new Error('account_unavailable');
+  const tokenVersion = Number(account.rows[0].token_version);
   const refreshToken = randomToken(32);
   const refreshHash = hashResetToken(refreshToken);
   const familyId = uuidv7();
@@ -50,27 +68,59 @@ async function issueSession(env: Env, userId: string, roles: string[] = []): Pro
     await client.query(`INSERT INTO identity.refresh_token_families (id, user_id) VALUES ($1, $2)`, [familyId, userId]);
     await client.query(`INSERT INTO identity.auth_sessions (user_id, refresh_family_id, refresh_token_hash, expires_at) VALUES ($1, $2, decode($3, 'base64'), now() + interval '30 days')`, [userId, familyId, refreshHash]);
   });
-  const accessToken = await signAccessToken({ userId, roles, privateKeyPem: secrets.privateKey, keyId: secrets.keyId });
+  const accessToken = await signAccessToken({ userId, roles, tokenVersion, privateKeyPem: secrets.privateKey, keyId: secrets.keyId });
   return { accessToken, refreshToken, expiresIn: 900 };
 }
 
-async function deliverAuthEmail(env: Env, input: { type: 'verification' | 'password_reset' | 'security'; to: string; token?: string; reason?: string }): Promise<void> {
+async function sendEmailTransport(env: Env, input: { to: string; subject: string; html: string }): Promise<EmailDeliveryReference> {
   if (env.EMAIL && env.EMAIL_FROM) {
-    const subject = input.type === 'verification' ? 'Verify your Lythaus email' : input.type === 'password_reset' ? 'Reset your Lythaus password' : 'Lythaus security notice';
-    const baseUrl = input.type === 'password_reset' ? env.EMAIL_PASSWORD_RESET_BASE_URL : env.EMAIL_VERIFICATION_BASE_URL;
-    const action = input.token && baseUrl
-      ? `<p><a href="${baseUrl}${encodeURIComponent(input.token)}">Continue securely</a></p>`
-      : '';
-    await env.EMAIL.send({ to: input.to, from: env.EMAIL_FROM, subject, html: `<p>${subject}.</p>${action}` });
-    return;
+    await env.EMAIL.send({ to: input.to, from: env.EMAIL_FROM, subject: input.subject, html: input.html });
+    return { provider: 'cloudflare-email', messageId: 'accepted', acceptedAt: new Date().toISOString() };
   }
   if (!env.EMAIL_PROVIDER_URL || !env.EMAIL_PROVIDER_TOKEN || !env.EMAIL_FROM) throw new Error('email_delivery_not_configured');
   const response = await fetch(env.EMAIL_PROVIDER_URL, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${env.EMAIL_PROVIDER_TOKEN}` },
-    body: JSON.stringify({ from: env.EMAIL_FROM, type: input.type, to: input.to, token: input.token, reason: input.reason }),
+    body: JSON.stringify({ from: env.EMAIL_FROM, to: input.to, subject: input.subject, html: input.html }),
   });
   if (!response.ok) throw new Error(`email_delivery_failed_${response.status}`);
+  const payload = await response.json().catch(() => ({})) as { messageId?: string };
+  return { provider: 'fallback-email', messageId: payload.messageId ?? 'accepted', acceptedAt: new Date().toISOString() };
+}
+
+function createTransactionalEmailProvider(env: Env): TransactionalEmailProvider {
+  const link = (baseUrl: string | undefined, token: string): string => baseUrl
+    ? `<p><a href="${baseUrl}${encodeURIComponent(token)}">Continue securely</a></p>`
+    : '';
+  return {
+    async sendVerification(input) {
+      const subject = 'Verify your Lythaus email';
+      return sendEmailTransport(env, { to: input.to, subject, html: `<p>${subject}.</p>${link(env.EMAIL_VERIFICATION_BASE_URL, input.token)}` });
+    },
+    async sendPasswordReset(input) {
+      const subject = 'Reset your Lythaus password';
+      return sendEmailTransport(env, { to: input.to, subject, html: `<p>${subject}.</p>${link(env.EMAIL_PASSWORD_RESET_BASE_URL, input.token)}` });
+    },
+    async sendSecurityNotice(input) {
+      const subject = 'Lythaus security notice';
+      return sendEmailTransport(env, { to: input.to, subject, html: `<p>${subject}.</p><p>${input.reason.replace(/[&<>"']/g, (value) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[value] ?? value))}</p>` });
+    },
+    async sendEmailChangeNotice(input) {
+      const subject = 'Confirm your Lythaus email change';
+      return sendEmailTransport(env, { to: input.to, subject, html: `<p>${subject}.</p>${link(env.EMAIL_VERIFICATION_BASE_URL, input.token)}` });
+    },
+    async sendAccountDeletionNotice(input) {
+      const subject = 'Lythaus account deletion requested';
+      return sendEmailTransport(env, { to: input.to, subject, html: `<p>${subject}.</p><p>Request reference: ${input.requestId}</p>` });
+    },
+  };
+}
+
+async function deliverAuthEmail(env: Env, input: { type: 'verification' | 'password_reset' | 'security'; to: string; token?: string; reason?: string }): Promise<EmailDeliveryReference> {
+  const provider = createTransactionalEmailProvider(env);
+  if (input.type === 'verification' && input.token) return provider.sendVerification({ to: input.to, token: input.token });
+  if (input.type === 'password_reset' && input.token) return provider.sendPasswordReset({ to: input.to, token: input.token });
+  return provider.sendSecurityNotice({ to: input.to, reason: input.reason ?? 'Account security event' });
 }
 
 async function emailAuth(request: Request, env: Env): Promise<Response> {
@@ -78,6 +128,7 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
   const email = normalizeEmail(input.email ?? '');
   const password = input.password ?? '';
   if (input.mode !== 'resend_verification' && (password.length < 12 || password.length > 128)) throw new Error('invalid_password');
+  if (input.mode === 'register') await verifyTurnstile(env, input.turnstileToken);
   const secrets = requireAuthSecrets(env);
   const lookup = hmacLookup(email, secrets.hmacKey);
   const existing = await query<{ id: string; status: string; password_hash: PasswordHash; verified_at: string | null }>(env.DB_APP_FRESH,
@@ -154,14 +205,19 @@ async function refreshSession(request: Request, env: Env): Promise<Response> {
     await client.query(`INSERT INTO identity.auth_sessions (user_id, refresh_family_id, refresh_token_hash, expires_at) VALUES ($1, $2, decode($3, 'base64'), now() + interval '30 days')`, [session.user_id, session.family_id, hashResetToken(replacement)]);
   });
   const secrets = requireAuthSecrets(env);
-  const accessToken = await signAccessToken({ userId: session.user_id, privateKeyPem: secrets.privateKey, keyId: secrets.keyId });
+  const tokenVersion = await query<{ token_version: number }>(env.DB_APP_FRESH,
+    `SELECT token_version FROM identity.users WHERE id = $1`, [session.user_id]);
+  const accessToken = await signAccessToken({ userId: session.user_id, tokenVersion: Number(tokenVersion.rows[0]?.token_version ?? 1), privateKeyPem: secrets.privateKey, keyId: secrets.keyId });
   return privateResponse(request, env, { accessToken, refreshToken: replacement, expiresIn: 900, tokenType: 'Bearer' });
 }
 
 async function logout(request: Request, env: Env): Promise<Response> {
   const user = await principal(request, env);
-  await query(env.DB_APP_FRESH, `UPDATE identity.auth_sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [user.userId]);
-  await query(env.DB_APP_FRESH, `UPDATE identity.refresh_token_families SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [user.userId]);
+  await transaction(env.DB_APP_FRESH, async (client) => {
+    await client.query(`UPDATE identity.auth_sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [user.userId]);
+    await client.query(`UPDATE identity.refresh_token_families SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [user.userId]);
+    await client.query(`UPDATE identity.users SET token_version = token_version + 1, updated_at = now() WHERE id = $1`, [user.userId]);
+  });
   return privateResponse(request, env, { loggedOut: true });
 }
 
@@ -235,7 +291,8 @@ async function googleAuthCallback(request: Request, env: Env): Promise<Response>
 }
 
 async function requestPasswordReset(request: Request, env: Env): Promise<Response> {
-  const input = await readJson<{ email?: string }>(request, 8 * 1024);
+  const input = await readJson<{ email?: string; turnstileToken?: string }>(request, 8 * 1024);
+  await verifyTurnstile(env, input.turnstileToken);
   const email = normalizeEmail(input.email ?? '');
   if (!env.PII_HMAC_KEY_V1) throw new Error('authentication_not_configured');
   const lookup = hmacLookup(email, env.PII_HMAC_KEY_V1);
@@ -268,6 +325,7 @@ async function completePasswordReset(request: Request, env: Env): Promise<Respon
     await client.query(`UPDATE identity.email_credentials SET password_hash = $1::jsonb, updated_at = now() WHERE user_id = $2`, [JSON.stringify(passwordHash), found.rows[0].user_id]);
     await client.query(`UPDATE identity.auth_sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [found.rows[0].user_id]);
     await client.query(`UPDATE identity.refresh_token_families SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [found.rows[0].user_id]);
+    await client.query(`UPDATE identity.users SET token_version = token_version + 1, updated_at = now() WHERE id = $1`, [found.rows[0].user_id]);
     await client.query(`INSERT INTO identity.account_events (user_id, event_type, metadata) VALUES ($1, 'password_reset_completed', '{}'::jsonb)`, [found.rows[0].user_id]);
   });
   return response(request, env, { state: 'password_reset_completed' });
@@ -302,7 +360,13 @@ async function principal(request: Request, env: Env): Promise<Principal> {
   const value = request.headers.get('authorization');
   const token = value?.match(/^Bearer\s+(.+)$/i)?.[1];
   if (!token || !env.JWT_PUBLIC_JWKS) throw new Error('authentication_required');
-  return verifyAccessToken(token, env.JWT_PUBLIC_JWKS);
+  const subject = await verifyAccessToken(token, env.JWT_PUBLIC_JWKS);
+  const account = await query<{ status: string; token_version: number }>(env.DB_APP_FRESH,
+    `SELECT status, token_version FROM identity.users WHERE id = $1`, [subject.userId]);
+  if (!account.rows[0] || account.rows[0].status !== 'active' || Number(account.rows[0].token_version) !== subject.tokenVersion) {
+    throw new Error('authentication_required');
+  }
+  return subject;
 }
 
 async function readJson<T>(request: Request, maxBytes: number): Promise<T> {
@@ -481,6 +545,39 @@ async function createFollow(request: Request, env: Env, user: Principal): Promis
   return privateResponse(request, env, { following: input.userId }, { status: 201 });
 }
 
+async function setBlock(request: Request, env: Env, user: Principal, targetUserId: string, blocked: boolean): Promise<Response> {
+  if (!targetUserId || targetUserId === user.userId) throw new Error('invalid_block');
+  await transaction(env.DB_APP_FRESH, async (client) => {
+    if (blocked) {
+      await client.query(`INSERT INTO social.blocks (blocker_id, blocked_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [user.userId, targetUserId]);
+      await client.query(`DELETE FROM social.follows WHERE (follower_id = $1 AND followed_id = $2) OR (follower_id = $2 AND followed_id = $1)`, [user.userId, targetUserId]);
+    } else {
+      await client.query(`DELETE FROM social.blocks WHERE blocker_id = $1 AND blocked_id = $2`, [user.userId, targetUserId]);
+    }
+  });
+  return privateResponse(request, env, { userId: targetUserId, blocked });
+}
+
+async function setMute(request: Request, env: Env, user: Principal, targetUserId: string, muted: boolean): Promise<Response> {
+  if (!targetUserId || targetUserId === user.userId) throw new Error('invalid_mute');
+  if (muted) {
+    await query(env.DB_APP_FRESH, `INSERT INTO social.mutes (muter_id, muted_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [user.userId, targetUserId]);
+  } else {
+    await query(env.DB_APP_FRESH, `DELETE FROM social.mutes WHERE muter_id = $1 AND muted_id = $2`, [user.userId, targetUserId]);
+  }
+  return privateResponse(request, env, { userId: targetUserId, muted });
+}
+
+async function setBookmark(request: Request, env: Env, user: Principal, postId: string, bookmarked: boolean): Promise<Response> {
+  if (!postId) throw new Error('invalid_bookmark');
+  if (bookmarked) {
+    await query(env.DB_APP_FRESH, `INSERT INTO social.bookmarks (user_id, post_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [user.userId, postId]);
+  } else {
+    await query(env.DB_APP_FRESH, `DELETE FROM social.bookmarks WHERE user_id = $1 AND post_id = $2`, [user.userId, postId]);
+  }
+  return privateResponse(request, env, { postId, bookmarked });
+}
+
 async function createComment(request: Request, env: Env, user: Principal, postId: string): Promise<Response> {
   const input = await readJson<{ body?: string; parentId?: string }>(request, 32 * 1024);
   const body = input.body?.trim();
@@ -587,6 +684,8 @@ async function getPersonalFeed(request: Request, env: Env, user: Principal): Pro
        FROM feed.user_inbox i
        JOIN content.posts p ON p.id = i.post_id
       WHERE i.user_id = $1 AND p.visibility IN ('public', 'followers') AND p.moderation_state = 'allowed'
+        AND NOT EXISTS (SELECT 1 FROM social.blocks b WHERE b.blocker_id = $1 AND b.blocked_id = p.author_id)
+        AND NOT EXISTS (SELECT 1 FROM social.mutes m WHERE m.muter_id = $1 AND m.muted_id = p.author_id)
       ORDER BY i.created_at DESC LIMIT 100`, [user.userId]);
   return privateResponse(request, env, { items: result.rows });
 }
@@ -634,6 +733,33 @@ export default {
       const publicProfile = url.pathname.match(/^\/api\/users\/([^/]+)$/);
       if (request.method === 'GET' && publicProfile) return getUserProfile(request, env, publicProfile[1]);
       if (request.method === 'POST' && (url.pathname === '/api/follows' || url.pathname === '/api/users/follow')) return createFollow(request, env, await principal(request, env));
+      if (request.method === 'DELETE' && url.pathname.match(/^\/api\/follows\/([^/]+)$/)) {
+        const user = await principal(request, env);
+        const followedId = url.pathname.match(/^\/api\/follows\/([^/]+)$/)?.[1] ?? '';
+        await query(env.DB_APP_FRESH, `DELETE FROM social.follows WHERE follower_id = $1 AND followed_id = $2`, [user.userId, followedId]);
+        return privateResponse(request, env, { following: followedId, removed: true });
+      }
+      if (request.method === 'POST' && (url.pathname === '/api/blocks' || url.pathname === '/api/users/block')) {
+        const user = await principal(request, env);
+        const input = await readJson<{ userId?: string }>(request, 8 * 1024);
+        return setBlock(request, env, user, input.userId ?? '', true);
+      }
+      const block = url.pathname.match(/^\/api\/blocks\/([^/]+)$/);
+      if (request.method === 'DELETE' && block) return setBlock(request, env, await principal(request, env), block[1], false);
+      if (request.method === 'POST' && (url.pathname === '/api/mutes' || url.pathname === '/api/users/mute')) {
+        const user = await principal(request, env);
+        const input = await readJson<{ userId?: string }>(request, 8 * 1024);
+        return setMute(request, env, user, input.userId ?? '', true);
+      }
+      const mute = url.pathname.match(/^\/api\/mutes\/([^/]+)$/);
+      if (request.method === 'DELETE' && mute) return setMute(request, env, await principal(request, env), mute[1], false);
+      if (request.method === 'POST' && url.pathname === '/api/bookmarks') {
+        const user = await principal(request, env);
+        const input = await readJson<{ postId?: string }>(request, 8 * 1024);
+        return setBookmark(request, env, user, input.postId ?? '', true);
+      }
+      const bookmark = url.pathname.match(/^\/api\/bookmarks\/([^/]+)$/);
+      if (request.method === 'DELETE' && bookmark) return setBookmark(request, env, await principal(request, env), bookmark[1], false);
       const comment = url.pathname.match(/^\/api\/posts\/([^/]+)\/comments$/);
       if (request.method === 'POST' && comment) return createComment(request, env, await principal(request, env), comment[1]);
       const reaction = url.pathname.match(/^\/api\/posts\/([^/]+)\/reactions$/);

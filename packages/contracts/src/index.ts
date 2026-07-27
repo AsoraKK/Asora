@@ -24,6 +24,8 @@ export interface TransactionalEmailProvider {
   sendVerification(input: { to: string; token: string }): Promise<EmailDeliveryReference>;
   sendPasswordReset(input: { to: string; token: string }): Promise<EmailDeliveryReference>;
   sendSecurityNotice(input: { to: string; reason: string }): Promise<EmailDeliveryReference>;
+  sendEmailChangeNotice(input: { to: string; token: string }): Promise<EmailDeliveryReference>;
+  sendAccountDeletionNotice(input: { to: string; requestId: string }): Promise<EmailDeliveryReference>;
 }
 
 export interface CreatePostInput {

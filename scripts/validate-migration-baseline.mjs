@@ -3,7 +3,7 @@ import path from 'node:path';
 
 const root = process.cwd();
 const migrationDir = path.join(root, 'database', 'planetscale', 'migrations');
-const requiredMigrations = ['0000_preflight.sql', '0001_extensions_and_schemas.sql', '0002_core_tables.sql', '0003_domain_extensions.sql', '0004_launch_contract.sql'];
+const requiredMigrations = ['0000_preflight.sql', '0001_extensions_and_schemas.sql', '0002_core_tables.sql', '0003_domain_extensions.sql', '0004_launch_contract.sql', '0005_auth_revocation.sql', '0006_admin_role_expansion.sql'];
 const requiredSeeds = ['0001_feature_flags.sql'];
 const requiredTables = [
   'identity.users', 'identity.email_verification_tokens', 'identity.password_reset_tokens', 'content.posts', 'content.content_declarations',

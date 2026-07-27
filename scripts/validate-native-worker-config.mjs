@@ -13,11 +13,15 @@ const failures = [];
 for (const relative of configs) {
   const file = path.join(root, relative);
   const source = fs.readFileSync(file, 'utf8');
+  const production = source.slice(0, source.indexOf('"env"') === -1 ? source.length : source.indexOf('"env"'));
   if (!/"workers_dev"\s*:\s*false/.test(source)) failures.push(`${relative}: production workers_dev must be false`);
   if (!/"preview_urls"\s*:\s*false/.test(source)) failures.push(`${relative}: production preview_urls must be false`);
   if (!/"nodejs_compat"/.test(source)) failures.push(`${relative}: nodejs_compat is required`);
-  if (/azurewebsites\.net|asora\.co\.za|asora-function/i.test(source)) failures.push(`${relative}: Azure/legacy hostname found in native config`);
+  if (/azurewebsites\.net|asora\.co\.za|asora-function|workers\.dev|pages\.dev|r2\.dev/i.test(production)) failures.push(`${relative}: legacy or public preview hostname found in production config`);
   if (!/HYPERDRIVE_QUERY_CACHE_MODE/.test(source) || !/disabled/.test(source)) failures.push(`${relative}: Hyperdrive cache-disabled intent missing`);
+  if (relative.includes('public-api') && !/api\.lythaus\.co/.test(production)) failures.push(`${relative}: public API must use api.lythaus.co`);
+  if (relative.includes('admin-api') && !/admin-api\.lythaus\.co/.test(production)) failures.push(`${relative}: admin API must use admin-api.lythaus.co`);
+  if (relative.includes('jobs') && /"routes"\s*:/.test(production)) failures.push(`${relative}: jobs Worker must not expose a production route`);
   if (requireProvisioned && /REPLACE_WITH_/.test(source)) failures.push(`${relative}: unresolved production resource placeholder`);
 }
 

@@ -21,6 +21,7 @@ interface Env extends EnvBindings {
   ACCOUNT_DELETE?: WorkflowBinding<{ subjectId: string; requestId: string }>;
   ACCOUNT_EXPORT?: WorkflowBinding<{ subjectId: string; requestId: string }>;
   RETENTION_CLEANUP?: WorkflowBinding<{ runId: string }>;
+  APPEAL_LIFECYCLE?: WorkflowBinding<{ appealId: string }>;
 }
 
 interface Queue { send(body: unknown, options?: { contentType?: string }): Promise<void>; }
@@ -313,6 +314,11 @@ async function processMessage(message: QueueMessage, env: Env): Promise<void> {
       await env.ACCOUNT_EXPORT.create({ id: `privacy-export-${payload.requestId}`, params: { subjectId, requestId: payload.requestId } });
     }
   }
+  if (eventType === 'moderation.appeal.created' && env.APPEAL_LIFECYCLE) {
+    const payload = (message.body.payload ?? {}) as { appealId?: string };
+    if (typeof payload.appealId !== 'string') throw new Error('appeal_event_invalid');
+    await env.APPEAL_LIFECYCLE.create({ id: `appeal-${payload.appealId}`, params: { appealId: payload.appealId } });
+  }
   await query(env.DB_JOBS_FRESH,
     `INSERT INTO system.consumer_inbox (consumer_name, event_id, event_type, payload)
      VALUES ('lythaus-jobs', $1, $2, $3::jsonb)
@@ -587,5 +593,35 @@ export class RetentionCleanupWorkflow extends WorkflowEntrypoint<Env, { runId: s
       deletedMedia += result.media;
     }
     return { runId: event.payload.runId, redactedPosts, deletedMedia };
+  }
+}
+
+export class AppealLifecycleWorkflow extends WorkflowEntrypoint<Env, { appealId: string }> {
+  async run(event: WorkflowEvent<{ appealId: string }>, step: WorkflowStep): Promise<{ appealId: string; state: string }> {
+    const appealId = event.payload.appealId;
+    const state = await step.do('resolve-appeal-state', async () => {
+      const result = await transaction(this.env.DB_JOBS_FRESH, async (client) => {
+        const appeal = await client.query<{ state: string; case_state: string }>(
+          `SELECT a.state, c.state AS case_state
+             FROM moderation.appeals a
+             JOIN moderation.cases c ON c.id = a.case_id
+            WHERE a.id = $1`, [appealId]);
+        const row = appeal.rows[0];
+        if (!row) throw new Error('appeal_not_found');
+        if (row.state === 'open' && row.case_state === 'resolved') {
+          await client.query(`UPDATE moderation.appeals SET state = 'resolved', resolved_at = COALESCE(resolved_at, now()) WHERE id = $1 AND state = 'open'`, [appealId]);
+          await client.query(
+            `INSERT INTO system.audit_events (action, target_type, target_id, reason_code, correlation_id, metadata)
+             VALUES ('moderation.appeal.resolved', 'appeal', $1, 'CASE_RESOLVED', $1, $2::jsonb)
+             ON CONFLICT DO NOTHING`,
+            [appealId, JSON.stringify({ appealId })]
+          );
+          return 'resolved';
+        }
+        return row.state;
+      });
+      return result;
+    });
+    return { appealId, state };
   }
 }

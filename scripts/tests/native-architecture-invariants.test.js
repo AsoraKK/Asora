@@ -20,6 +20,15 @@ test('native Workers disable production workers.dev and preview URLs', () => {
   }
 });
 
+test('native production routing is custom-domain-only', () => {
+  const validate = fs.readFileSync(path.join(root, 'scripts/validate-native-worker-config.mjs'), 'utf8');
+  assert.match(validate, /workers\\\.dev/);
+  assert.match(validate, /pages\\\.dev/);
+  assert.match(validate, /r2\\\.dev/);
+  assert.match(validate, /api\\\.lythaus\\\.co/);
+  assert.match(validate, /admin-api\\\.lythaus\\\.co/);
+});
+
 test('native Workers declare cache-disabled Hyperdrive intent', () => {
   for (const relative of configs) {
     const source = fs.readFileSync(path.join(root, relative), 'utf8');
@@ -73,6 +82,18 @@ test('native auth and user controls are implemented behind configured secrets', 
   assert.match(migration, /SECURITY DEFINER/);
 });
 
+test('native authentication supports account-level token revocation and social controls', () => {
+  const migration = fs.readFileSync(path.join(root, 'database/planetscale/migrations/0005_auth_revocation.sql'), 'utf8');
+  const source = fs.readFileSync(path.join(root, 'apps/lythaus-public-api/src/index.ts'), 'utf8');
+  const admin = fs.readFileSync(path.join(root, 'apps/lythaus-admin-api/src/index.ts'), 'utf8');
+  assert.match(migration, /token_version/);
+  assert.match(source, /tokenVersion/);
+  assert.match(source, /social\.blocks/);
+  assert.match(source, /social\.mutes/);
+  assert.match(source, /social\.bookmarks/);
+  assert.match(admin, /account\.status_changed/);
+});
+
 test('admin verifies Access JWTs independently', () => {
   const source = fs.readFileSync(path.join(root, 'apps/lythaus-admin-api/src/index.ts'), 'utf8');
   assert.match(source, /createRemoteJWKSet/);
@@ -94,4 +115,13 @@ test('production deployment is manually gated and provisioned-only', () => {
   assert.match(workflow, /environment: production/);
   assert.match(workflow, /validate:native-workers:provisioned/);
   assert.doesNotMatch(workflow, /on:\s*\n\s*push:/);
+});
+
+test('jobs Worker exposes durable privacy and appeal workflows', () => {
+  const config = fs.readFileSync(path.join(root, 'apps/lythaus-jobs/wrangler.jsonc'), 'utf8');
+  const source = fs.readFileSync(path.join(root, 'apps/lythaus-jobs/src/index.ts'), 'utf8');
+  assert.match(config, /APPEAL_LIFECYCLE/);
+  assert.match(source, /class AppealLifecycleWorkflow/);
+  assert.match(source, /moderation\.appeal\.created/);
+  assert.match(source, /ON CONFLICT DO NOTHING/);
 });

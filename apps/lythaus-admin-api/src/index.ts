@@ -78,6 +78,30 @@ async function decideModeration(request: Request, env: Env, actor: { userId: str
   return json({ caseId, outcome: input.outcome, publicLabel: publicLabel ?? null }, { headers: { 'x-correlation-id': correlation, 'cache-control': 'private, no-store' } });
 }
 
+async function updateAccountStatus(request: Request, env: Env, actor: { userId: string; role: string }, targetUserId: string, correlation: string): Promise<Response> {
+  if (!['administrator', 'owner'].includes(actor.role)) throw new Error('admin_role_required');
+  const input = await readJson<{ status?: 'active' | 'suspended' | 'locked'; reasonCode?: string }>(request);
+  if (!input.status || !['active', 'suspended', 'locked'].includes(input.status)) throw new Error('invalid_account_status');
+  if (!input.reasonCode || !/^[A-Z0-9_.:-]{2,80}$/.test(input.reasonCode)) throw new Error('reason_code_required');
+  const result = await transaction(env.DB_ADMIN_FRESH, async (client) => {
+    const updated = await client.query<{ id: string }>(
+      `UPDATE identity.users SET status = $1, token_version = token_version + 1, updated_at = now() WHERE id = $2 AND status <> 'deleted' RETURNING id`,
+      [input.status, targetUserId]
+    );
+    if (updated.rowCount !== 1) throw new Error('user_not_found');
+    await client.query(`UPDATE identity.auth_sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [targetUserId]);
+    await client.query(`UPDATE identity.refresh_token_families SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [targetUserId]);
+    await client.query(`INSERT INTO identity.account_events (user_id, actor_id, event_type, metadata) VALUES ($1, $2, 'account_status_changed', $3::jsonb)`, [targetUserId, actor.userId, JSON.stringify({ status: input.status, reasonCode: input.reasonCode })]);
+    await client.query(
+      `INSERT INTO system.audit_events (actor_id, action, target_type, target_id, reason_code, correlation_id, metadata)
+       VALUES ($1, 'account.status_changed', 'user', $2, $3, $4, $5::jsonb)`,
+      [actor.userId, targetUserId, input.reasonCode, correlation, JSON.stringify({ status: input.status })]
+    );
+    return updated.rows[0].id;
+  });
+  return json({ userId: result, status: input.status }, { headers: { 'x-correlation-id': correlation, 'cache-control': 'private, no-store' } });
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const id = correlationId(request);
@@ -96,6 +120,8 @@ export default {
       }
       const moderation = url.pathname.match(/^\/api\/admin\/moderation\/cases\/([^/]+)\/decision$/);
       if (request.method === 'POST' && moderation) return decideModeration(request, env, actor, moderation[1], id);
+      const accountStatus = url.pathname.match(/^\/api\/admin\/users\/([^/]+)\/status$/);
+      if (request.method === 'POST' && accountStatus) return updateAccountStatus(request, env, actor, accountStatus[1], id);
       return json({ error: 'not_found', correlationId: id }, { status: 404 });
     } catch (error) {
       const code = error instanceof Error ? error.message : 'admin_request_failed';
