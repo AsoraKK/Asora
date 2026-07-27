@@ -129,3 +129,23 @@ after the provider dashboard reported the temporary extension outage.
   passed.
 - The draft implementation remains pushed on branch
   `codex/cloudflare-planetscale-provisioning`; production gates remain closed.
+
+## Superseding provider refresh — 2026-07-28
+
+- PlanetScale MCP re-read confirms database `lythaus-core` is `ready`, plan
+  `scaler_pro`, Cloudflare-billed through account
+  `e5b7ae46e04698f507b7e4b3d4ef1af0`, with exactly `main` and `development`
+  branches in Frankfurt. No write or DDL was issued.
+- Cloudflare MCP read-only access is currently healthy for the shared account.
+  The account contains active Workers Paid, R2 Paid and Workers PlanetScale
+  subscriptions, but it remains a mixed-use account and is not the required
+  dedicated Lythaus production account.
+- The shared account contains only the existing `lythaus-core-fresh`
+  Hyperdrive configuration plus synthetic development resources. No native
+  production Worker was deployed and no production binding was provisioned.
+- The earlier Cloudflare API `10000` authentication observation is superseded
+  for account and zone reads by this refresh; it remains unresolved for any
+  endpoint not revalidated in this read-only check.
+- Gate 1 remains blocked by account isolation and the owner Azure
+  data-disposition decision. Gates 2–5 remain gated by benchmark, extension,
+  credential, deployment and recovery evidence.
