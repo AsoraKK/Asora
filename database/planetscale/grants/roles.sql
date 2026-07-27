@@ -4,10 +4,16 @@
 -- lythaus_runtime, lythaus_admin, lythaus_jobs and lythaus_privacy must be
 -- non-owning login roles. lythaus_migrations is the only DDL-capable role.
 
+ALTER ROLE lythaus_runtime NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+ALTER ROLE lythaus_admin NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+ALTER ROLE lythaus_jobs NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+ALTER ROLE lythaus_privacy NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+ALTER ROLE lythaus_migrations NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+
 REVOKE ALL ON ALL TABLES IN SCHEMA identity, content, social, feed, moderation, privacy, trust, media, editorial, system FROM PUBLIC;
 REVOKE ALL ON ALL SEQUENCES IN SCHEMA identity, content, social, feed, moderation, privacy, trust, media, editorial, system FROM PUBLIC;
 
-GRANT CONNECT ON DATABASE postgres TO lythaus_runtime, lythaus_admin, lythaus_jobs, lythaus_privacy;
+GRANT CONNECT ON DATABASE postgres TO lythaus_runtime, lythaus_admin, lythaus_jobs, lythaus_privacy, lythaus_migrations;
 
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA identity, content, social, feed, moderation, privacy, trust, media, editorial, system TO lythaus_runtime, lythaus_admin, lythaus_jobs, lythaus_privacy;
 

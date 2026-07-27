@@ -1,0 +1,32 @@
+{
+  "project": "lythaus",
+  "production": {
+    "accountIdEnv": "CLOUDFLARE_PRODUCTION_ACCOUNT_ID",
+    "zoneIdEnv": "CLOUDFLARE_PRODUCTION_ZONE_ID",
+    "requiredEnvironment": "production",
+    "sharedAccountMustDiffer": true,
+    "productionOnlyResourceSuffix": ""
+  },
+  "preproduction": {
+    "accountId": "e5b7ae46e04698f507b7e4b3d4ef1af0",
+    "zoneId": "7bc572c8b7cd3c00be9c655176c29382",
+    "resourceSuffix": "-dev",
+    "syntheticDataOnly": true
+  },
+  "approvedProductionHosts": [
+    "api.lythaus.co",
+    "admin-api.lythaus.co"
+  ],
+  "forbiddenHostFragments": [
+    "azurewebsites.net",
+    "asora.co.za",
+    "workers.dev",
+    "pages.dev",
+    "r2.dev"
+  ],
+  "requiredWorkers": [
+    "apps/lythaus-public-api/wrangler.jsonc",
+    "apps/lythaus-admin-api/wrangler.jsonc",
+    "apps/lythaus-jobs/wrangler.jsonc"
+  ]
+}

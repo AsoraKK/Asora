@@ -50,3 +50,36 @@ application records.
 | 4 | IN PROGRESS | Native Worker code and exact-head checks pass | Development database schema and live Worker deployment |
 | 5 | BLOCKED | No production data or cutover performed | Independent backup, restore drills, domains, rollback rehearsal |
 
+## Live MCP recheck — 2026-07-28
+
+- PlanetScale organization plan: `developer`; payment information is not yet
+  valid and the database remains Cloudflare-billed through the shared account.
+- Database branches currently visible: `main` (production) and `development`
+  (non-production). No permanent `ai-development` database branch exists.
+- `main`: Frankfurt, PS-5 ARM, zero replicas, PostgreSQL 17.10, zero
+  application tables.
+- `development`: Frankfurt, PS-DEV ARM, zero replicas, PostgreSQL 18.4, zero
+  application tables.
+- Available autoscaling tiers include PS-5 ARM at US$15/month plus US$5/month
+  per replica and PS-10 ARM at US$30/month plus US$10/month per replica;
+  storage, backup, egress, and regional adjustments remain unpriced here.
+- Read-only SQL on `development` confirmed `postgis_installed=false`,
+  `pgcrypto_installed=false`, `pg_trgm_installed=false`, and
+  `unaccent_installed=false`. The MCP session uses an ephemeral read-only role;
+  its role catalog does not expose the five branch login roles, so role
+  provisioning remains evidenced by the PlanetScale role-management API/CLI.
+
+No write or DDL operation was issued against `main`. No PostGIS retry was made
+after the provider dashboard reported the temporary extension outage.
+
+## Native Worker validation
+
+- `wrangler` version `4.114.0` is installed.
+- Public API development `wrangler deploy --dry-run --env development` passed;
+  the bundle resolved the synthetic KV, R2, queue, email, and placeholder
+  Hyperdrive bindings without deploying a Worker.
+- `wrangler whoami` remains blocked because the local token expired and cannot
+  refresh in the non-interactive shell. No live Worker deployment was claimed.
+- The new scope validator and native Worker validator both pass in
+  pre-production mode. Production mode correctly fails closed until protected
+  dedicated-account identifiers and the production environment are supplied.

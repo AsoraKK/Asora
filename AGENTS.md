@@ -26,8 +26,12 @@ Prefer `development` with synthetic data or an ephemeral `ci-*` branch for exper
 Initial verification prompt: use PlanetScale MCP to confirm access to
 `lythaus/lythaus-core`, list all branches, and inspect the schema. Do not
 execute writes or DDL.
-Verified 2026-07-27: only the production `main` branch currently exists;
-`development` is planned and must not be assumed available until provisioned.
+Verified 2026-07-28 through PlanetScale CLI and MCP: `main` and the synthetic
+`development` branch exist. `development` is a ready Frankfurt PostgreSQL 18.4
+PS-DEV branch with five provisioned login roles, but its required extensions and
+application schema are not yet installed because PlanetScale has temporarily
+disabled PostGIS. Do not treat it as production-ready until migrations, grants,
+Hyperdrive credentials, and negative permission tests pass.
 
 The current database is an empty Frankfurt PS-5 PostgreSQL 17.10 branch billed
 through the shared Cloudflare account. Do not apply the native PostgreSQL 18
