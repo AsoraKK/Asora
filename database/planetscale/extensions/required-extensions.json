@@ -1,0 +1,32 @@
+{
+  "engine": "postgresql",
+  "required": [
+    {
+      "name": "pgcrypto",
+      "purpose": "cryptographic helpers and UUID generation fallback",
+      "launchFeature": "identity and encrypted-field support"
+    },
+    {
+      "name": "pg_trgm",
+      "purpose": "fuzzy handle and public-search indexes",
+      "launchFeature": "handle discovery"
+    },
+    {
+      "name": "unaccent",
+      "purpose": "accent-insensitive search normalization",
+      "launchFeature": "public-search normalization"
+    },
+    {
+      "name": "postgis",
+      "purpose": "consent-bounded place and region queries",
+      "launchFeature": "geographic discovery"
+    }
+  ],
+  "failurePolicy": "Do not mark the database production-ready or enable dependent features until every required extension is installed and verified.",
+  "providerEvidence": {
+    "checkedAt": "2026-07-28",
+    "branch": "development",
+    "status": "blocked",
+    "reason": "PlanetScale extension catalog currently omits all four required extensions and the provider has temporarily disabled PostGIS."
+  }
+}

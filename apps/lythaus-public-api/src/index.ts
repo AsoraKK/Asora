@@ -42,6 +42,13 @@ function requireAuthSecrets(env: Env): { pepper: string; encryptionKey: string; 
   return { pepper: env.AUTH_PASSWORD_PEPPER_V1, encryptionKey: env.PII_ENCRYPTION_KEY_V1, hmacKey: env.PII_HMAC_KEY_V1, privateKey: env.JWT_PRIVATE_KEY, keyId: env.JWT_KEY_ID };
 }
 
+function hashConfiguredPassword(env: Env, password: string, pepper: string): PasswordHash {
+  return hashPassword(password, pepper, {
+    fallbackToScrypt: env.PASSWORD_HASH_ALLOW_SCRYPT_FALLBACK === 'true',
+    pepperVersion: 'v1',
+  });
+}
+
 async function verifyTurnstile(env: Env, token: unknown): Promise<void> {
   if (env.TURNSTILE_REQUIRED !== 'true') return;
   if (!env.TURNSTILE_SECRET_KEY || typeof token !== 'string' || token.length < 10) throw new Error('turnstile_required');
@@ -149,7 +156,7 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
     if (account) throw new Error('account_exists');
     const userId = uuidv7();
     const encrypted = await encryptField(email, secrets.encryptionKey, 'v1');
-    const passwordHash = hashPassword(password, secrets.pepper, { fallbackToScrypt: true });
+    const passwordHash = hashConfiguredPassword(env, password, secrets.pepper);
     const verificationToken = randomToken(32);
     await transaction(env.DB_APP_FRESH, async (client) => {
       await client.query(`INSERT INTO identity.users (id) VALUES ($1)`, [userId]);
@@ -317,7 +324,7 @@ async function completePasswordReset(request: Request, env: Env): Promise<Respon
   if (!token || token.length < 32) throw new Error('reset_token_invalid');
   if (password.length < 12 || password.length > 128) throw new Error('invalid_password');
   const secrets = requireAuthSecrets(env);
-  const passwordHash = hashPassword(password, secrets.pepper, { fallbackToScrypt: true });
+  const passwordHash = hashConfiguredPassword(env, password, secrets.pepper);
   await transaction(env.DB_APP_FRESH, async (client) => {
     const found = await client.query<{ user_id: string }>(`SELECT user_id FROM identity.password_reset_tokens WHERE token_hash = decode($1, 'base64') AND consumed_at IS NULL AND expires_at > now()`, [hashResetToken(token)]);
     if (!found.rows[0]) throw new Error('reset_token_invalid');

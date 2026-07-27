@@ -94,6 +94,14 @@ test('native authentication supports account-level token revocation and social c
   assert.match(admin, /account\.status_changed/);
 });
 
+test('password hashing fallback is explicitly environment-gated', () => {
+  const source = fs.readFileSync(path.join(root, 'apps/lythaus-public-api/src/index.ts'), 'utf8');
+  assert.match(source, /PASSWORD_HASH_ALLOW_SCRYPT_FALLBACK === 'true'/);
+  assert.match(source, /fallbackToScrypt:/);
+  const config = fs.readFileSync(path.join(root, 'apps/lythaus-public-api/wrangler.jsonc'), 'utf8');
+  assert.match(config, /"PASSWORD_HASH_ALLOW_SCRYPT_FALLBACK": "false"/);
+});
+
 test('admin verifies Access JWTs independently', () => {
   const source = fs.readFileSync(path.join(root, 'apps/lythaus-admin-api/src/index.ts'), 'utf8');
   assert.match(source, /createRemoteJWKSet/);

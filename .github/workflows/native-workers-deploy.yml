@@ -33,11 +33,21 @@ jobs:
       - name: Validate provisioned production configuration
         env:
           CLOUDFLARE_PRODUCTION_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_PRODUCTION_ACCOUNT_ID }}
+          CLOUDFLARE_PRODUCTION_ZONE_ID: ${{ secrets.CLOUDFLARE_PRODUCTION_ZONE_ID }}
           CLOUDFLARE_SHARED_ACCOUNT_ID: ${{ vars.CLOUDFLARE_SHARED_ACCOUNT_ID }}
+          CLOUDFLARE_ENVIRONMENT: production
         run: npm run validate:native-workers:provisioned
+      - name: Validate production account and zone scope
+        env:
+          CLOUDFLARE_PRODUCTION_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_PRODUCTION_ACCOUNT_ID }}
+          CLOUDFLARE_PRODUCTION_ZONE_ID: ${{ secrets.CLOUDFLARE_PRODUCTION_ZONE_ID }}
+          CLOUDFLARE_SHARED_ACCOUNT_ID: ${{ vars.CLOUDFLARE_SHARED_ACCOUNT_ID }}
+          CLOUDFLARE_ENVIRONMENT: production
+        run: npm run validate:native-scope:production
       - name: Validate migrations and generated Worker types
         run: |
           npm run validate:planetscale-migrations
+          npm run validate:planetscale-extensions
           npx wrangler types --check apps/lythaus-public-api/src/worker-configuration.d.ts --config apps/lythaus-public-api/wrangler.jsonc --env development
           npx wrangler types --check apps/lythaus-admin-api/src/worker-configuration.d.ts --config apps/lythaus-admin-api/wrangler.jsonc --env development
           npx wrangler types --check apps/lythaus-jobs/src/worker-configuration.d.ts --config apps/lythaus-jobs/wrangler.jsonc --env development

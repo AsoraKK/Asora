@@ -31,6 +31,7 @@ export interface EnvBindings {
   MEDIA_QUARANTINE_BUCKET?: string;
   MEDIA_APPROVED_BUCKET?: string;
   AUTH_PASSWORD_PEPPER_V1?: string;
+  PASSWORD_HASH_ALLOW_SCRYPT_FALLBACK?: string;
   JWT_PRIVATE_KEY?: string;
   JWT_KEY_ID?: string;
   JWT_PUBLIC_JWKS?: string;

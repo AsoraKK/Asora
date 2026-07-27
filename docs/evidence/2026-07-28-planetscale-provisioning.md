@@ -72,6 +72,17 @@ application records.
 No write or DDL operation was issued against `main`. No PostGIS retry was made
 after the provider dashboard reported the temporary extension outage.
 
+## Repository acceptance contracts
+
+- `database/planetscale/extensions/required-extensions.json` records the
+  required `postgis`, `pgcrypto`, `pg_trgm`, and `unaccent` capability set.
+- `scripts/validate-planetscale-extensions.mjs` validates migration references
+  locally and fails closed when live catalog evidence is required but absent or
+  missing a required extension.
+- `docs/architecture/password-hashing-adr.md` records Argon2id as the default;
+  scrypt fallback is disabled in production unless benchmark evidence and an
+  approved decision explicitly enable it.
+
 ## Native Worker validation
 
 - `wrangler` version `4.114.0` is installed.

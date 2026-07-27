@@ -6,6 +6,8 @@ on:
     paths:
       - 'database/planetscale/**'
       - 'scripts/validate-migration-baseline.mjs'
+      - 'scripts/validate-planetscale-extensions.mjs'
+      - 'database/planetscale/extensions/**'
       - 'package.json'
       - 'package-lock.json'
   push:
@@ -13,6 +15,8 @@ on:
     paths:
       - 'database/planetscale/**'
       - 'scripts/validate-migration-baseline.mjs'
+      - 'scripts/validate-planetscale-extensions.mjs'
+      - 'database/planetscale/extensions/**'
 
 permissions:
   contents: read
@@ -28,4 +32,5 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run validate:planetscale-migrations
+      - run: npm run validate:planetscale-extensions
       - run: npm run test:native-architecture
