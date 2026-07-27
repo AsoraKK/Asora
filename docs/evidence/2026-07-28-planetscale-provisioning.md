@@ -22,16 +22,18 @@ application records.
 - User-table count before migrations: `0`.
 - The branch is synthetic development only and is not production-ready.
 
-## Extension blocker
+## Extension and migration history
 
 - The migration preflight succeeded on `development`.
 - Migration `0001_extensions_and_schemas.sql` stopped at `CREATE EXTENSION postgis`.
 - PlanetScale SQL admin sessions are intentionally non-superuser and returned
   `permission denied to create extension "postgis"`.
-- The PlanetScale dashboard currently reports PostGIS and related extensions
-  temporarily disabled due to an operational issue.
-- Required next action: wait for PlanetScale to restore PostGIS, then enable it
-  through the supported dashboard/default-role path and rerun the baseline.
+- The provider temporarily reported PostGIS unavailable during the first
+  migration attempt; no application schema was created then.
+- A subsequent read-only catalog probe now reports all four required extensions
+  (`postgis`, `pgcrypto`, `pg_trgm`, and `unaccent`) as available, but none is
+  installed. Installing them and applying the baseline still requires an
+  explicitly approved development-branch DDL operation.
 - No application tables or user data were created on `development`.
 
 ## Reversible attempts
@@ -46,7 +48,7 @@ application records.
 | --- | --- | --- | --- |
 | 1 | BLOCKED | Shared Cloudflare account; dedicated-account API remains forbidden | Dedicated production account and signed Azure disposition |
 | 2 | IN PROGRESS | PG18.4 Frankfurt development branch is ready | Region/tier benchmark, production PG18 HA topology, replicas and cost approval |
-| 3 | BLOCKED | CLI OAuth and migration preflight pass | PostGIS enablement, baseline migrations, roles/grants and Hyperdrive credentials |
+| 3 | BLOCKED | CLI OAuth and required extensions now appear available | Approved development DDL, baseline migrations, grants, roles, negative tests and Hyperdrive credentials |
 | 4 | IN PROGRESS | Native Worker code and exact-head checks pass | Development database schema and live Worker deployment |
 | 5 | BLOCKED | No production data or cutover performed | Independent backup, restore drills, domains, rollback rehearsal |
 
@@ -63,14 +65,14 @@ application records.
 - Available autoscaling tiers include PS-5 ARM at US$15/month plus US$5/month
   per replica and PS-10 ARM at US$30/month plus US$10/month per replica;
   storage, backup, egress, and regional adjustments remain unpriced here.
-- Read-only SQL on `development` confirmed `postgis_installed=false`,
-  `pgcrypto_installed=false`, `pg_trgm_installed=false`, and
-  `unaccent_installed=false`. The MCP session uses an ephemeral read-only role;
+- Read-only SQL on `development` confirmed required extensions are available in
+  `pg_available_extensions` but `installed_required_extensions` is null. The MCP
+  session uses an ephemeral read-only role;
   its role catalog does not expose the five branch login roles, so role
   provisioning remains evidenced by the PlanetScale role-management API/CLI.
 
-No write or DDL operation was issued against `main`. No PostGIS retry was made
-after the provider dashboard reported the temporary extension outage.
+No write or DDL operation was issued against `main` or `development` during
+this recheck. Development DDL remains pending explicit human approval.
 
 ## Repository acceptance contracts
 
@@ -149,6 +151,15 @@ after the provider dashboard reported the temporary extension outage.
 - Gate 1 remains blocked by account isolation and the owner Azure
   data-disposition decision. Gates 2–5 remain gated by benchmark, extension,
   credential, deployment and recovery evidence.
+
+## Extension availability refresh — 2026-07-28
+
+- PlanetScale read-only SQL reports PostgreSQL `18.4`, with
+  `pg_trgm,pgcrypto,postgis,unaccent` available in the extension catalog and
+  none installed.
+- The provider-side availability outage is no longer the blocker. The next
+  operation is still DDL on the synthetic `development` branch; no such query
+  has been executed pending explicit human approval.
 
 ## Exact-head CI refresh — 2026-07-28
 

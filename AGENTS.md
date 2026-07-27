@@ -28,10 +28,11 @@ Initial verification prompt: use PlanetScale MCP to confirm access to
 execute writes or DDL.
 Verified 2026-07-28 through PlanetScale CLI and MCP: `main` and the synthetic
 `development` branch exist. `development` is a ready Frankfurt PostgreSQL 18.4
-PS-DEV branch with five provisioned login roles, but its required extensions and
-application schema are not yet installed because PlanetScale has temporarily
-disabled PostGIS. Do not treat it as production-ready until migrations, grants,
-Hyperdrive credentials, and negative permission tests pass.
+PS-DEV branch with five provisioned login roles. The required extensions are now
+available in the catalog but remain uninstalled, and the application schema is
+not yet present. Do not treat it as production-ready until the approved
+development migrations, grants, Hyperdrive credentials, and negative
+permission tests pass.
 
 The current database is an empty Frankfurt PS-5 PostgreSQL 17.10 branch billed
 through the shared Cloudflare account. Do not apply the native PostgreSQL 18
