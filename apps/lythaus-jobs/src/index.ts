@@ -16,9 +16,13 @@ interface Env extends EnvBindings {
   MEDIA_QUARANTINE?: NonNullable<EnvBindings['MEDIA_QUARANTINE']>;
   MEDIA_APPROVED?: NonNullable<EnvBindings['MEDIA_APPROVED']>;
   IMAGES?: NonNullable<EnvBindings['IMAGES']>;
+  PRIVATE_EXPORTS?: NonNullable<EnvBindings['PRIVATE_EXPORTS']>;
+  ACCOUNT_DELETE?: WorkflowBinding<{ subjectId: string }>;
+  ACCOUNT_EXPORT?: WorkflowBinding<{ subjectId: string }>;
 }
 
 interface Queue { send(body: unknown, options?: { contentType?: string }): Promise<void>; }
+interface WorkflowBinding<T> { create(options: { id: string; params: T }): Promise<unknown>; }
 
 interface QueueMessage {
   id: string;
@@ -122,7 +126,7 @@ async function processMessage(message: QueueMessage, env: Env): Promise<void> {
   if (eventType === 'media.upload.finalised') await processMediaUpload(message, env);
   if (eventType === 'privacy.request.created') {
     const payload = (message.body.payload ?? {}) as { requestId?: string; requestType?: string };
-    const subjectId = message.body.actorId;
+    const subjectId = typeof message.body.actorId === 'string' ? message.body.actorId : undefined;
     if (!payload.requestId || !subjectId || !['export', 'delete', 'rectify'].includes(payload.requestType ?? '')) throw new Error('privacy_event_invalid');
     await query(env.DB_PRIVACY_FRESH,
       `INSERT INTO privacy.requests (id, subject_id, request_type)
@@ -132,6 +136,12 @@ async function processMessage(message: QueueMessage, env: Env): Promise<void> {
       `INSERT INTO privacy.request_events (id, request_id, event_type, metadata)
        VALUES ($1, $2, 'received', $3::jsonb)
        ON CONFLICT (id) DO NOTHING`, [eventId, payload.requestId, JSON.stringify({ eventId })]);
+    if (payload.requestType === 'delete' && env.ACCOUNT_DELETE) {
+      await env.ACCOUNT_DELETE.create({ id: `privacy-delete-${payload.requestId}`, params: { subjectId } });
+    }
+    if (payload.requestType === 'export' && env.ACCOUNT_EXPORT) {
+      await env.ACCOUNT_EXPORT.create({ id: `privacy-export-${payload.requestId}`, params: { subjectId } });
+    }
   }
   await query(env.DB_JOBS_FRESH,
     `INSERT INTO system.consumer_inbox (consumer_name, event_id, event_type, payload)
@@ -201,10 +211,130 @@ export default {
 
 export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: string }> {
   async run(event: WorkflowEvent<{ subjectId: string }>, step: WorkflowStep): Promise<{ subjectId: string; state: string }> {
-    await step.do('record-deletion-start', async () => {
-      await query(this.env.DB_PRIVACY_FRESH, `INSERT INTO privacy.request_events (request_id, event_type, metadata) SELECT id, 'workflow_started', $1::jsonb FROM privacy.requests WHERE subject_id = $2 AND request_type = 'delete' AND state <> 'completed' ORDER BY created_at DESC LIMIT 1`, [JSON.stringify({ subjectId: event.payload.subjectId }), event.payload.subjectId]);
+    const subjectId = event.payload.subjectId;
+    const requestId = await step.do('resolve-request', async () => {
+      const result = await query<{ id: string }>(this.env.DB_PRIVACY_FRESH,
+        `SELECT id FROM privacy.requests WHERE subject_id = $1 AND request_type = 'delete' AND state NOT IN ('completed', 'blocked') ORDER BY created_at DESC LIMIT 1`, [subjectId]);
+      if (!result.rows[0]) throw new Error('privacy_delete_request_not_found');
+      await query(this.env.DB_PRIVACY_FRESH,
+        `INSERT INTO privacy.request_events (request_id, event_type, metadata) VALUES ($1, 'workflow_started', $2::jsonb)`,
+        [result.rows[0].id, JSON.stringify({ subjectId })]);
+      return result.rows[0].id;
+    });
+
+    await step.do('lock-account-and-revoke-sessions', async () => {
+      await transaction(this.env.DB_PRIVACY_FRESH, async (client) => {
+        await client.query(`UPDATE identity.users SET status = 'locked', updated_at = now() WHERE id = $1 AND status IN ('active', 'locked')`, [subjectId]);
+        await client.query(`UPDATE identity.auth_sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [subjectId]);
+        await client.query(`UPDATE identity.refresh_token_families SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [subjectId]);
+      });
       return true;
     });
-    return { subjectId: event.payload.subjectId, state: 'started' };
+
+    const hold = await step.do('evaluate-legal-holds', async () => {
+      const result = await query<{ id: string }>(this.env.DB_PRIVACY_FRESH, `SELECT id FROM privacy.legal_holds WHERE subject_id = $1 AND active`, [subjectId]);
+      if (result.rows[0]) {
+        await query(this.env.DB_PRIVACY_FRESH,
+          `UPDATE privacy.requests SET state = 'blocked' WHERE id = $1 AND state <> 'completed'`, [requestId]);
+        await query(this.env.DB_PRIVACY_FRESH,
+          `INSERT INTO privacy.request_events (request_id, event_type, metadata) VALUES ($1, 'blocked_legal_hold', $2::jsonb)`,
+          [requestId, JSON.stringify({ legalHoldId: result.rows[0].id })]);
+        return true;
+      }
+      return false;
+    });
+    if (hold) return { subjectId, state: 'blocked' };
+
+    await step.do('redact-authoritative-content', async () => {
+      await transaction(this.env.DB_JOBS_FRESH, async (client) => {
+        await client.query(`UPDATE content.comments SET body = '[deleted]', moderation_state = 'blocked' WHERE author_id = $1`, [subjectId]);
+        await client.query(`UPDATE content.posts SET body = '[deleted]', visibility = 'private', moderation_state = 'blocked', published_at = NULL, updated_at = now() WHERE author_id = $1`, [subjectId]);
+        await client.query(`DELETE FROM social.follows WHERE follower_id = $1 OR followed_id = $1`, [subjectId]);
+        await client.query(`DELETE FROM social.reactions WHERE user_id = $1`, [subjectId]);
+        await client.query(`DELETE FROM social.bookmarks WHERE user_id = $1`, [subjectId]);
+      });
+      await transaction(this.env.DB_PRIVACY_FRESH, async (client) => {
+        await client.query(`DELETE FROM identity.provider_links WHERE user_id = $1`, [subjectId]);
+        await client.query(`DELETE FROM identity.email_credentials WHERE user_id = $1`, [subjectId]);
+        await client.query(`DELETE FROM identity.handles WHERE user_id = $1`, [subjectId]);
+        await client.query(`DELETE FROM social.profile_private_fields WHERE user_id = $1`, [subjectId]);
+        await client.query(`UPDATE identity.users SET status = 'deleted', display_name = '[deleted]', deleted_at = COALESCE(deleted_at, now()), updated_at = now() WHERE id = $1`, [subjectId]);
+      });
+      return true;
+    });
+
+    await step.do('purge-media-and-mark-locator', async () => {
+      if (!this.env.MEDIA_APPROVED || !this.env.MEDIA_QUARANTINE) throw new Error('media_purge_not_configured');
+      const objects = await query<{ object_key: string }>(this.env.DB_JOBS_FRESH, `SELECT object_key FROM media.objects WHERE owner_id = $1 AND deleted_at IS NULL`, [subjectId]);
+      for (const object of objects.rows) await this.env.MEDIA_APPROVED.delete(object.object_key);
+      const uploads = await query<{ object_key: string }>(this.env.DB_JOBS_FRESH, `SELECT object_key FROM media.upload_sessions WHERE user_id = $1 AND status IN ('pending', 'queued')`, [subjectId]);
+      for (const upload of uploads.rows) await this.env.MEDIA_QUARANTINE.delete(upload.object_key);
+      await transaction(this.env.DB_JOBS_FRESH, async (client) => {
+        await client.query(`UPDATE media.objects SET state = 'deleted', deleted_at = COALESCE(deleted_at, now()) WHERE owner_id = $1`, [subjectId]);
+        await client.query(`UPDATE media.upload_sessions SET status = 'expired' WHERE user_id = $1 AND status IN ('pending', 'queued')`, [subjectId]);
+      });
+      await query(this.env.DB_PRIVACY_FRESH,
+        `UPDATE privacy.subject_data_locations SET deletion_state = 'deleted', last_verified_at = now() WHERE subject_id = $1`, [subjectId]);
+      return objects.rows.length + uploads.rows.length;
+    });
+
+    await step.do('complete-request-and-tombstone', async () => {
+      const evidence = new TextEncoder().encode(`${subjectId}:${requestId}:${new Date().toISOString()}`);
+      const digest = await crypto.subtle.digest('SHA-256', evidence);
+      const evidenceHash = Array.from(new Uint8Array(digest), (value) => value.toString(16).padStart(2, '0')).join('');
+      await transaction(this.env.DB_PRIVACY_FRESH, async (client) => {
+        await client.query(`INSERT INTO privacy.deletion_tombstones (subject_id, evidence_hash) VALUES ($1, $2) ON CONFLICT (subject_id) DO UPDATE SET completed_at = now(), evidence_hash = EXCLUDED.evidence_hash`, [subjectId, evidenceHash]);
+        await client.query(`UPDATE privacy.requests SET state = 'completed', completed_at = now() WHERE id = $1`, [requestId]);
+        await client.query(`INSERT INTO privacy.request_events (request_id, event_type, metadata) VALUES ($1, 'completed', $2::jsonb)`, [requestId, JSON.stringify({ evidenceHash })]);
+      });
+      return evidenceHash;
+    });
+    return { subjectId, state: 'completed' };
+  }
+}
+
+export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: string }> {
+  async run(event: WorkflowEvent<{ subjectId: string }>, step: WorkflowStep): Promise<{ subjectId: string; state: string }> {
+    const subjectId = event.payload.subjectId;
+    const exportsBucket = this.env.PRIVATE_EXPORTS;
+    if (!exportsBucket) throw new Error('private_exports_not_configured');
+    const requestId = await step.do('resolve-export-request', async () => {
+      const result = await query<{ id: string }>(this.env.DB_PRIVACY_FRESH,
+        `SELECT id FROM privacy.requests WHERE subject_id = $1 AND request_type = 'export' AND state NOT IN ('completed', 'blocked') ORDER BY created_at DESC LIMIT 1`, [subjectId]);
+      if (!result.rows[0]) throw new Error('privacy_export_request_not_found');
+      await query(this.env.DB_PRIVACY_FRESH,
+        `INSERT INTO privacy.request_events (request_id, event_type, metadata) VALUES ($1, 'workflow_started', $2::jsonb)`,
+        [result.rows[0].id, JSON.stringify({ subjectId })]);
+      return result.rows[0].id;
+    });
+
+    const passport = await step.do('build-data-passport', async () => {
+      const [identity, locations] = await Promise.all([
+        query(this.env.DB_PRIVACY_FRESH, `SELECT id, display_name, status, created_at, deleted_at FROM identity.users WHERE id = $1`, [subjectId]),
+        query(this.env.DB_PRIVACY_FRESH, `SELECT store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class, legal_hold_state, deletion_state, last_verified_at FROM privacy.subject_data_locations WHERE subject_id = $1`, [subjectId]),
+      ]);
+      const [posts, comments, follows] = await Promise.all([
+        query(this.env.DB_JOBS_FRESH, `SELECT id, body, declared_creation_mode, visibility, moderation_state, geo_scope, place_id, published_at, created_at FROM content.posts WHERE author_id = $1 ORDER BY created_at`, [subjectId]),
+        query(this.env.DB_JOBS_FRESH, `SELECT id, post_id, parent_id, body, moderation_state, created_at FROM content.comments WHERE author_id = $1 ORDER BY created_at`, [subjectId]),
+        query(this.env.DB_JOBS_FRESH, `SELECT follower_id, followed_id, created_at FROM social.follows WHERE follower_id = $1 OR followed_id = $1 ORDER BY created_at`, [subjectId]),
+      ]);
+      return { schemaVersion: 'lythaus-data-passport-v1', generatedAt: new Date().toISOString(), profile: identity.rows[0] ?? null, posts: posts.rows, comments: comments.rows, follows: follows.rows, subjectDataLocations: locations.rows };
+    });
+
+    await step.do('store-export-and-complete-request', async () => {
+      const body = JSON.stringify(passport);
+      const bytes = new TextEncoder().encode(body);
+      const digest = await crypto.subtle.digest('SHA-256', bytes);
+      const packageHash = Array.from(new Uint8Array(digest), (value) => value.toString(16).padStart(2, '0')).join('');
+      const objectKey = `exports/${subjectId}/${requestId}.json`;
+      await exportsBucket.put(objectKey, bytes, { httpMetadata: { contentType: 'application/json' } });
+      await transaction(this.env.DB_PRIVACY_FRESH, async (client) => {
+        await client.query(`INSERT INTO privacy.export_manifests (request_id, object_key, package_hash, expires_at) VALUES ($1, $2, $3, now() + interval '7 days') ON CONFLICT DO NOTHING`, [requestId, objectKey, packageHash]);
+        await client.query(`UPDATE privacy.requests SET state = 'completed', completed_at = now() WHERE id = $1`, [requestId]);
+        await client.query(`INSERT INTO privacy.request_events (request_id, event_type, metadata) VALUES ($1, 'completed', $2::jsonb)`, [requestId, JSON.stringify({ objectKey, packageHash })]);
+      });
+      return packageHash;
+    });
+    return { subjectId, state: 'completed' };
   }
 }

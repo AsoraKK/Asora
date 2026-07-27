@@ -45,7 +45,8 @@
   },
   "triggers": { "crons": ["*/15 * * * *"] },
   "workflows": [
-    { "name": "lythaus-account-delete", "binding": "ACCOUNT_DELETE", "class_name": "AccountDeleteWorkflow" }
+    { "name": "lythaus-account-delete", "binding": "ACCOUNT_DELETE", "class_name": "AccountDeleteWorkflow" },
+    { "name": "lythaus-account-export", "binding": "ACCOUNT_EXPORT", "class_name": "AccountExportWorkflow" }
   ],
   "env": {
     "development": {
@@ -85,7 +86,8 @@
         ]
       },
       "workflows": [
-        { "name": "lythaus-account-delete-dev", "binding": "ACCOUNT_DELETE", "class_name": "AccountDeleteWorkflow" }
+        { "name": "lythaus-account-delete-dev", "binding": "ACCOUNT_DELETE", "class_name": "AccountDeleteWorkflow" },
+        { "name": "lythaus-account-export-dev", "binding": "ACCOUNT_EXPORT", "class_name": "AccountExportWorkflow" }
       ]
     }
   }
