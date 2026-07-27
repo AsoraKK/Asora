@@ -133,6 +133,13 @@ test('Cloudflare scope manifest forbids known shared and unrelated resources', (
   assert.ok(manifest.approvedLegacyResourcePrefixes.includes('asora-azure-compat'));
 });
 
+test('native Workers have an explicit Azure dependency scan', () => {
+  const script = fs.readFileSync(path.join(root, 'scripts/validate-native-azure-dependencies.mjs'), 'utf8');
+  assert.match(script, /azurewebsites/);
+  assert.match(script, /CosmosClient/);
+  assert.match(script, /applicationinsights/);
+});
+
 test('jobs Worker exposes durable privacy and appeal workflows', () => {
   const config = fs.readFileSync(path.join(root, 'apps/lythaus-jobs/wrangler.jsonc'), 'utf8');
   const source = fs.readFileSync(path.join(root, 'apps/lythaus-jobs/src/index.ts'), 'utf8');

@@ -44,6 +44,7 @@
     "validate:native-workers:provisioned": "node scripts/validate-native-worker-config.mjs --require-provisioned",
     "validate:native-scope": "node scripts/validate-native-scope.mjs",
     "validate:native-scope:production": "node scripts/validate-native-scope.mjs --production",
+    "validate:native-azure-dependencies": "node scripts/validate-native-azure-dependencies.mjs",
     "typecheck:native": "tsc -p tsconfig.native.json --noEmit",
     "test:native-architecture": "node --test scripts/tests/native-architecture-invariants.test.js",
     "validate:planetscale-migrations": "node scripts/validate-migration-baseline.mjs",
