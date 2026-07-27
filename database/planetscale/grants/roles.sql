@@ -29,7 +29,8 @@ GRANT SELECT, DELETE ON social.follows, social.reactions, social.bookmarks TO ly
 GRANT SELECT, INSERT ON system.audit_events TO lythaus_jobs;
 
 GRANT USAGE ON SCHEMA privacy, media, identity, social, system TO lythaus_privacy;
-GRANT SELECT, INSERT, UPDATE ON privacy.requests, privacy.request_events, privacy.legal_holds, privacy.retention_rules, privacy.subject_data_locations, privacy.deletion_tombstones, privacy.export_manifests, media.objects, media.storage_ledger, media.ownership, media.deletion_events, identity.users, identity.account_events TO lythaus_privacy;
+GRANT SELECT, INSERT, UPDATE ON privacy.requests, privacy.request_events, privacy.legal_holds, privacy.retention_rules, privacy.subject_data_locations, privacy.deletion_tombstones, privacy.export_manifests, media.objects, media.storage_ledger, media.ownership, media.deletion_events, identity.users, identity.account_events, identity.auth_sessions, identity.refresh_token_families TO lythaus_privacy;
+GRANT DELETE ON identity.provider_links, identity.email_credentials, identity.handles, identity.auth_sessions, identity.refresh_token_families TO lythaus_privacy;
 GRANT SELECT, DELETE ON social.profile_private_fields TO lythaus_privacy;
 GRANT SELECT, INSERT ON system.audit_events TO lythaus_privacy;
 
