@@ -4,12 +4,14 @@ import type { CreatePostInput } from '@lythaus/contracts';
 import { createPresignedPutUrl, ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES, type AllowedImageType } from '@lythaus/media';
 import { correlationId, json, logEvent } from '@lythaus/observability';
 import { encryptField, hashPassword, hashResetToken, hmacLookup, randomToken, signAccessToken, uuidv7, verifyAccessToken, verifyPassword, type PasswordHash, type Principal } from '@lythaus/security';
+import { createRemoteJWKSet, jwtVerify } from 'jose';
 
 interface Env extends EnvBindings {
   DB_APP_FRESH: HyperdriveBinding;
   MEDIA_QUARANTINE: NonNullable<EnvBindings['MEDIA_QUARANTINE']>;
   MODERATION_QUEUE: NonNullable<EnvBindings['MODERATION_QUEUE']>;
   R2_ACCOUNT_ID: string;
+  LYTHAUS_CONFIG?: NonNullable<EnvBindings['LYTHAUS_CONFIG']>;
 }
 
 interface EmailAuthInput {
@@ -22,6 +24,14 @@ function normalizeEmail(value: string): string {
   const email = value.trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 320) throw new Error('invalid_email');
   return email;
+}
+
+function base64Url(bytes: Uint8Array): string {
+  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+async function pkceChallenge(verifier: string): Promise<string> {
+  return base64Url(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))));
 }
 
 function requireAuthSecrets(env: Env): { pepper: string; encryptionKey: string; hmacKey: string; privateKey: string; keyId: string } {
@@ -144,6 +154,75 @@ async function logout(request: Request, env: Env): Promise<Response> {
   await query(env.DB_APP_FRESH, `UPDATE identity.auth_sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [user.userId]);
   await query(env.DB_APP_FRESH, `UPDATE identity.refresh_token_families SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [user.userId]);
   return privateResponse(request, env, { loggedOut: true });
+}
+
+async function googleAuthStart(request: Request, env: Env): Promise<Response> {
+  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_REDIRECT_URI || !env.LYTHAUS_CONFIG) throw new Error('google_not_configured');
+  const state = randomToken(24);
+  const verifier = randomToken(32);
+  await env.LYTHAUS_CONFIG.put(`oauth:google:${state}`, JSON.stringify({ verifier, createdAt: Date.now() }), { expirationTtl: 600 });
+  const authorization = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+  authorization.search = new URLSearchParams({
+    client_id: env.GOOGLE_CLIENT_ID,
+    redirect_uri: env.GOOGLE_REDIRECT_URI,
+    response_type: 'code',
+    scope: 'openid email profile',
+    state,
+    access_type: 'offline',
+    prompt: 'select_account',
+    code_challenge: await pkceChallenge(verifier),
+    code_challenge_method: 'S256',
+  }).toString();
+  return new Response(null, { status: 302, headers: { location: authorization.toString(), 'cache-control': 'no-store' } });
+}
+
+async function googleAuthCallback(request: Request, env: Env): Promise<Response> {
+  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !env.GOOGLE_REDIRECT_URI || !env.GOOGLE_JWKS_URL || !env.LYTHAUS_CONFIG || !env.PII_HMAC_KEY_V1 || !env.PII_ENCRYPTION_KEY_V1 || !env.JWT_PRIVATE_KEY || !env.JWT_KEY_ID) throw new Error('google_not_configured');
+  const url = new URL(request.url);
+  const state = url.searchParams.get('state');
+  const code = url.searchParams.get('code');
+  if (!state || !code) throw new Error('google_callback_invalid');
+  const stateValue = await env.LYTHAUS_CONFIG.get(`oauth:google:${state}`);
+  if (!stateValue) throw new Error('google_state_invalid');
+  const stateRecord = typeof stateValue === 'string' ? JSON.parse(stateValue) as { verifier?: string } : null;
+  if (!stateRecord?.verifier) throw new Error('google_state_invalid');
+  await env.LYTHAUS_CONFIG.delete(`oauth:google:${state}`);
+  const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ code, client_id: env.GOOGLE_CLIENT_ID, client_secret: env.GOOGLE_CLIENT_SECRET, redirect_uri: env.GOOGLE_REDIRECT_URI, grant_type: 'authorization_code', code_verifier: stateRecord.verifier }),
+  });
+  if (!tokenResponse.ok) throw new Error('google_code_exchange_failed');
+  const tokenPayload = await tokenResponse.json() as { id_token?: string };
+  if (!tokenPayload.id_token) throw new Error('google_id_token_missing');
+  const verified = await jwtVerify(tokenPayload.id_token, createRemoteJWKSet(new URL(env.GOOGLE_JWKS_URL)), { issuer: ['https://accounts.google.com', 'accounts.google.com'], audience: env.GOOGLE_CLIENT_ID });
+  const claims = verified.payload as { sub?: string; email?: string; email_verified?: boolean; name?: string };
+  if (!claims.sub || !claims.email || claims.email_verified !== true) throw new Error('google_identity_unverified');
+  const email = normalizeEmail(claims.email);
+  const subjectHmac = hmacLookup(claims.sub, env.PII_HMAC_KEY_V1);
+  const emailHmac = hmacLookup(email, env.PII_HMAC_KEY_V1);
+  const existing = await query<{ id: string; status: string }>(env.DB_APP_FRESH,
+    `SELECT u.id, u.status FROM identity.provider_links p JOIN identity.users u ON u.id = p.user_id WHERE p.provider = 'google' AND p.provider_subject_hmac = decode($1, 'base64')`, [subjectHmac]);
+  let userId = existing.rows[0]?.id;
+  let accountStatus = existing.rows[0]?.status;
+  if (!userId) {
+    const byEmail = await query<{ id: string; status: string }>(env.DB_APP_FRESH,
+      `SELECT u.id, u.status FROM identity.email_credentials c JOIN identity.users u ON u.id = c.user_id WHERE c.email_lookup_hmac = decode($1, 'base64')`, [emailHmac]);
+    userId = byEmail.rows[0]?.id;
+    accountStatus = byEmail.rows[0]?.status;
+    const encryptedSubject = await encryptField(claims.sub, env.PII_ENCRYPTION_KEY_V1, 'v1');
+    await transaction(env.DB_APP_FRESH, async (client) => {
+      if (!userId) {
+        userId = uuidv7();
+        await client.query(`INSERT INTO identity.users (id, display_name) VALUES ($1, $2)`, [userId, claims.name?.trim().slice(0, 160) ?? '']);
+      }
+      await client.query(`INSERT INTO identity.provider_links (user_id, provider, provider_subject_ciphertext, provider_subject_hmac) VALUES ($1, 'google', convert_to($2, 'utf8'), decode($3, 'base64')) ON CONFLICT (provider, provider_subject_hmac) DO NOTHING`, [userId, encryptedSubject.ciphertext, subjectHmac]);
+      await client.query(`INSERT INTO identity.account_events (user_id, event_type, metadata) VALUES ($1, 'google_login', '{}'::jsonb)`, [userId]);
+    });
+  }
+  if (!userId || accountStatus === 'suspended' || accountStatus === 'deleted') throw new Error('account_unavailable');
+  const tokens = await issueSession(env, userId);
+  return privateResponse(request, env, { ...tokens, tokenType: 'Bearer' });
 }
 
 function corsOrigin(request: Request, env: Env): string | undefined {
@@ -524,7 +603,8 @@ export default {
       if ((request.method === 'GET' || request.method === 'POST') && url.pathname === '/api/auth/email/verify') return verifyEmail(request, env);
       if (request.method === 'POST' && url.pathname === '/api/auth/refresh') return refreshSession(request, env);
       if (request.method === 'POST' && url.pathname === '/api/auth/logout') return logout(request, env);
-      if (url.pathname === '/api/auth/google') return response(request, env, { error: 'provider_unavailable', provider: 'google', correlationId: id }, { status: 503 });
+      if (request.method === 'GET' && url.pathname === '/api/auth/google') return googleAuthStart(request, env);
+      if (request.method === 'GET' && url.pathname === '/api/auth/google/callback') return googleAuthCallback(request, env);
       if (request.method === 'POST' && url.pathname === '/api/posts') return createPost(request, env, await principal(request, env));
       if (request.method === 'POST' && url.pathname === '/api/media/uploads') return createUploadSession(request, env, await principal(request, env));
       const finalise = url.pathname.match(/^\/api\/media\/uploads\/([^/]+)\/finalise$/);

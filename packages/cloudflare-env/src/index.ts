@@ -37,6 +37,10 @@ export interface EnvBindings {
   EMAIL_PROVIDER_URL?: string;
   EMAIL_PROVIDER_TOKEN?: string;
   EMAIL_FROM?: string;
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
+  GOOGLE_REDIRECT_URI?: string;
+  GOOGLE_JWKS_URL?: string;
   ACCESS_SUBJECT_HMAC_KEY?: string;
   ENVIRONMENT?: string;
   CORS_ALLOWED_ORIGINS?: string;

@@ -16,7 +16,10 @@
     "R2_ACCOUNT_ID": "REPLACE_WITH_DEDICATED_ACCOUNT_ID",
     "MEDIA_QUOTA_BYTES": "REPLACE_WITH_MEDIA_QUOTA_BYTES",
     "EMAIL_PROVIDER_URL": "REPLACE_WITH_EMAIL_PROVIDER_URL",
-    "EMAIL_FROM": "REPLACE_WITH_EMAIL_FROM"
+    "EMAIL_FROM": "REPLACE_WITH_EMAIL_FROM",
+    "GOOGLE_CLIENT_ID": "REPLACE_WITH_GOOGLE_CLIENT_ID",
+    "GOOGLE_REDIRECT_URI": "https://api.lythaus.co/api/auth/google/callback",
+    "GOOGLE_JWKS_URL": "https://www.googleapis.com/oauth2/v3/certs"
   },
   "hyperdrive": [
     { "binding": "DB_APP_FRESH", "id": "REPLACE_WITH_DB_APP_FRESH_ID" }
@@ -49,6 +52,9 @@
         "MEDIA_QUOTA_BYTES": "1073741824",
         "EMAIL_PROVIDER_URL": "http://localhost:8788/email",
         "EMAIL_FROM": "no-reply@localhost",
+        "GOOGLE_CLIENT_ID": "REPLACE_WITH_GOOGLE_CLIENT_ID",
+        "GOOGLE_REDIRECT_URI": "http://localhost:8787/api/auth/google/callback",
+        "GOOGLE_JWKS_URL": "https://www.googleapis.com/oauth2/v3/certs",
         "CORS_ALLOWED_ORIGINS": "http://localhost:3000",
         "HYPERDRIVE_QUERY_CACHE_MODE": "disabled"
       },
