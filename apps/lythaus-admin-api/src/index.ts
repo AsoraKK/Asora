@@ -1,4 +1,4 @@
-import { query, type HyperdriveBinding } from '@lythaus/db';
+import { query, transaction, type HyperdriveBinding } from '@lythaus/db';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { correlationId, json, logEvent } from '@lythaus/observability';
 import { hmacLookup } from '@lythaus/security';
@@ -24,14 +24,57 @@ async function accessSubject(request: Request, env: Env): Promise<string> {
   return subject;
 }
 
-async function requireAdmin(request: Request, env: Env): Promise<void> {
+async function requireAdmin(request: Request, env: Env): Promise<{ userId: string; role: string }> {
   if (!env.ACCESS_SUBJECT_HMAC_KEY) throw new Error('admin_subject_key_not_configured');
   const subjectHmac = hmacLookup(await accessSubject(request, env), env.ACCESS_SUBJECT_HMAC_KEY);
-  const result = await query<{ role: string }>(env.DB_ADMIN_FRESH,
-    `SELECT role FROM identity.admin_memberships WHERE access_subject_hmac = decode($1, 'base64') AND active = true`,
+  const result = await query<{ user_id: string; role: string }>(env.DB_ADMIN_FRESH,
+    `SELECT user_id, role FROM identity.admin_memberships WHERE access_subject_hmac = decode($1, 'base64') AND active = true`,
     [subjectHmac]
   );
   if (result.rowCount !== 1) throw new Error('admin_role_required');
+  return { userId: result.rows[0].user_id, role: result.rows[0].role };
+}
+
+async function readJson<T>(request: Request): Promise<T> {
+  const length = Number(request.headers.get('content-length') ?? 0);
+  if (length > 16 * 1024) throw new Error('request_too_large');
+  return JSON.parse(new TextDecoder().decode(await request.arrayBuffer())) as T;
+}
+
+async function decideModeration(request: Request, env: Env, actor: { userId: string; role: string }, caseId: string, correlation: string): Promise<Response> {
+  const input = await readJson<{ outcome?: 'allow' | 'block' | 'queue'; reasonCode?: string; publicLabel?: string }>(request);
+  if (!input.outcome || !['allow', 'block', 'queue'].includes(input.outcome)) throw new Error('invalid_moderation_outcome');
+  if (!input.reasonCode || !/^[A-Z0-9_.:-]{2,80}$/.test(input.reasonCode)) throw new Error('reason_code_required');
+  const existing = await query<{ content_type: string; content_id: string; policy_version: string }>(env.DB_ADMIN_FRESH,
+    `SELECT content_type, content_id, policy_version FROM moderation.cases WHERE id = $1`, [caseId]);
+  const moderationCase = existing.rows[0];
+  if (!moderationCase) throw new Error('moderation_case_not_found');
+  const publicLabel = input.publicLabel && ['Human-authored', 'AI-assisted', 'AI-generated', 'Under review'].includes(input.publicLabel)
+    ? input.publicLabel
+    : input.outcome === 'allow' ? undefined : 'Under review';
+  await transaction(env.DB_ADMIN_FRESH, async (client) => {
+    await client.query(
+      `INSERT INTO moderation.decisions (case_id, outcome, public_label, policy_version, decided_by) VALUES ($1, $2, $3, $4, $5)`,
+      [caseId, input.outcome, publicLabel ?? null, moderationCase.policy_version, actor.userId]
+    );
+    await client.query(`UPDATE moderation.cases SET state = $1, resolved_at = CASE WHEN $1 = 'open' THEN NULL ELSE now() END WHERE id = $2`, [input.outcome === 'queue' ? 'open' : 'resolved', caseId]);
+    if (moderationCase.content_type === 'post') {
+      await client.query(`UPDATE content.posts SET moderation_state = $1, published_at = CASE WHEN $1 = 'allowed' THEN COALESCE(published_at, now()) ELSE NULL END, updated_at = now() WHERE id = $2`, [input.outcome === 'allow' ? 'allowed' : input.outcome === 'block' ? 'blocked' : 'under_review', moderationCase.content_id]);
+      if (publicLabel) await client.query(`UPDATE content.content_declarations SET public_label = $1, review_required = $2, updated_at = now() WHERE post_id = $3`, [publicLabel, input.outcome !== 'allow', moderationCase.content_id]);
+    } else if (moderationCase.content_type === 'comment') {
+      await client.query(`UPDATE content.comments SET moderation_state = $1 WHERE id = $2`, [input.outcome === 'allow' ? 'allowed' : input.outcome === 'block' ? 'blocked' : 'under_review', moderationCase.content_id]);
+    }
+    await client.query(
+      `INSERT INTO moderation.enforcement_events (case_id, action, reason_code, policy_version, actor_id) VALUES ($1, $2, $3, $4, $5)`,
+      [caseId, input.outcome, input.reasonCode, moderationCase.policy_version, actor.userId]
+    );
+    await client.query(
+      `INSERT INTO system.audit_events (actor_id, action, target_type, target_id, reason_code, correlation_id, metadata)
+       VALUES ($1, 'moderation.decision', 'moderation_case', $2, $3, $4, $5::jsonb)`,
+      [actor.userId, caseId, input.reasonCode, correlation, JSON.stringify({ outcome: input.outcome, role: actor.role })]
+    );
+  });
+  return json({ caseId, outcome: input.outcome, publicLabel: publicLabel ?? null }, { headers: { 'x-correlation-id': correlation, 'cache-control': 'private, no-store' } });
 }
 
 export default {
@@ -41,7 +84,7 @@ export default {
       const url = new URL(request.url);
       if (request.method === 'OPTIONS') return json(null, { status: 204 });
       if (request.method === 'GET' && url.pathname === '/health') return json({ status: 'ok', service: 'lythaus-admin-api' });
-      await requireAdmin(request, env);
+      const actor = await requireAdmin(request, env);
       if (request.method === 'GET' && url.pathname === '/api/admin/health') {
         const result = await query(env.DB_ADMIN_FRESH, `SELECT current_timestamp AS database_time`);
         return json({ status: 'ok', database: result.rows[0] }, { headers: { 'x-correlation-id': id, 'cache-control': 'private, no-store' } });
@@ -50,6 +93,8 @@ export default {
         const result = await query(env.DB_PRIVACY_FRESH, `SELECT id, subject_id, request_type, state, created_at FROM privacy.requests ORDER BY created_at DESC LIMIT 100`);
         return json({ items: result.rows }, { headers: { 'x-correlation-id': id, 'cache-control': 'private, no-store' } });
       }
+      const moderation = url.pathname.match(/^\/api\/admin\/moderation\/cases\/([^/]+)\/decision$/);
+      if (request.method === 'POST' && moderation) return decideModeration(request, env, actor, moderation[1], id);
       return json({ error: 'not_found', correlationId: id }, { status: 404 });
     } catch (error) {
       const code = error instanceof Error ? error.message : 'admin_request_failed';
