@@ -113,13 +113,14 @@ jobs:
             --account-name "$COSMOS_ACCOUNT" \
             -o json > evidence/existing-cosmos-assignments.json
 
-      - name: Probe PostgreSQL secret access without reading its value
+      - name: Probe PostgreSQL secret metadata access without reading its value
         shell: bash
         run: |
           set -euo pipefail
           error_file="$(mktemp)"
-          if secret_id="$(az keyvault secret show --vault-name "$KEY_VAULT" --name "$POSTGRES_SECRET_NAME" --query id -o tsv 2>"$error_file")"; then
-            jq -n --arg secretId "$secret_id" '{status:"accessible",secretId:$secretId,valueRead:false}' > evidence/postgres-secret-access.json
+          query="[?name == '$POSTGRES_SECRET_NAME'] | [0].{id:id,name:name}"
+          if secret_metadata="$(az keyvault secret list --vault-name "$KEY_VAULT" --query "$query" -o json 2>"$error_file")" && jq -e '.id' >/dev/null <<<"$secret_metadata"; then
+            jq -n --argjson metadata "$secret_metadata" '{status:"metadata-accessible",secretId:$metadata.id,secretName:$metadata.name,valueRead:false}' > evidence/postgres-secret-access.json
           else
             error_code="$(grep -Eo 'AuthorizationFailed|Forbidden|ResourceNotFound|BadParameter|AuthenticationFailed' "$error_file" | head -n 1 || true)"
             jq -n --arg errorCode "${error_code:-unknown}" '{status:"not-accessible",errorCode:$errorCode,valueRead:false}' > evidence/postgres-secret-access.json
