@@ -27,6 +27,25 @@ This run has not made the owner decision. The safe operating mode is
 **selective preservation**. The native platform may be developed with synthetic
 data, but Azure deletion and production cutover remain gated.
 
+### Read-only evidence reviewed 2026-07-28
+
+- The Azure Cosmos account contains live containers for users, authentication,
+  posts, comments, moderation, notifications, privacy requests, privacy audit,
+  and legal holds.
+- Metadata-only enumeration found no DSR export blobs in the observed export
+  container, but this does not prove that the corresponding Cosmos records are
+  absent.
+- Read-only count queries for `privacy_requests`, `privacy_audit`, and
+  `legal_holds` returned HTTP 403 with the available Entra data-plane identity.
+- Consequently, active-user, outstanding-privacy-request, and legal-hold
+  counts remain **unknown**. A clean-state decision cannot be evidenced from
+  the current permissions; selective preservation remains the operating
+  default until the owner signs a disposition and the required data-plane
+  review is completed.
+
+Evidence references: `docs/evidence/azure-exit/2026-07-26/dsr-reconciliation.md`,
+`cosmos-export-validation.md`, and `azure-exit-readiness-report.md`.
+
 ## Controls
 
 - No Azure resource, database, storage account, credential, or compatibility

@@ -339,3 +339,64 @@ requirements recorded above.
 - The source invariant suite now contains an explicit public/admin hostname
   guard assertion. TypeScript checking and native architecture tests pass after
   the refresh (22/22 architecture invariants).
+
+## Read-only provider snapshot refresh - 2026-07-28
+
+- PlanetScale organization `lythaus` and database `lythaus-core` remain ready
+  and Cloudflare-billed through account ending `...e4b3d4ef1af0`. The database
+  is PostgreSQL `18.4` on the `development` branch in Frankfurt (`eu-central`)
+  and PostgreSQL `17.10` on the empty production `main` branch.
+- Branch inventory is exactly `main` and `development`; both have zero
+  replicas. `main` remains untouched. The development branch has no application
+  schemas or tables.
+- Development installed extensions are `hypopg`, `pg_trgm`, `pgcrypto`,
+  `plpgsql`, and `unaccent`. `pg_available_extensions` lists PostGIS 3.6.1,
+  but the provider allowlist excludes it (`extwlist.pscale_allowed_extensions`),
+  so the approved migration baseline remains blocked.
+- Current cluster pricing metadata reports PS-DEV at `$15/mo`, PS-5 ARM at
+  `$15/mo` plus `$5/mo` per replica, and PS-10 ARM at `$30/mo` plus `$10/mo`
+  per replica. No production tier or replica topology has been approved.
+- Cloudflare account `e5b7ae46e04698f507b7e4b3d4ef1af0` is mixed-use: it
+  contains `asora.co.za`, `lythaus.co`, and `niteowlangling.co.za`, plus
+  unrelated Workers and Access applications. This remains a Gate 1 blocker.
+- Development Hyperdrive bindings remain cache-disabled and role-specific:
+  `lythaus-db-app-dev`, `lythaus-db-admin-dev`, `lythaus-db-jobs-dev`, and
+  `lythaus-db-privacy-dev`. No production Hyperdrive configuration exists.
+- Existing backend regression suite passed: 208 suites passed, 2,279 tests
+  passed, 18 skipped (2,297 total). OpenAPI contract examples passed with 20
+  tests passed and 17 skipped. These are repository-level checks and do not
+  substitute for live database-backed acceptance.
+- A random synthetic `ACCESS_SUBJECT_HMAC_KEY` was provisioned on the
+  development admin Worker through the supported secret binding endpoint. The
+  protected admin health route now returns `access_required` (HTTP 401) rather
+  than `admin_subject_key_not_configured`; no Access identity was supplied.
+
+## Native Worker acceptance refresh - 2026-07-28
+
+- Compact live probes against the current public development deployment
+  returned: `/api/health` HTTP `200` with `status=ok`, `/api/ready` HTTP `200`
+  with `status=ready`, and `/.well-known/jwks.json` HTTP `200` with one ES256
+  public key and `kid=dev-es256-20260728-r2`. No private key material is stored
+  in this evidence.
+- The disabled Apple provider returned HTTP `404` with
+  `provider_unavailable`; this confirms the launch policy remains fail-closed
+  for that provider.
+- The admin public `/health` endpoint returned HTTP `200`. The protected
+  `/api/admin/health` endpoint returned HTTP `401` with `access_required`,
+  confirming the configured subject-key guard is active and no Access identity
+  was supplied.
+- The current Cloudflare deployment inventory API returned successful reads for
+  all three development scripts. The latest deployment records are retained in
+  the provider audit trail; this document stores no deployment tokens or secret
+  values.
+- Development secret-name inventory contains the expected public authentication
+  and PII key names (`AUTH_PASSWORD_PEPPER_V1`, `EMAIL_PROVIDER_TOKEN`,
+  `GOOGLE_CLIENT_SECRET`, `JWT_KEY_ID`, `JWT_PRIVATE_KEY`, `JWT_PUBLIC_JWKS`,
+  `PII_ENCRYPTION_KEY_V1`, `PII_HMAC_KEY_V1`, `TURNSTILE_SECRET_KEY`) and the
+  admin `ACCESS_SUBJECT_HMAC_KEY`. Jobs has no provider secrets yet; Hive and
+  R2 signing credentials remain intentionally absent and related paths must fail
+  closed.
+- These probes establish native health, readiness, JWKS publication, disabled
+  provider behaviour and admin boundary enforcement only. They do not satisfy
+  the schema, authentication, media, moderation, privacy, backup, account
+  isolation or production cutover gates.

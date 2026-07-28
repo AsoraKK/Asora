@@ -16,11 +16,15 @@ No secrets, connection strings, object contents, or personal data are stored.
 
 | Name | Environment | Purpose | Public subdomain |
 | --- | --- | --- | --- |
-| `lythaus-public-api-development` | synthetic dev | public API | enabled |
-| `lythaus-admin-api-development` | synthetic dev | admin API | enabled for testing |
+| `lythaus-public-api-development` | synthetic dev | public API | enabled; deployment `0d59f963faee43a1a2decc13b9e82726` |
+| `lythaus-admin-api-development` | synthetic dev | admin API | enabled for testing; deployment `dfcf6370a844495697fc69e964c3cf44` |
 | `lythaus-jobs-development` | synthetic dev | queues/workflows/cron | disabled |
 
 Production Worker IDs remain placeholders and no production Worker is deployed.
+
+The public and admin development Workers enforce their configured
+`asora.workers.dev` hostnames at request entry. Expected-host health probes
+returned HTTP 200; legacy Host spoofing was rejected by the Cloudflare edge.
 
 ## Hyperdrive
 
@@ -61,3 +65,24 @@ All four point to the synthetic Frankfurt `development` branch.
   this is evidence that the account is not production-isolated.
 - Turnstile inventory could not be read through the current API session
   (`10000 Authentication error`); it is not marked verified.
+
+## Live deployment and secret-name refresh - 2026-07-28
+
+- Cloudflare deployment-list and secret-list reads succeeded for
+  `lythaus-public-api-development`, `lythaus-admin-api-development`, and
+  `lythaus-jobs-development`. Only names and deployment metadata were read;
+  no secret values are recorded here.
+- Public development probes returned HTTP `200` for `/api/health`, `/api/ready`,
+  and `/.well-known/jwks.json`. The JWKS response exposes one ES256 public key
+  with the configured development key identifier. Apple authentication remains
+  disabled and returns `provider_unavailable` (HTTP `404`).
+- Admin `/health` returned HTTP `200`; `/api/admin/health` returned HTTP `401`
+  with `access_required`, proving the subject-key guard is configured and the
+  route remains protected without an Access identity.
+- Public development secret names are present for password pepper, JWT signing,
+  PII encryption/HMAC, Google OAuth, email adapter and Turnstile. The admin
+  subject HMAC secret is present. Jobs has no Hive or R2 signing secrets, so
+  provider-dependent processing remains fail-closed.
+- This inventory remains synthetic pre-production in a mixed-use account and
+  cannot satisfy Gate 1 or authorize production data, DNS cutover, or Azure
+  deletion.
