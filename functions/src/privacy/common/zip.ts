@@ -1,5 +1,5 @@
 import { PassThrough } from 'node:stream';
-import archiver from 'archiver';
+import { ZipArchive } from 'archiver';
 import stableStringify from 'fast-json-stable-stringify';
 
 import { uploadStreamToExport } from './storage';
@@ -45,7 +45,7 @@ export async function packageExportZip(payload: PackageExportPayload): Promise<{
   blobPath: string;
   exportBytes: number;
 }> {
-  const archive = archiver('zip', { zlib: { level: 9 } });
+  const archive = new ZipArchive({ zlib: { level: 9 } });
   const stream = new PassThrough();
   const blobPath = buildBlobPath(payload.requestId);
   const uploadPromise = uploadStreamToExport(blobPath, stream);

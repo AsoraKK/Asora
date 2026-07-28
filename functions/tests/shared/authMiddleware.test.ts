@@ -50,6 +50,6 @@ describe('shared auth middleware', () => {
   });
 
   it('authRequired throws when principal is null', () => {
-    expect(() => authRequired(null)).toThrowError();
+    expect(() => authRequired(null)).toThrow();
   });
 });
