@@ -120,9 +120,9 @@ export default {
         return json({ items: result.rows }, { headers: { 'x-correlation-id': id, 'cache-control': 'private, no-store' } });
       }
       const moderation = url.pathname.match(/^\/api\/admin\/moderation\/cases\/([^/]+)\/decision$/);
-      if (request.method === 'POST' && moderation) return decideModeration(request, env, actor, moderation[1], id);
+      if (request.method === 'POST' && moderation) return await decideModeration(request, env, actor, moderation[1], id);
       const accountStatus = url.pathname.match(/^\/api\/admin\/users\/([^/]+)\/status$/);
-      if (request.method === 'POST' && accountStatus) return updateAccountStatus(request, env, actor, accountStatus[1], id);
+      if (request.method === 'POST' && accountStatus) return await updateAccountStatus(request, env, actor, accountStatus[1], id);
       return json({ error: 'not_found', correlationId: id }, { status: 404 });
     } catch (error) {
       const code = error instanceof Error ? error.message : 'admin_request_failed';

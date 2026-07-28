@@ -49,6 +49,12 @@ test('public API dispatch awaits rejection-prone async handlers', () => {
   }
 });
 
+test('admin API dispatch awaits rejection-prone mutations', () => {
+  const source = fs.readFileSync(path.join(root, 'apps/lythaus-admin-api/src/index.ts'), 'utf8');
+  assert.match(source, /return await decideModeration\(/);
+  assert.match(source, /return await updateAccountStatus\(/);
+});
+
 test('native Workers declare cache-disabled Hyperdrive intent', () => {
   for (const relative of configs) {
     const source = fs.readFileSync(path.join(root, relative), 'utf8');

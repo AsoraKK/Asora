@@ -475,3 +475,14 @@ entries remain as chronological evidence of the pre-migration state.
   `outcome=exception`, HTTP 500, and the `normalizeEmail` stack. Those events
   are historical evidence for the defect and are not treated as post-fix
   failures; the corrected deployment is the one verified by the live probes.
+
+## Admin API async-error fix - 2026-07-28
+
+- The admin Worker had the same un-awaited rejection path for moderation
+  decisions and account-status mutations. Both dispatches now await their
+  handlers and are covered by a native architecture invariant.
+- The corrected admin development bundle was uploaded through Cloudflare MCP
+  as deployment `f4214c1d17d445ada0d643677989ec83`, with explicit development
+  vars and inherited Hyperdrive, R2, and Access-subject bindings.
+- Post-deploy probes returned HTTP 200 for `/health` and HTTP 401 JSON
+  `access_required` for `/api/admin/health` without an Access identity.
