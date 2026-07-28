@@ -279,3 +279,20 @@ requirements recorded above.
   one year. Approved media remains without automatic deletion. Quarantine and
   approved development buckets allow only the configured localhost origin for
   signed browser operations.
+
+## Native boundary and telemetry recheck — 2026-07-28
+
+- Read-only probes returned HTTP `200` for public `/api/health` and `/api/ready`.
+- The disabled Apple provider returned the required `provider_unavailable` response.
+- The admin `/health` endpoint returned HTTP `200`; the protected admin health route
+  failed closed with `admin_subject_key_not_configured` because no development Access
+  subject secret has been provisioned.
+- The jobs Worker has no public hostname; its development subdomain returned HTTP `404`.
+- Cloudflare Workers Observability was queried for the three native development scripts
+  over the sampled two-hour window ending 2026-07-28T01:22:28Z with a case-insensitive
+  `azure` needle. The query completed with zero matching events. This is negative
+  runtime evidence only; repository dependency validation remains the authoritative
+  source scan.
+- The same telemetry dataset still contains historical pre-refresh readiness events
+  from an earlier script version. Those events are retained as diagnostic history and
+  do not change the current deployment result.
