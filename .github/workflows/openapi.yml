@@ -81,16 +81,7 @@ jobs:
         run: npm run openapi:check:dart
       - name: Generate OpenAPI docs pre-release bundle
         run: npm run openapi:docs
-      - name: Write contract env
-        run: |
-          cat <<EOF > .env.test
-          STAGING_DOMAIN=${{ secrets.STAGING_DOMAIN }}
-          STAGING_SMOKE_TOKEN=${{ secrets.STAGING_SMOKE_TOKEN }}
-          EOF
       - name: Contract tests
-        env:
-          STAGING_DOMAIN: ${{ secrets.STAGING_DOMAIN }}
-          STAGING_SMOKE_TOKEN: ${{ secrets.STAGING_SMOKE_TOKEN }}
         run: npm run openapi:test:contract
       - name: Upload bundled spec
         uses: actions/upload-artifact@v6

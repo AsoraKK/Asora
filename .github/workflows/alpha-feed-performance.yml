@@ -23,7 +23,7 @@ permissions:
 jobs:
   performance:
     runs-on: ubuntu-latest
-    environment: staging
+    environment: dev
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
@@ -46,7 +46,9 @@ jobs:
       - name: Run representative Alpha feed matrix
         env:
           ALPHA_API_BASE_URL: ${{ inputs.alpha_api_base_url }}
-          ALPHA_SMOKE_TOKEN: ${{ secrets.STAGING_SMOKE_TOKEN }}
+          RUNTIME_AUTH_API_BASE_URL: ${{ inputs.alpha_api_base_url }}
+          RUNTIME_AUTH_EMAIL: ${{ secrets.MVP_SMOKE_EMAIL }}
+          RUNTIME_AUTH_PASSWORD: ${{ secrets.MVP_SMOKE_PASSWORD }}
           ALPHA_TEST_SESSION_ID: ${{ vars.ALPHA_TEST_SESSION_ID }}
           ALPHA_CUSTOM_FEED_ID: ${{ vars.ALPHA_PERF_CUSTOM_FEED_ID }}
           ALPHA_EMPTY_PROFILE_ID: ${{ vars.ALPHA_PERF_EMPTY_PROFILE_ID }}
@@ -57,7 +59,8 @@ jobs:
         run: |
           set -euo pipefail
           node -e 'const url = new URL(process.env.ALPHA_API_BASE_URL); if (url.protocol !== "https:" || url.hostname.endsWith(".azurewebsites.net") || !url.pathname.endsWith("/api")) throw new Error("alpha_api_base_url must be an HTTPS API gateway ending in /api");'
-          docker run --rm \
+          node scripts/release/runtime-authenticated-command.mjs \
+            --token-env ALPHA_SMOKE_TOKEN -- docker run --rm \
             -e ALPHA_API_BASE_URL \
             -e ALPHA_SMOKE_TOKEN \
             -e ALPHA_TEST_SESSION_ID \

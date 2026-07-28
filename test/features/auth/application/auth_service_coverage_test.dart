@@ -89,16 +89,19 @@ void main() {
       final client = http_testing.MockClient((request) async {
         return http.Response(
           jsonEncode({
-            'token': 'jwt-token',
-            'user': {
-              'id': 'u1',
-              'email': 'a@b.com',
-              'name': 'Test',
-              'role': 'user',
-              'tier': 'free',
-              'reputationScore': 0,
-              'createdAt': '2024-01-01T00:00:00Z',
-              'lastLoginAt': '2024-06-01T00:00:00Z',
+            'success': true,
+            'data': {
+              'access_token': 'jwt-token',
+              'user': {
+                'id': 'u1',
+                'email': 'a@b.com',
+                'name': 'Test',
+                'role': 'user',
+                'tier': 'free',
+                'reputationScore': 0,
+                'createdAt': '2024-01-01T00:00:00Z',
+                'lastLoginAt': '2024-06-01T00:00:00Z',
+              },
             },
           }),
           200,

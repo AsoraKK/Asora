@@ -1,6 +1,7 @@
 import './routes/authorize';
 import './routes/ping';
 import './routes/token';
+import './routes/email';
 import './routes/userinfo';
 import './routes/invite_validate.function';
 

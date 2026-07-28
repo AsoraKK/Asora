@@ -23,6 +23,7 @@ import {
   auditTokenReuse,
 } from './authAuditService';
 import { getClientIp } from '@rate-limit/keys';
+import type { PGUser } from './usersService';
 
 const logger = getAzureLogger('auth/token');
 
@@ -77,6 +78,73 @@ async function signJwtToken(
     .setJti(jwtid)
     .setExpirationTime(expiresIn)
     .sign(getJwtSecretBytes());
+}
+
+export async function issueTokensForPgUser(
+  user: PGUser,
+  clientId: string,
+  requestId: string
+): Promise<{
+  access_token: string;
+  refresh_token: string;
+  token_type: 'Bearer';
+  expires_in: number;
+  scope: string;
+  user: {
+    id: string;
+    email: string;
+    role: string;
+    roles: string[];
+    tier: string;
+    reputationScore: number;
+  };
+}> {
+  if (!isInternalUserId(user.id)) {
+    throw new Error('User account identifier is not a valid internal UUIDv7');
+  }
+
+  const roles = user.roles.filter((role) => typeof role === 'string' && role.trim().length > 0);
+  const role = roles[0] || 'user';
+  const tokenPayload: TokenPayload = {
+    sub: user.id,
+    email: user.primary_email,
+    role,
+    roles,
+    tier: user.tier,
+    reputation: user.reputation_score,
+    iss: JWT_ISSUER,
+    aud: clientId,
+    type: 'access',
+  };
+
+  const accessToken = await signJwtToken(tokenPayload, ACCESS_TOKEN_EXPIRY);
+  const refreshJti = crypto.randomUUID();
+  const refreshExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  const refreshToken = await signJwtToken(
+    { sub: user.id, iss: JWT_ISSUER, aud: clientId, type: 'refresh' },
+    REFRESH_TOKEN_EXPIRY,
+    refreshJti
+  );
+
+  await storeRefreshToken(refreshJti, user.id, refreshExpiresAt);
+  logAuthAttempt(logger, true, user.id, 'Email token issuance successful', requestId);
+  auditTokenExchange(user.id, requestId).catch(() => {});
+
+  return {
+    access_token: accessToken,
+    refresh_token: refreshToken,
+    token_type: 'Bearer',
+    expires_in: 15 * 60,
+    scope: 'read write',
+    user: {
+      id: user.id,
+      email: user.primary_email,
+      role,
+      roles,
+      tier: user.tier,
+      reputationScore: user.reputation_score,
+    },
+  };
 }
 
 
