@@ -271,3 +271,9 @@ requirements recorded above.
   subdomains enabled for synthetic testing, while `lythaus-jobs-development`
   has both `enabled=false` and `previews_enabled=false`. The deleted diagnostic
   Worker returns the expected not-found response.
+- Development R2 policy refresh completed through the Cloudflare API:
+  `quarantine/` objects expire after seven days, `exports/` objects expire after
+  30 days, and the `audit/` prefix in `lythaus-audit-archive-dev` is locked for
+  one year. Approved media remains without automatic deletion. Quarantine and
+  approved development buckets allow only the configured localhost origin for
+  signed browser operations.
