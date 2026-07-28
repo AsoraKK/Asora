@@ -322,3 +322,20 @@ requirements recorded above.
   by a naming or resource collision. The required owner action is to create or
   grant a dedicated Lythaus account through Cloudflare Tenant administration,
   then provide its account and zone IDs for the production gate.
+
+## Native hostname boundary refresh - 2026-07-28
+
+- The public Worker was rebuilt from the current repository and uploaded as
+  deployment `0d59f963faee43a1a2decc13b9e82726` (tag
+  `f939c50929804735ac7800394619058d`). The admin Worker was uploaded as
+  deployment `dfcf6370a844495697fc69e964c3cf44` (tag
+  `c8cf659212be4915a78ec7f861e8ad81`).
+- Both Workers now enforce the configured development hostname at the start of
+  every request. Expected `asora.workers.dev` hosts returned HTTP 200 for
+  health probes after deployment.
+- Requests sent with the legacy `workers.dev` Host values were rejected by the
+  Cloudflare edge with HTTP 403; the legacy hostnames do not resolve directly.
+  This is routing-boundary evidence, not production-domain evidence.
+- The source invariant suite now contains an explicit public/admin hostname
+  guard assertion. TypeScript checking and native architecture tests pass after
+  the refresh (22/22 architecture invariants).

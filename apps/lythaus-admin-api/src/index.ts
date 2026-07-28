@@ -1,6 +1,6 @@
 import { query, transaction, type HyperdriveBinding } from '@lythaus/db';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
-import { correlationId, json, logEvent } from '@lythaus/observability';
+import { assertExpectedHostname, correlationId, json, logEvent } from '@lythaus/observability';
 import { hmacLookup } from '@lythaus/security';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 
@@ -106,6 +106,7 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const id = correlationId(request);
     try {
+      assertExpectedHostname(request, env.EXPECTED_HOSTNAMES);
       const url = new URL(request.url);
       if (request.method === 'OPTIONS') return json(null, { status: 204 });
       if (request.method === 'GET' && url.pathname === '/health') return json({ status: 'ok', service: 'lythaus-admin-api' });

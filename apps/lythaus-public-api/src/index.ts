@@ -2,7 +2,7 @@ import { transaction, query, type HyperdriveBinding } from '@lythaus/db';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import type { CreatePostInput, EmailDeliveryReference, TransactionalEmailProvider } from '@lythaus/contracts';
 import { createPresignedPutUrl, ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES, type AllowedImageType } from '@lythaus/media';
-import { correlationId, json, logEvent } from '@lythaus/observability';
+import { assertExpectedHostname, correlationId, json, logEvent } from '@lythaus/observability';
 import { encryptField, hashPassword, hashResetToken, hmacLookup, needsPasswordRehash, randomToken, signAccessToken, uuidv7, verifyAccessToken, verifyPassword, type PasswordHash, type Principal } from '@lythaus/security';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 
@@ -722,6 +722,7 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const id = correlationId(request);
     try {
+      assertExpectedHostname(request, env.EXPECTED_HOSTNAMES);
       const url = new URL(request.url);
       if (request.method === 'OPTIONS') return response(request, env, null, { status: 204, headers: { 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'Authorization, Content-Type, X-Correlation-ID' } });
       if (request.method === 'GET' && (url.pathname === '/health' || url.pathname === '/api/health')) return response(request, env, { status: 'ok', service: 'lythaus-public-api', environment: env.ENVIRONMENT ?? 'unknown' });

@@ -11,7 +11,7 @@ interface __BaseEnv_Env {
 	FEED_QUEUE: Queue;
 	PRIVACY_QUEUE: Queue;
 	ENVIRONMENT: "development";
-	EXPECTED_HOSTNAMES: "lythaus-public-api-development.workers.dev";
+	EXPECTED_HOSTNAMES: "lythaus-public-api-development.asora.workers.dev";
 	R2_ACCOUNT_ID: "e5b7ae46e04698f507b7e4b3d4ef1af0";
 	MEDIA_QUOTA_BYTES: "1073741824";
 	MEDIA_QUARANTINE_BUCKET: "lythaus-media-quarantine-dev";

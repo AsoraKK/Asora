@@ -29,6 +29,19 @@ test('native production routing is custom-domain-only', () => {
   assert.match(validate, /admin-api\\\.lythaus\\\.co/);
 });
 
+test('native public and admin APIs enforce configured hostnames', () => {
+  const observability = fs.readFileSync(path.join(root, 'packages/observability/src/index.ts'), 'utf8');
+  const publicApi = fs.readFileSync(path.join(root, 'apps/lythaus-public-api/src/index.ts'), 'utf8');
+  const adminApi = fs.readFileSync(path.join(root, 'apps/lythaus-admin-api/src/index.ts'), 'utf8');
+  assert.match(observability, /assertExpectedHostname/);
+  assert.match(observability, /hostname_not_configured/);
+  assert.match(observability, /hostname_not_allowed/);
+  assert.match(publicApi, /assertExpectedHostname\(request, env\.EXPECTED_HOSTNAMES\)/);
+  assert.match(adminApi, /assertExpectedHostname\(request, env\.EXPECTED_HOSTNAMES\)/);
+  assert.match(fs.readFileSync(path.join(root, 'apps/lythaus-public-api/wrangler.jsonc'), 'utf8'), /lythaus-public-api-development\.asora\.workers\.dev/);
+  assert.match(fs.readFileSync(path.join(root, 'apps/lythaus-admin-api/wrangler.jsonc'), 'utf8'), /lythaus-admin-api-development\.asora\.workers\.dev/);
+});
+
 test('native Workers declare cache-disabled Hyperdrive intent', () => {
   for (const relative of configs) {
     const source = fs.readFileSync(path.join(root, relative), 'utf8');

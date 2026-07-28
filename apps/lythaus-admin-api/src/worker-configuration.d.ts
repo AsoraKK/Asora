@@ -7,7 +7,7 @@ interface __BaseEnv_Env {
 	DB_ADMIN_FRESH: Hyperdrive;
 	DB_PRIVACY_FRESH: Hyperdrive;
 	ENVIRONMENT: "development";
-	EXPECTED_HOSTNAMES: "lythaus-admin-api-development.workers.dev";
+	EXPECTED_HOSTNAMES: "lythaus-admin-api-development.asora.workers.dev";
 	CORS_ALLOWED_ORIGINS: "http://localhost:3000";
 	HYPERDRIVE_QUERY_CACHE_MODE: "disabled";
 	ACCESS_TEAM_DOMAIN: "REPLACE_WITH_ACCESS_TEAM_DOMAIN";
