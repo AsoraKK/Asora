@@ -267,6 +267,8 @@ requirements recorded above.
   stale claims after five minutes, marks successful events `completed`, and
   releases failed claims for Queue retry. This source-level contract is tested
   locally; live execution awaits the blocked migration baseline.
+- Repository secret scan via `scripts/secret-scan.sh` completed against 1,582
+  commits with no leaks found. No secret values were added to the evidence.
 - Cloudflare subdomain verification reports public and admin development
   subdomains enabled for synthetic testing, while `lythaus-jobs-development`
   has both `enabled=false` and `previews_enabled=false`. The deleted diagnostic
