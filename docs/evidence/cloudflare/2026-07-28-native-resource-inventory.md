@@ -83,6 +83,12 @@ All four point to the synthetic Frankfurt `development` branch.
   PII encryption/HMAC, Google OAuth, email adapter and Turnstile. The admin
   subject HMAC secret is present. Jobs has no Hive or R2 signing secrets, so
   provider-dependent processing remains fail-closed.
+- A pre-production attempt to create a 30-day, quarantine-bucket-scoped R2 API
+  token through `/user/tokens` was rejected by the current Cloudflare identity
+  (`1001` policy reuse / authorization validation). No token or Worker R2 secret
+  was created. The required owner action is to create a bucket-scoped R2 token
+  from the R2 dashboard or grant the necessary token-management authority;
+  production token creation remains deferred to the dedicated account.
 - This inventory remains synthetic pre-production in a mixed-use account and
   cannot satisfy Gate 1 or authorize production data, DNS cutover, or Azure
   deletion.
