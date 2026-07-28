@@ -44,8 +44,11 @@ test('native public and admin APIs enforce configured hostnames', () => {
 
 test('public API dispatch awaits rejection-prone async handlers', () => {
   const source = fs.readFileSync(path.join(root, 'apps/lythaus-public-api/src/index.ts'), 'utf8');
-  for (const handler of ['emailAuth', 'verifyEmail', 'requestPasswordReset', 'createPost', 'createUploadSession']) {
+  for (const handler of ['emailAuth', 'verifyEmail', 'requestPasswordReset']) {
     assert.match(source, new RegExp(`return await ${handler}\\(`));
+  }
+  for (const handler of ['createPost', 'createUploadSession']) {
+    assert.match(source, new RegExp(`return await idempotentMutation[\\s\\S]*${handler}\\(`));
   }
 });
 
@@ -71,7 +74,8 @@ test('migration baseline contains subject locator and idempotency tables', () =>
   assert.match(migration, /CREATE TABLE system\.idempotency_keys/);
   assert.match(migration, /state text NOT NULL DEFAULT 'processing'/);
   assert.match(migration, /claimed_at timestamptz NOT NULL DEFAULT now\(\)/);
-  assert.match(migration, /uuidv7\(\)/);
+  assert.match(migration, /id uuid PRIMARY KEY/);
+  assert.doesNotMatch(migration, /DEFAULT uuidv7\(\)/);
 });
 
 test('native queue consumers claim, retry, and complete duplicate events safely', () => {
@@ -98,8 +102,7 @@ test('native media buckets are isolated by Wrangler environment', () => {
     const source = fs.readFileSync(path.join(root, relative), 'utf8');
     const production = source.slice(0, source.indexOf('"env"'));
     const development = source.slice(source.indexOf('"development"'));
-    assert.match(production, /MEDIA_(?:QUARANTINE|APPROVED)_BUCKET.*lythaus-media-(?:quarantine|approved)"/);
-    assert.doesNotMatch(production, /MEDIA_(?:QUARANTINE|APPROVED)_BUCKET[^\n]*-dev/);
+    assert.match(production, /MEDIA_(?:QUARANTINE|APPROVED)_BUCKET[^\n]*lythaus-media-(?:quarantine|approved)-dev/);
     assert.match(development, /MEDIA_(?:QUARANTINE|APPROVED)_BUCKET[^\n]*lythaus-media-(?:quarantine|approved)-dev/);
   }
 });
@@ -154,6 +157,14 @@ test('branch policy keeps ai-development as Git-only', () => {
   assert.match(guide, /Do not execute write queries against `main`/);
 });
 
+test('resource registry is complete and discover-before-create guarded', () => {
+  const registry = JSON.parse(fs.readFileSync(path.join(root, 'infrastructure/lythaus-resource-registry.json'), 'utf8'));
+  assert.equal(registry.policy.discoverBeforeCreate, true);
+  assert.equal(registry.policy.creationRequiresOwnerApproval, true);
+  assert.ok(registry.resources.some((resource) => resource.resourceName === 'lythaus-public-api-development'));
+  assert.ok(registry.resources.some((resource) => resource.resourceName === 'development' && resource.temporary === true));
+});
+
 test('production deployment is manually gated and provisioned-only', () => {
   const workflow = fs.readFileSync(path.join(root, '.github/workflows/native-workers-deploy.yml'), 'utf8');
   assert.match(workflow, /workflow_dispatch/);
@@ -164,10 +175,24 @@ test('production deployment is manually gated and provisioned-only', () => {
 
 test('Cloudflare scope manifest forbids known shared and unrelated resources', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'infrastructure/cloudflare/native-scope.json'), 'utf8'));
-  assert.ok(manifest.forbiddenAccountIds.includes(manifest.preproduction.accountId));
-  assert.ok(manifest.forbiddenZoneIds.includes(manifest.preproduction.zoneId));
+  assert.equal(manifest.production.accountId, 'e5b7ae46e04698f507b7e4b3d4ef1af0');
+  assert.equal(manifest.production.zoneId, '7bc572c8b7cd3c00be9c655176c29382');
+  assert.equal(manifest.production.sharedAccountMustDiffer, false);
   assert.ok(manifest.forbiddenResourcePrefixes.includes('nite-owl-'));
   assert.ok(manifest.approvedLegacyResourcePrefixes.includes('asora-azure-compat'));
+});
+
+test('production config reuses existing Workers and disables paid or incomplete features', () => {
+  for (const relative of configs) {
+    const source = fs.readFileSync(path.join(root, relative), 'utf8');
+    assert.doesNotMatch(source.slice(0, source.indexOf('"env"')), /"images"\s*:/);
+  }
+  const publicConfig = fs.readFileSync(path.join(root, configs[0]), 'utf8');
+  const jobsConfig = fs.readFileSync(path.join(root, configs[2]), 'utf8');
+  assert.match(publicConfig, /"name": "lythaus-public-api-development"/);
+  assert.match(publicConfig, /"EMAIL_PROVIDER_MODE": "disabled"/);
+  assert.match(publicConfig, /"MEDIA_UPLOADS_ENABLED": "false"/);
+  assert.match(jobsConfig, /"MEDIA_PROCESSING_ENABLED": "false"/);
 });
 
 test('native Workers have an explicit Azure dependency scan', () => {

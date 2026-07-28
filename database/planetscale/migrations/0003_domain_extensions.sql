@@ -7,7 +7,7 @@ CREATE TABLE moderation.appeal_votes (
 );
 
 CREATE TABLE privacy.retention_rules (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   user_id uuid NOT NULL REFERENCES identity.users(id),
   content_type text NOT NULL,
   retention_period interval NOT NULL,
@@ -16,7 +16,7 @@ CREATE TABLE privacy.retention_rules (
 );
 
 CREATE TABLE trust.reputation_events (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   subject_user_id uuid NOT NULL REFERENCES identity.users(id),
   content_id uuid,
   event_type text NOT NULL,
@@ -33,7 +33,7 @@ CREATE TABLE trust.reputation_balances (
 );
 
 CREATE TABLE media.variants (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   object_id uuid NOT NULL REFERENCES media.objects(id) ON DELETE CASCADE,
   object_key text NOT NULL UNIQUE,
   content_type text NOT NULL,
@@ -44,7 +44,7 @@ CREATE TABLE media.variants (
 );
 
 CREATE TABLE media.moderation_results (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   object_id uuid NOT NULL REFERENCES media.objects(id) ON DELETE CASCADE,
   provider text NOT NULL,
   model_version text NOT NULL,
@@ -61,7 +61,7 @@ CREATE TABLE editorial.memberships (
 );
 
 CREATE TABLE editorial.membership_events (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   user_id uuid NOT NULL REFERENCES identity.users(id),
   event_type text NOT NULL,
   reason_code text,

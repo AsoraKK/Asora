@@ -32,16 +32,13 @@ jobs:
       - run: npm ci --ignore-scripts
       - name: Validate provisioned production configuration
         env:
-          CLOUDFLARE_PRODUCTION_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_PRODUCTION_ACCOUNT_ID }}
-          CLOUDFLARE_PRODUCTION_ZONE_ID: ${{ secrets.CLOUDFLARE_PRODUCTION_ZONE_ID }}
-          CLOUDFLARE_SHARED_ACCOUNT_ID: ${{ vars.CLOUDFLARE_SHARED_ACCOUNT_ID }}
+          CLOUDFLARE_ACCOUNT_ID: e5b7ae46e04698f507b7e4b3d4ef1af0
           CLOUDFLARE_ENVIRONMENT: production
         run: npm run validate:native-workers:provisioned
       - name: Validate production account and zone scope
         env:
-          CLOUDFLARE_PRODUCTION_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_PRODUCTION_ACCOUNT_ID }}
-          CLOUDFLARE_PRODUCTION_ZONE_ID: ${{ secrets.CLOUDFLARE_PRODUCTION_ZONE_ID }}
-          CLOUDFLARE_SHARED_ACCOUNT_ID: ${{ vars.CLOUDFLARE_SHARED_ACCOUNT_ID }}
+          CLOUDFLARE_ACCOUNT_ID: e5b7ae46e04698f507b7e4b3d4ef1af0
+          CLOUDFLARE_ZONE_ID: 7bc572c8b7cd3c00be9c655176c29382
           CLOUDFLARE_ENVIRONMENT: production
         run: npm run validate:native-scope:production
       - name: Validate all production acceptance gates
@@ -60,6 +57,8 @@ jobs:
         env:
           PLANETSCALE_ADMIN_DATABASE_URL: ${{ secrets.PLANETSCALE_ADMIN_DATABASE_URL }}
           PLANETSCALE_PRODUCTION_MIGRATIONS_APPROVED: ${{ secrets.PLANETSCALE_PRODUCTION_MIGRATIONS_APPROVED }}
+          PLANETSCALE_MIGRATION_USAGE_APPROVED: ${{ secrets.PLANETSCALE_MIGRATION_USAGE_APPROVED }}
+          PLANETSCALE_MIGRATION_USAGE_MAX_USD: ${{ secrets.PLANETSCALE_MIGRATION_USAGE_MAX_USD }}
           PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
           PSCALE_BRANCH_NAME: main
         run: npm run apply:planetscale-production-migrations

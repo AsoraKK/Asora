@@ -174,6 +174,7 @@ async function processPostModeration(message: QueueMessage, env: Env): Promise<v
 }
 
 async function processMediaUpload(message: QueueMessage, env: Env): Promise<void> {
+  if (env.MEDIA_PROCESSING_ENABLED !== 'true') return;
   const payload = (message.body.payload ?? message.body) as { uploadSessionId?: unknown; objectKey?: unknown };
   const sessionId = typeof payload.uploadSessionId === 'string' ? payload.uploadSessionId : undefined;
   const objectKey = typeof payload.objectKey === 'string' ? payload.objectKey : undefined;

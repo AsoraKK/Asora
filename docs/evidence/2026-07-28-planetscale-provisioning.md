@@ -546,15 +546,42 @@ entries remain as chronological evidence of the pre-migration state.
 - No Cloudflare API token was created. All provider inventory and Worker
   deployment actions recorded here used the authenticated Cloudflare MCP.
 
-## Owner data-disposition decision - pending
+## Owner data-disposition decision - selective preservation approved
 
-- The implementation remains under the safe default of selective preservation.
-  No owner-signed clean-state declaration has been located in the repository.
-- Before Azure deletion or production cutover, the owner must select and sign
-  one of: (a) clean-state authorised, confirming Azure contains only
-  development/test data and no active users, unresolved privacy requests,
-  legal holds, or contractual retention obligations; or (b) selective
-  preservation authorised, identifying the required data classes and preserving
-  identity continuity and reconciliation evidence.
-- This pending decision does not block synthetic development work. It blocks
-  Azure deletion and any cutover that could abandon unresolved user records.
+- The owner approved selective preservation: inspect Azure, extract meaningful
+  information, and replicate verified records into the canonical PlanetScale
+  model. Azure structures are not imported as application tables or generic
+  legacy JSON.
+- This approval does not authorize Azure deletion, unresolved data loss, or
+  migration writes before the required Azure access and measured usage gates.
+- Unresolved privacy, legal, identity, or authoritative content remains a hard
+  blocker for the affected Azure resource; inaccessible derived or telemetry
+  data receives a resource-level disposition instead of blocking unrelated
+  migration work.
+
+## Temporary regional benchmark cleanup - 2026-07-28
+
+- The synthetic `bench-dublin-20260728` branch was created only to support the
+  required regional benchmark. It contained no production data; its interrupted
+  benchmark left 20 synthetic users and 20 synthetic posts.
+- The temporary `bench_admin_20260728` role's owned objects were reassigned to
+  the branch `postgres` role, the role was deleted, and the temporary branch
+  was deleted through the authenticated PlanetScale CLI.
+- The live branch inventory now contains only `main` and `development`.
+- No London branch or database was created. London provisioning was blocked by
+  the existing database's ARM architecture and, for a standalone database, by
+  PlanetScale billing-card verification.
+
+## Public development endpoint benchmark - 2026-07-28
+
+- The sanitized benchmark harness ran 20 iterations from the current
+  Johannesburg execution environment against
+  `lythaus-public-api-development.asora.workers.dev` with writes and bearer
+  credentials disabled.
+- Health measured p50/p95/p99 of 101.65/331.58/331.58 ms with zero errors;
+  readiness measured 231.94/310.95/310.95 ms with zero errors; discovery
+  measured 216.28/330.91/330.91 ms with zero errors.
+- Transactional writes, authenticated feeds, asynchronous completion, and
+  placed-versus-unplaced comparison were skipped because no synthetic access
+  token or placed development deployment was authorised. These results are
+  development evidence only and do not establish the production SLO table.

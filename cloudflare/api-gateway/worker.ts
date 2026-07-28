@@ -6,6 +6,8 @@ import {
   type EdgeRateLimitOptions,
   type EdgeRateLimitResult,
 } from '../../edge/worker/src/rateLimit';
+export { queryHyperdrive } from './hyperdrive';
+import type { HyperdriveBinding } from './hyperdrive';
 
 export interface Env {
   ENVIRONMENT?: string;
@@ -20,6 +22,7 @@ export interface Env {
   GATEWAY_POLICY?: 'public' | 'admin';
   LEGACY_API_SUNSET?: string;
   LEGACY_SUCCESSOR?: string;
+  HYPERDRIVE?: HyperdriveBinding;
 }
 
 const ALLOWED_METHODS = new Set(['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']);

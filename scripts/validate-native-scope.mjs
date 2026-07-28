@@ -30,18 +30,18 @@ const adminConfig = read(manifest.requiredWorkers[1]);
 if (!publicConfig.includes('api.lythaus.co')) failures.push('public API custom domain is missing');
 if (!adminConfig.includes('admin-api.lythaus.co')) failures.push('admin API custom domain is missing');
 
-const productionAccount = process.env[manifest.production.accountIdEnv] ?? '';
-const productionZone = process.env[manifest.production.zoneIdEnv] ?? '';
-const sharedAccount = process.env.CLOUDFLARE_SHARED_ACCOUNT_ID ?? manifest.preproduction.accountId;
+const productionAccount = process.env.CLOUDFLARE_ACCOUNT_ID
+  ?? process.env.CLOUDFLARE_PRODUCTION_ACCOUNT_ID
+  ?? manifest.production.accountId;
+const productionZone = process.env.CLOUDFLARE_ZONE_ID
+  ?? process.env.CLOUDFLARE_PRODUCTION_ZONE_ID
+  ?? manifest.production.zoneId;
 if (production) {
-  if (!productionAccount) failures.push(`${manifest.production.accountIdEnv} is required for production validation`);
-  if (!productionZone) failures.push(`${manifest.production.zoneIdEnv} is required for production validation`);
-  if (productionAccount && productionAccount === sharedAccount) failures.push('production account must differ from the shared pre-production account');
+  if (productionAccount !== manifest.production.accountId) failures.push('production account must be the approved shared Cloudflare account');
+  if (productionZone !== manifest.production.zoneId) failures.push('production zone must be lythaus.co');
   if (productionAccount && manifest.forbiddenAccountIds?.includes(productionAccount)) failures.push('production account is explicitly forbidden by the scope manifest');
   if (productionZone && manifest.forbiddenZoneIds?.includes(productionZone)) failures.push('production zone is explicitly forbidden by the scope manifest');
   if (process.env.CLOUDFLARE_ENVIRONMENT !== manifest.production.requiredEnvironment) failures.push('CLOUDFLARE_ENVIRONMENT=production is required');
-} else if (productionAccount && productionAccount === sharedAccount) {
-  failures.push('configured production account matches the shared pre-production account');
 }
 
 if (failures.length) {

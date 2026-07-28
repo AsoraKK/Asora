@@ -1,4 +1,4 @@
--- Run after restoring a PlanetScale backup into a temporary PostgreSQL 18 branch.
+-- Run after restoring a PlanetScale backup into a temporary PostgreSQL 17+ branch.
 -- This script is intentionally assertion-only and contains no destructive SQL.
 
 DO $$
@@ -6,13 +6,13 @@ DECLARE
   missing_extensions text;
   object_count integer;
 BEGIN
-  IF current_setting('server_version_num')::integer < 180000 THEN
-    RAISE EXCEPTION 'restore requires PostgreSQL 18 or newer';
+  IF current_setting('server_version_num')::integer < 170000 THEN
+    RAISE EXCEPTION 'restore requires PostgreSQL 17 or newer';
   END IF;
 
   SELECT string_agg(required_name, ', ' ORDER BY required_name)
     INTO missing_extensions
-    FROM (VALUES ('pgcrypto'), ('pg_trgm'), ('unaccent'), ('postgis')) AS required(required_name)
+    FROM (VALUES ('pgcrypto'), ('pg_trgm'), ('unaccent')) AS required(required_name)
    WHERE NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = required_name);
   IF missing_extensions IS NOT NULL THEN
     RAISE EXCEPTION 'required extensions missing after restore: %', missing_extensions;
@@ -34,7 +34,7 @@ BEGIN
 END $$;
 
 SELECT current_setting('server_version') AS server_version;
-SELECT extname FROM pg_extension WHERE extname IN ('postgis', 'pgcrypto', 'pg_trgm', 'unaccent') ORDER BY extname;
+SELECT extname FROM pg_extension WHERE extname IN ('pgcrypto', 'pg_trgm', 'unaccent') ORDER BY extname;
 SELECT nspname AS schema_name
   FROM pg_namespace
  WHERE nspname IN ('identity', 'content', 'social', 'feed', 'moderation', 'privacy', 'trust', 'media', 'editorial', 'system')

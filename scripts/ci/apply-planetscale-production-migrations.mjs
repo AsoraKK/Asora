@@ -7,11 +7,14 @@ const { Client } = pg;
 const root = process.cwd();
 const branch = process.env.PSCALE_BRANCH_NAME ?? '';
 const approval = process.env.PLANETSCALE_PRODUCTION_MIGRATIONS_APPROVED ?? '';
+const usageApproval = process.env.PLANETSCALE_MIGRATION_USAGE_APPROVED ?? '';
+const usageMaxUsd = Number(process.env.PLANETSCALE_MIGRATION_USAGE_MAX_USD ?? '0');
 const databaseUrl = process.env.PLANETSCALE_ADMIN_DATABASE_URL ?? '';
 const roleIdentifiers = JSON.parse(process.env.PSCALE_ROLE_IDENTIFIERS ?? '{}');
 
 if (branch !== 'main') throw new Error('production migrations require PSCALE_BRANCH_NAME=main');
 if (approval !== 'approved') throw new Error('production migrations require PLANETSCALE_PRODUCTION_MIGRATIONS_APPROVED=approved');
+if (usageApproval !== 'approved' || !(usageMaxUsd > 0)) throw new Error('production migrations require measured migration usage approval and a positive PLANETSCALE_MIGRATION_USAGE_MAX_USD');
 if (!databaseUrl) throw new Error('PLANETSCALE_ADMIN_DATABASE_URL is required');
 const connection = new URL(databaseUrl);
 if (connection.searchParams.get('sslmode') !== 'verify-full') throw new Error('production migrations require sslmode=verify-full');
@@ -74,6 +77,11 @@ async function recordMigrations(client, rows) {
 }
 
 await withClient(async (client) => {
+  const existingUsers = await client.query("SELECT to_regclass('identity.users') AS users");
+  if (existingUsers.rows[0]?.users) {
+    const existingRows = await client.query('SELECT count(*)::bigint AS count FROM identity.users');
+    if (Number(existingRows.rows[0]?.count ?? 0) !== 0) throw new Error('main contains application users; refusing clean-slate production migration');
+  }
   const existing = await registryRows(client);
   const applied = [];
   for (const migration of migrationFiles) {

@@ -1,0 +1,209 @@
+{
+  "schemaVersion": "lythaus-azure-exit-mappings-v1",
+  "sourcePolicy": {
+    "rawAzureDataAllowedInPlanetScale": false,
+    "unknownSources": "BLOCKED",
+    "orphanRecords": "reject-and-record",
+    "sourceIdsStoredInApplicationTables": false,
+    "duplicateAuthority": "prove-with-code-references-timestamps-counts-id-overlap-schema-version-and-deployment-history"
+  },
+  "canonicalSchemas": ["identity", "content", "social", "feed", "moderation", "privacy", "trust", "media", "editorial", "system"],
+  "mappings": [
+    {
+      "source": "Cosmos asora/users",
+      "sourceIdentifier": "id or verified internal user identifier",
+      "destination": "identity.users",
+      "classification": "MIGRATE",
+      "transform": "preserve valid stable UUID; otherwise generate UUIDv7; normalize status and timestamps; omit Azure metadata",
+      "identityRule": "JWT.sub equals identity.users.id",
+      "excludedFields": ["access tokens", "refresh tokens", "provider secrets", "Azure resource IDs", "test markers"],
+      "validation": "unique identity, valid status, no unverifiable orphan references"
+    },
+    {
+      "source": "Cosmos asora/users",
+      "sourceIdentifier": "provider subject and email fields",
+      "destination": "identity.provider_links and identity.email_credentials",
+      "classification": "MIGRATE",
+      "transform": "create encrypted provider link and HMAC lookup; import password hash only after compatibility verification",
+      "identityRule": "preserve user relationship; never expose provider subject",
+      "excludedFields": ["active access tokens", "refresh-token families unless safely rotated", "reversible passwords"],
+      "validation": "provider uniqueness and reset-required fallback for incompatible hashes"
+    },
+    {
+      "source": "Cosmos asora/publicProfiles and profiles",
+      "sourceIdentifier": "user identifier",
+      "destination": "social.profiles and social.profile_private_fields",
+      "classification": "MIGRATE",
+      "transform": "split public and restricted fields; normalize handles and profile status",
+      "identityRule": "map to identity.users.id",
+      "excludedFields": ["Cosmos document envelope", "stale projections", "test fields"],
+      "validation": "one profile per user and no private field in public projection"
+    },
+    {
+      "source": "Cosmos asora/posts and posts_v2",
+      "sourceIdentifier": "document id",
+      "destination": "content.posts, content.content_declarations, and feed.author_outbox",
+      "classification": "BLOCKED — AUTHORITY REVIEW",
+      "transform": "select authoritative source only after code-reference, timestamp, count, overlap, schema, and deployment-history comparison",
+      "identityRule": "map author to identity.users.id; reject unknown authors",
+      "excludedFields": ["Cosmos partition keys", "provider projection metadata", "unknown legacy JSON"],
+      "validation": "deterministic duplicate resolution and publication-state reconciliation"
+    },
+    {
+      "source": "Cosmos asora/comments",
+      "sourceIdentifier": "document id",
+      "destination": "content.comments",
+      "classification": "MIGRATE",
+      "transform": "map post, author, parent, body, moderation state, and timestamps",
+      "identityRule": "reject missing post, author, or parent references",
+      "excludedFields": ["partition key", "Cosmos etag", "derived counters"],
+      "validation": "dependency order after users and posts"
+    },
+    {
+      "source": "Cosmos asora/likes",
+      "sourceIdentifier": "user and post identifiers",
+      "destination": "social.reactions",
+      "classification": "MIGRATE",
+      "transform": "map like to reaction_type=like and preserve created timestamp",
+      "identityRule": "reject unknown users or posts",
+      "excludedFields": ["duplicate projection records", "Cosmos envelope"],
+      "validation": "deduplicate by user, post, and reaction type"
+    },
+    {
+      "source": "Cosmos asora/userFeed",
+      "sourceIdentifier": "user and post identifiers",
+      "destination": "feed.user_inbox",
+      "classification": "MIGRATE AS DERIVED",
+      "transform": "rebuild from authoritative follows and allowed posts; import only verified unexplained inbox records",
+      "identityRule": "reject unknown user or post",
+      "excludedFields": ["ranking cache", "stale projection fields", "provider partition key"],
+      "validation": "rebuild after canonical content import"
+    },
+    {
+      "source": "Cosmos asora/privacy_requests",
+      "sourceIdentifier": "request id",
+      "destination": "privacy.requests and privacy.request_events",
+      "classification": "MIGRATE",
+      "transform": "preserve request state, subject, type, timestamps, and audit events",
+      "identityRule": "map subject to identity.users.id; unresolved subject blocks deletion",
+      "excludedFields": ["provider credentials", "raw secrets", "duplicate projections"],
+      "validation": "open requests and completed-but-retained requests reconcile exactly"
+    },
+    {
+      "source": "Cosmos asora/privacy_audit",
+      "sourceIdentifier": "audit event id",
+      "destination": "privacy.request_events and system.audit_events",
+      "classification": "MIGRATE OR PRESERVE EVIDENCE",
+      "transform": "import only verified privacy events; preserve sanitised evidence for records not safe for application import",
+      "identityRule": "retain subject relationship only when verified",
+      "excludedFields": ["secret values", "raw private evidence not required by the product model"],
+      "validation": "hash and count reconciliation"
+    },
+    {
+      "source": "Cosmos asora/legal_holds",
+      "sourceIdentifier": "hold id",
+      "destination": "privacy.legal_holds",
+      "classification": "MIGRATE",
+      "transform": "preserve active and released legal holds, subject, scope, reason code, and timestamps",
+      "identityRule": "unresolved subject or hold blocks affected Azure deletion",
+      "excludedFields": ["raw provider metadata", "secrets"],
+      "validation": "no active hold is lost"
+    },
+    {
+      "source": "Cosmos asora/content_flags",
+      "sourceIdentifier": "flag id",
+      "destination": "moderation.content_flags and moderation.cases",
+      "classification": "MIGRATE",
+      "transform": "normalize reporter, content type, content id, reason, and case linkage",
+      "identityRule": "reject unknown reporters or content",
+      "excludedFields": ["detector cache noise", "Cosmos envelope"],
+      "validation": "flag and case counts reconcile"
+    },
+    {
+      "source": "Cosmos asora/moderation_decisions",
+      "sourceIdentifier": "decision id",
+      "destination": "moderation.decisions, moderation.enforcement_events, and moderation.policy_versions",
+      "classification": "MIGRATE",
+      "transform": "preserve decision outcome, public label, policy version, and enforcement timestamps",
+      "identityRule": "map moderator and content references when verified",
+      "excludedFields": ["provider telemetry noise", "raw model payloads not required for audit"],
+      "validation": "case, decision, and enforcement relationships reconcile"
+    },
+    {
+      "source": "Cosmos asora/appeals and appeal_votes",
+      "sourceIdentifier": "appeal id and vote key",
+      "destination": "moderation.appeals and moderation.appeal_votes",
+      "classification": "MIGRATE",
+      "transform": "preserve appeal state, decision linkage, voter relationship, and timestamps",
+      "identityRule": "reject unknown users or cases",
+      "excludedFields": ["duplicate vote projections", "provider metadata"],
+      "validation": "one vote per permitted voter and appeal"
+    },
+    {
+      "source": "Cosmos asora/notification_preferences",
+      "sourceIdentifier": "user id",
+      "destination": "feed.notifications and identity.account_events",
+      "classification": "MIGRATE",
+      "transform": "preserve user preference state only; do not import stale delivery queue state",
+      "identityRule": "map to identity.users.id",
+      "excludedFields": ["device tokens", "stale notification messages", "provider delivery IDs"],
+      "validation": "one current preference set per user"
+    },
+    {
+      "source": "Cosmos asora/notifications, notification_events, notification_history",
+      "sourceIdentifier": "event id",
+      "destination": "feed.notifications and system.audit_events",
+      "classification": "PRESERVE AS EVIDENCE OR MIGRATE VERIFIED HISTORY",
+      "transform": "exclude stale delivery state; preserve only product-visible notification history and sanitised audit evidence",
+      "identityRule": "verify user relationship before import",
+      "excludedFields": ["stale queue messages", "provider delivery secrets", "device tokens"],
+      "validation": "no active queue dependency remains"
+    },
+    {
+      "source": "Cosmos asora/reputation_audit",
+      "sourceIdentifier": "event id",
+      "destination": "trust.reputation_events and trust.provenance_events",
+      "classification": "MIGRATE",
+      "transform": "preserve valid reputation events, policy version, source, and timestamps",
+      "identityRule": "map subject and content references when verified",
+      "excludedFields": ["derived balances", "duplicate projections", "unknown provider fields"],
+      "validation": "rebuild balances from accepted events"
+    },
+    {
+      "source": "Azure PostgreSQL asora_db",
+      "sourceIdentifier": "table primary key",
+      "destination": "explicit canonical table mapping after schema inventory",
+      "classification": "BLOCKED — ACCESS REQUIRED",
+      "transform": "logical export, schema analysis, classification, deterministic canonical transformation",
+      "identityRule": "preserve verified stable UUIDs or generate UUIDv7 locally",
+      "excludedFields": ["Azure connection data", "deployment metadata", "secrets", "provider-only runtime state"],
+      "validation": "pg_dump hash, row counts, constraints, relationships, and rejects"
+    }
+  ],
+  "preserveAsEvidence": [
+    "Azure resource inventories",
+    "deployment histories",
+    "sanitised operational logs",
+    "schema inventories",
+    "count reconciliations",
+    "backup manifests",
+    "legal or compliance evidence",
+    "final Azure deletion evidence"
+  ],
+  "discardWithoutImport": [
+    "deployment packages",
+    "Function build artefacts",
+    "Azure-specific connection data",
+    "Application Insights telemetry noise",
+    "stale Queue messages",
+    "expired tokens",
+    "Azure Key Vault secret values",
+    "temporary test accounts",
+    "synthetic posts",
+    "duplicate test data",
+    "stale Cosmos projections",
+    "obsolete feature experiments",
+    "empty operational containers",
+    "provider-specific runtime state"
+  ]
+}

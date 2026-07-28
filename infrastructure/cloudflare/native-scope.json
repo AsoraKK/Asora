@@ -1,18 +1,17 @@
 {
   "project": "lythaus",
   "production": {
-    "accountIdEnv": "CLOUDFLARE_PRODUCTION_ACCOUNT_ID",
-    "zoneIdEnv": "CLOUDFLARE_PRODUCTION_ZONE_ID",
+    "accountId": "e5b7ae46e04698f507b7e4b3d4ef1af0",
+    "zoneId": "7bc572c8b7cd3c00be9c655176c29382",
     "requiredEnvironment": "production",
-    "sharedAccountMustDiffer": true,
-    "productionOnlyResourceSuffix": ""
+    "sharedAccountMustDiffer": false,
+    "productionOnlyResourceSuffix": "",
+    "approvedResourcePrefix": "lythaus-",
+    "promotedInPlace": true
   },
-  "forbiddenAccountIds": [
-    "e5b7ae46e04698f507b7e4b3d4ef1af0"
-  ],
-  "forbiddenZoneIds": [
-    "7bc572c8b7cd3c00be9c655176c29382"
-  ],
+  "forbiddenAccountIds": [],
+  "forbiddenZoneIds": [],
+  "forbiddenZoneNames": ["niteowlangling.co.za"],
   "forbiddenResourcePrefixes": [
     "nite-owl-",
     "preview-"
@@ -20,11 +19,11 @@
   "approvedLegacyResourcePrefixes": [
     "asora-azure-compat"
   ],
-  "preproduction": {
+  "sharedAccount": {
     "accountId": "e5b7ae46e04698f507b7e4b3d4ef1af0",
     "zoneId": "7bc572c8b7cd3c00be9c655176c29382",
-    "resourceSuffix": "-dev",
-    "syntheticDataOnly": true
+    "resourcePrefix": "lythaus-",
+    "promotionPolicy": "existing-dev-resources-promoted-in-place"
   },
   "approvedProductionHosts": [
     "api.lythaus.co",

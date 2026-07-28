@@ -80,10 +80,14 @@ async function issueSession(env: Env, userId: string, roles: string[] = []): Pro
 }
 
 async function sendEmailTransport(env: Env, input: { to: string; subject: string; html: string }): Promise<EmailDeliveryReference> {
-  if (env.EMAIL && env.EMAIL_FROM) {
+  const providerMode = env.EMAIL_PROVIDER_MODE ?? (env.ENVIRONMENT === 'production' ? 'cloudflare' : 'fallback');
+  if (providerMode === 'disabled') throw new Error('provider_unavailable');
+  if (providerMode === 'cloudflare') {
+    if (!env.EMAIL || !env.EMAIL_FROM) throw new Error('email_delivery_not_configured');
     await env.EMAIL.send({ to: input.to, from: env.EMAIL_FROM, subject: input.subject, html: input.html });
     return { provider: 'cloudflare-email', messageId: 'accepted', acceptedAt: new Date().toISOString() };
   }
+  if (providerMode !== 'fallback') throw new Error('email_provider_mode_invalid');
   if (!env.EMAIL_PROVIDER_URL || !env.EMAIL_PROVIDER_TOKEN || !env.EMAIL_FROM) throw new Error('email_delivery_not_configured');
   const response = await fetch(env.EMAIL_PROVIDER_URL, {
     method: 'POST',
@@ -388,6 +392,46 @@ async function readJson<T>(request: Request, maxBytes: number): Promise<T> {
   const bytes = await request.arrayBuffer();
   if (bytes.byteLength > maxBytes) throw new Error('request_too_large');
   return JSON.parse(new TextDecoder().decode(bytes)) as T;
+}
+
+type IdempotencyRecord = { state: 'processing' | 'completed'; status?: number; body?: unknown };
+
+async function idempotentMutation(
+  request: Request,
+  env: Env,
+  actorId: string,
+  scope: string,
+  work: () => Promise<Response>,
+): Promise<Response> {
+  const key = request.headers.get('idempotency-key')?.trim();
+  if (!key) return work();
+  if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/.test(key)) throw new Error('invalid_idempotency_key');
+  const claimed = await query<{ response: IdempotencyRecord }>(env.DB_APP_FRESH,
+    `INSERT INTO system.idempotency_keys (scope, key, actor_id, response)
+     VALUES ($1, $2, $3, '{"state":"processing"}'::jsonb)
+     ON CONFLICT (scope, key) DO NOTHING
+     RETURNING response`, [scope, key, actorId]);
+  if (claimed.rowCount === 0) {
+    const existing = await query<{ actor_id: string | null; response: IdempotencyRecord }>(env.DB_APP_FRESH,
+      `SELECT actor_id, response FROM system.idempotency_keys WHERE scope = $1 AND key = $2`, [scope, key]);
+    const record = existing.rows[0];
+    if (!record || record.actor_id !== actorId) throw new Error('idempotency_key_conflict');
+    if (record.response.state === 'processing') throw new Error('idempotency_in_progress');
+    return privateResponse(request, env, record.response.body ?? null, { status: record.response.status ?? 200 });
+  }
+  try {
+    const result = await work();
+    const rawBody = await result.clone().text();
+    const body = rawBody ? JSON.parse(rawBody) : null;
+    await query(env.DB_APP_FRESH,
+      `UPDATE system.idempotency_keys SET response = $4::jsonb WHERE scope = $1 AND key = $2 AND actor_id = $3`,
+      [scope, key, actorId, JSON.stringify({ state: 'completed', status: result.status, body })]);
+    return result;
+  } catch (error) {
+    await query(env.DB_APP_FRESH,
+      `DELETE FROM system.idempotency_keys WHERE scope = $1 AND key = $2 AND actor_id = $3`, [scope, key, actorId]).catch(() => undefined);
+    throw error;
+  }
 }
 
 async function createPost(request: Request, env: Env, user: Principal): Promise<Response> {
@@ -743,50 +787,91 @@ export default {
       const comments = url.pathname.match(/^\/api\/posts\/([^/]+)\/comments$/);
       if (request.method === 'GET' && comments) return await getComments(request, env, comments[1]);
       if (request.method === 'GET' && url.pathname === '/api/users/me') return await getUserProfile(request, env, (await principal(request, env)).userId, true);
-      if (request.method === 'PUT' && url.pathname === '/api/users/me') return await updateProfile(request, env, await principal(request, env));
+      if (request.method === 'PUT' && url.pathname === '/api/users/me') {
+        const user = await principal(request, env);
+        return await idempotentMutation(request, env, user.userId, 'profile.update', () => updateProfile(request, env, user));
+      }
       const publicProfile = url.pathname.match(/^\/api\/users\/([^/]+)$/);
       if (request.method === 'GET' && publicProfile) return await getUserProfile(request, env, publicProfile[1]);
-      if (request.method === 'POST' && (url.pathname === '/api/follows' || url.pathname === '/api/users/follow')) return await createFollow(request, env, await principal(request, env));
+      if (request.method === 'POST' && (url.pathname === '/api/follows' || url.pathname === '/api/users/follow')) {
+        const user = await principal(request, env);
+        return await idempotentMutation(request, env, user.userId, 'follow.create', () => createFollow(request, env, user));
+      }
       if (request.method === 'DELETE' && url.pathname.match(/^\/api\/follows\/([^/]+)$/)) {
         const user = await principal(request, env);
         const followedId = url.pathname.match(/^\/api\/follows\/([^/]+)$/)?.[1] ?? '';
-        await query(env.DB_APP_FRESH, `DELETE FROM social.follows WHERE follower_id = $1 AND followed_id = $2`, [user.userId, followedId]);
-        return privateResponse(request, env, { following: followedId, removed: true });
+        return await idempotentMutation(request, env, user.userId, 'follow.delete', async () => {
+          await query(env.DB_APP_FRESH, `DELETE FROM social.follows WHERE follower_id = $1 AND followed_id = $2`, [user.userId, followedId]);
+          return privateResponse(request, env, { following: followedId, removed: true });
+        });
       }
       if (request.method === 'POST' && (url.pathname === '/api/blocks' || url.pathname === '/api/users/block')) {
         const user = await principal(request, env);
         const input = await readJson<{ userId?: string }>(request, 8 * 1024);
-        return await setBlock(request, env, user, input.userId ?? '', true);
+        return await idempotentMutation(request, env, user.userId, 'block.create', () => setBlock(request, env, user, input.userId ?? '', true));
       }
       const block = url.pathname.match(/^\/api\/blocks\/([^/]+)$/);
-      if (request.method === 'DELETE' && block) return await setBlock(request, env, await principal(request, env), block[1], false);
+      if (request.method === 'DELETE' && block) {
+        const user = await principal(request, env);
+        return await idempotentMutation(request, env, user.userId, 'block.delete', () => setBlock(request, env, user, block[1], false));
+      }
       if (request.method === 'POST' && (url.pathname === '/api/mutes' || url.pathname === '/api/users/mute')) {
         const user = await principal(request, env);
         const input = await readJson<{ userId?: string }>(request, 8 * 1024);
-        return await setMute(request, env, user, input.userId ?? '', true);
+        return await idempotentMutation(request, env, user.userId, 'mute.create', () => setMute(request, env, user, input.userId ?? '', true));
       }
       const mute = url.pathname.match(/^\/api\/mutes\/([^/]+)$/);
-      if (request.method === 'DELETE' && mute) return await setMute(request, env, await principal(request, env), mute[1], false);
+      if (request.method === 'DELETE' && mute) {
+        const user = await principal(request, env);
+        return await idempotentMutation(request, env, user.userId, 'mute.delete', () => setMute(request, env, user, mute[1], false));
+      }
       if (request.method === 'POST' && url.pathname === '/api/bookmarks') {
         const user = await principal(request, env);
         const input = await readJson<{ postId?: string }>(request, 8 * 1024);
-        return await setBookmark(request, env, user, input.postId ?? '', true);
+        return await idempotentMutation(request, env, user.userId, 'bookmark.create', () => setBookmark(request, env, user, input.postId ?? '', true));
       }
       const bookmark = url.pathname.match(/^\/api\/bookmarks\/([^/]+)$/);
-      if (request.method === 'DELETE' && bookmark) return await setBookmark(request, env, await principal(request, env), bookmark[1], false);
+      if (request.method === 'DELETE' && bookmark) {
+        const user = await principal(request, env);
+        return await idempotentMutation(request, env, user.userId, 'bookmark.delete', () => setBookmark(request, env, user, bookmark[1], false));
+      }
       const comment = url.pathname.match(/^\/api\/posts\/([^/]+)\/comments$/);
-      if (request.method === 'POST' && comment) return await createComment(request, env, await principal(request, env), comment[1]);
+      if (request.method === 'POST' && comment) {
+        const user = await principal(request, env);
+        return await idempotentMutation(request, env, user.userId, 'comment.create', () => createComment(request, env, user, comment[1]));
+      }
       const reaction = url.pathname.match(/^\/api\/posts\/([^/]+)\/reactions$/);
-      if (request.method === 'POST' && reaction) return await createReaction(request, env, await principal(request, env), reaction[1]);
-      if (request.method === 'POST' && (url.pathname === '/api/flags' || url.pathname === '/api/content/flags')) return await createFlag(request, env, await principal(request, env));
-      if (request.method === 'POST' && url.pathname === '/api/appeals') return await createAppeal(request, env, await principal(request, env));
+      if (request.method === 'POST' && reaction) {
+        const user = await principal(request, env);
+        return await idempotentMutation(request, env, user.userId, 'reaction.create', () => createReaction(request, env, user, reaction[1]));
+      }
+      if (request.method === 'POST' && (url.pathname === '/api/flags' || url.pathname === '/api/content/flags')) {
+        const user = await principal(request, env);
+        return await idempotentMutation(request, env, user.userId, 'flag.create', () => createFlag(request, env, user));
+      }
+      if (request.method === 'POST' && url.pathname === '/api/appeals') {
+        const user = await principal(request, env);
+        return await idempotentMutation(request, env, user.userId, 'appeal.create', () => createAppeal(request, env, user));
+      }
       const appeal = url.pathname.match(/^\/api\/appeals\/([^/]+)$/);
       if (request.method === 'GET' && appeal) return await getAppeal(request, env, await principal(request, env), appeal[1]);
-      if (request.method === 'POST' && (url.pathname === '/api/privacy/requests' || url.pathname === '/api/privacy/request')) return await createPrivacyRequest(request, env, await principal(request, env));
+      if (request.method === 'POST' && (url.pathname === '/api/privacy/requests' || url.pathname === '/api/privacy/request')) {
+        const user = await principal(request, env);
+        return await idempotentMutation(request, env, user.userId, 'privacy.request.create', () => createPrivacyRequest(request, env, user));
+      }
       if (request.method === 'GET' && (url.pathname === '/api/storage' || url.pathname === '/api/storage/usage')) return await getStorage(request, env, await principal(request, env));
-      if (request.method === 'PUT' && (url.pathname === '/api/users/me/region' || url.pathname === '/api/privacy/region')) return await updateRegionPreferences(request, env, await principal(request, env));
-      if (request.method === 'PUT' && (url.pathname === '/api/users/me/retention' || url.pathname === '/api/privacy/retention')) return await updateRetentionRule(request, env, await principal(request, env));
+      if (request.method === 'PUT' && (url.pathname === '/api/users/me/region' || url.pathname === '/api/privacy/region')) {
+        const user = await principal(request, env);
+        return await idempotentMutation(request, env, user.userId, 'region.update', () => updateRegionPreferences(request, env, user));
+      }
+      if (request.method === 'PUT' && (url.pathname === '/api/users/me/retention' || url.pathname === '/api/privacy/retention')) {
+        const user = await principal(request, env);
+        return await idempotentMutation(request, env, user.userId, 'retention.update', () => updateRetentionRule(request, env, user));
+      }
       if (request.method === 'GET' && url.pathname === '/api/auth/userinfo') return await getUserProfile(request, env, (await principal(request, env)).userId, true);
+      if (url.pathname === '/api/auth/email' || url.pathname === '/api/authEmail' || url.pathname.startsWith('/api/auth/email/verify') || url.pathname.startsWith('/api/auth/password/reset') || url.pathname === '/api/auth/password-reset') {
+        if (env.EMAIL_PROVIDER_MODE === 'disabled') return response(request, env, { error: 'provider_unavailable', provider: 'email', correlationId: id }, { status: 404 });
+      }
       if (request.method === 'POST' && (url.pathname === '/api/auth/email' || url.pathname === '/api/authEmail')) return await emailAuth(request, env);
       if ((request.method === 'GET' || request.method === 'POST') && url.pathname === '/api/auth/email/verify') return await verifyEmail(request, env);
       if (request.method === 'POST' && (url.pathname === '/api/auth/password/reset/request' || url.pathname === '/api/auth/password-reset')) return await requestPasswordReset(request, env);
@@ -795,10 +880,21 @@ export default {
       if (request.method === 'POST' && url.pathname === '/api/auth/logout') return await logout(request, env);
       if (request.method === 'GET' && url.pathname === '/api/auth/google') return await googleAuthStart(request, env);
       if (request.method === 'GET' && url.pathname === '/api/auth/google/callback') return await googleAuthCallback(request, env);
-      if (request.method === 'POST' && url.pathname === '/api/posts') return await createPost(request, env, await principal(request, env));
-      if (request.method === 'POST' && url.pathname === '/api/media/uploads') return await createUploadSession(request, env, await principal(request, env));
+      if (request.method === 'POST' && url.pathname === '/api/posts') {
+        const user = await principal(request, env);
+        return await idempotentMutation(request, env, user.userId, 'post.create', () => createPost(request, env, user));
+      }
+      if (request.method === 'POST' && url.pathname === '/api/media/uploads' && env.MEDIA_UPLOADS_ENABLED !== 'true') return response(request, env, { error: 'feature_disabled', feature: 'media_uploads', correlationId: id }, { status: 404 });
+      if (request.method === 'POST' && url.pathname === '/api/media/uploads') {
+        const user = await principal(request, env);
+        return await idempotentMutation(request, env, user.userId, 'media.upload.create', () => createUploadSession(request, env, user));
+      }
       const finalise = url.pathname.match(/^\/api\/media\/uploads\/([^/]+)\/finalise$/);
-      if (request.method === 'POST' && finalise) return await finaliseUpload(request, env, await principal(request, env), finalise[1]);
+      if (request.method === 'POST' && finalise && env.MEDIA_UPLOADS_ENABLED !== 'true') return response(request, env, { error: 'feature_disabled', feature: 'media_uploads', correlationId: id }, { status: 404 });
+      if (request.method === 'POST' && finalise) {
+        const user = await principal(request, env);
+        return await idempotentMutation(request, env, user.userId, 'media.upload.finalise', () => finaliseUpload(request, env, user, finalise[1]));
+      }
       if (url.pathname === '/api/auth/apple' || url.pathname === '/api/auth/world-id' || url.pathname === '/api/auth/world') {
         return response(request, env, { error: 'provider_unavailable', provider: url.pathname.includes('apple') ? 'apple' : 'world_id', correlationId: id }, { status: 404 });
       }

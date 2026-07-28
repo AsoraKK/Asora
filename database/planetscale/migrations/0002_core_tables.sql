@@ -1,5 +1,5 @@
 CREATE TABLE identity.users (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'suspended', 'deleted', 'locked')),
   display_name text NOT NULL DEFAULT '',
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -8,7 +8,7 @@ CREATE TABLE identity.users (
 );
 
 CREATE TABLE identity.provider_links (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   user_id uuid NOT NULL REFERENCES identity.users(id),
   provider text NOT NULL CHECK (provider IN ('google', 'apple', 'world_id', 'email')),
   provider_subject_ciphertext bytea,
@@ -36,7 +36,7 @@ CREATE TABLE identity.email_credentials (
 );
 
 CREATE TABLE identity.refresh_token_families (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   user_id uuid NOT NULL REFERENCES identity.users(id),
   family_version integer NOT NULL DEFAULT 1,
   revoked_at timestamptz,
@@ -45,7 +45,7 @@ CREATE TABLE identity.refresh_token_families (
 );
 
 CREATE TABLE identity.auth_sessions (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   user_id uuid NOT NULL REFERENCES identity.users(id),
   refresh_family_id uuid NOT NULL REFERENCES identity.refresh_token_families(id),
   refresh_token_hash bytea NOT NULL UNIQUE,
@@ -55,7 +55,7 @@ CREATE TABLE identity.auth_sessions (
 );
 
 CREATE TABLE identity.consent_records (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   user_id uuid NOT NULL REFERENCES identity.users(id),
   purpose text NOT NULL,
   policy_version text NOT NULL,
@@ -82,7 +82,7 @@ CREATE TABLE identity.admin_memberships (
 );
 
 CREATE TABLE content.places (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   parent_id uuid REFERENCES content.places(id),
   display_name text NOT NULL,
   place_type text NOT NULL,
@@ -105,7 +105,7 @@ END
 $$;
 
 CREATE TABLE content.posts (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   author_id uuid NOT NULL REFERENCES identity.users(id),
   body text NOT NULL CHECK (length(body) BETWEEN 1 AND 100000),
   declared_creation_mode text NOT NULL CHECK (declared_creation_mode IN ('human', 'ai_assisted', 'ai_generated')),
@@ -127,7 +127,7 @@ CREATE TABLE content.post_locations (
 );
 
 CREATE TABLE content.comments (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   post_id uuid NOT NULL REFERENCES content.posts(id) ON DELETE CASCADE,
   author_id uuid NOT NULL REFERENCES identity.users(id),
   parent_id uuid REFERENCES content.comments(id),
@@ -179,7 +179,7 @@ CREATE TABLE feed.discovery_candidates (
 );
 
 CREATE TABLE moderation.content_flags (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   reporter_id uuid NOT NULL REFERENCES identity.users(id),
   content_type text NOT NULL,
   content_id uuid NOT NULL,
@@ -189,7 +189,7 @@ CREATE TABLE moderation.content_flags (
 );
 
 CREATE TABLE moderation.cases (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   content_type text NOT NULL,
   content_id uuid NOT NULL,
   state text NOT NULL DEFAULT 'open',
@@ -199,7 +199,7 @@ CREATE TABLE moderation.cases (
 );
 
 CREATE TABLE moderation.detector_runs (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   content_type text NOT NULL,
   content_id uuid NOT NULL,
   provider text NOT NULL,
@@ -209,7 +209,7 @@ CREATE TABLE moderation.detector_runs (
 );
 
 CREATE TABLE moderation.decisions (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   case_id uuid NOT NULL REFERENCES moderation.cases(id),
   outcome text NOT NULL CHECK (outcome IN ('allow', 'block', 'queue')),
   public_label text,
@@ -219,7 +219,7 @@ CREATE TABLE moderation.decisions (
 );
 
 CREATE TABLE moderation.appeals (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   case_id uuid NOT NULL REFERENCES moderation.cases(id),
   appellant_id uuid NOT NULL REFERENCES identity.users(id),
   state text NOT NULL DEFAULT 'open',
@@ -228,7 +228,7 @@ CREATE TABLE moderation.appeals (
 );
 
 CREATE TABLE privacy.requests (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   subject_id uuid NOT NULL REFERENCES identity.users(id),
   request_type text NOT NULL CHECK (request_type IN ('export', 'delete', 'rectify')),
   state text NOT NULL DEFAULT 'received',
@@ -237,7 +237,7 @@ CREATE TABLE privacy.requests (
 );
 
 CREATE TABLE privacy.request_events (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   request_id uuid NOT NULL REFERENCES privacy.requests(id),
   event_type text NOT NULL,
   metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
@@ -245,7 +245,7 @@ CREATE TABLE privacy.request_events (
 );
 
 CREATE TABLE privacy.legal_holds (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   subject_id uuid NOT NULL REFERENCES identity.users(id),
   reason text NOT NULL,
   active boolean NOT NULL DEFAULT true,
@@ -254,7 +254,7 @@ CREATE TABLE privacy.legal_holds (
 );
 
 CREATE TABLE privacy.subject_data_locations (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   subject_id uuid NOT NULL REFERENCES identity.users(id),
   store_type text NOT NULL,
   resource_reference text NOT NULL,
@@ -275,7 +275,7 @@ CREATE TABLE privacy.deletion_tombstones (
 );
 
 CREATE TABLE privacy.export_manifests (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   request_id uuid NOT NULL REFERENCES privacy.requests(id),
   object_key text NOT NULL,
   package_hash text NOT NULL,
@@ -284,7 +284,7 @@ CREATE TABLE privacy.export_manifests (
 );
 
 CREATE TABLE trust.provenance_events (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   content_id uuid NOT NULL,
   author_id uuid NOT NULL REFERENCES identity.users(id),
   declared_creation_mode text NOT NULL,
@@ -298,7 +298,7 @@ CREATE TABLE trust.provenance_events (
 );
 
 CREATE TABLE trust.human_contribution_events (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   subject_user_id uuid NOT NULL REFERENCES identity.users(id),
   content_id uuid,
   human_authorship_eligibility boolean NOT NULL,
@@ -312,7 +312,7 @@ CREATE TABLE trust.human_contribution_events (
 );
 
 CREATE TABLE media.upload_sessions (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   user_id uuid NOT NULL REFERENCES identity.users(id),
   object_key text NOT NULL UNIQUE,
   content_type text NOT NULL,
@@ -337,7 +337,7 @@ CREATE TABLE media.storage_ledger (
 );
 
 CREATE TABLE media.objects (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   owner_id uuid NOT NULL REFERENCES identity.users(id),
   object_key text NOT NULL UNIQUE,
   content_type text NOT NULL,
@@ -381,7 +381,7 @@ CREATE TABLE system.idempotency_keys (
 );
 
 CREATE TABLE system.audit_events (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   actor_id uuid,
   action text NOT NULL,
   target_type text,

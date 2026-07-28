@@ -1,8 +1,5 @@
--- PostGIS is a required launch capability, but PlanetScale may temporarily
--- exclude it from the extension allowlist. The explicit install script lives
--- in extensions/postgis.sql and must be applied before geography features are
--- enabled. Development can continue with the documented JSON boundary
--- fallback while the provider capability remains unavailable.
+-- PostGIS is deliberately optional. Location launch behavior uses validated
+-- country, region, municipality, community, and GeoJSON fields only.
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'postgis') THEN

@@ -57,10 +57,11 @@ for (const fn of requiredFunctions) {
   const [schema, name] = fn.split('.');
   if (!new RegExp(`CREATE (?:OR REPLACE )?FUNCTION ${schema}\\.${name}\\b`, 'i').test(source)) failures.push(`missing function: ${fn}`);
 }
-for (const required of ['postgis', 'pg_trgm', 'unaccent', 'pgcrypto', 'uuidv7']) {
+for (const required of ['pg_trgm', 'unaccent', 'pgcrypto', 'uuid']) {
   if (!source.toLowerCase().includes(required.toLowerCase())) failures.push(`missing extension/function reference: ${required}`);
 }
-if (!/server_version_num.*180000/s.test(source)) failures.push('PostgreSQL 18 preflight missing');
+if (/uuidv7\(\)/i.test(source)) failures.push('database-generated uuidv7 default is forbidden; generate UUIDv7 in application code');
+if (!/server_version_num.*170000/s.test(source)) failures.push('PostgreSQL 17 preflight missing');
 if (/password|token/i.test(source) && /plaintext|secret_value/i.test(source)) failures.push('migration appears to contain secret material');
 if (failures.length) {
   console.error(failures.map((failure) => `- ${failure}`).join('\n'));

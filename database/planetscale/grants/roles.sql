@@ -60,7 +60,10 @@ ALTER DEFAULT PRIVILEGES REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
 ALTER DEFAULT PRIVILEGES REVOKE ALL ON TABLES FROM PUBLIC;
 ALTER DEFAULT PRIVILEGES REVOKE ALL ON SEQUENCES FROM PUBLIC;
 ALTER DEFAULT PRIVILEGES IN SCHEMA identity, content, social, feed, moderation, privacy, trust, media, editorial, system GRANT USAGE, SELECT ON SEQUENCES TO lythaus_runtime, lythaus_admin, lythaus_jobs, lythaus_privacy;
-REVOKE CREATE, USAGE ON SCHEMA privacy FROM lythaus_runtime, lythaus_admin, lythaus_jobs;
+-- Runtime may execute the narrowly scoped retention function, so preserve
+-- schema USAGE while still preventing object creation in the restricted
+-- privacy schema.
+REVOKE CREATE ON SCHEMA privacy FROM lythaus_runtime, lythaus_admin, lythaus_jobs;
 REVOKE CREATE ON DATABASE postgres FROM lythaus_runtime, lythaus_admin, lythaus_jobs, lythaus_privacy;
 
 -- Runtime roles must not own database objects or receive CREATE/CREATEROLE/CREATEDB.

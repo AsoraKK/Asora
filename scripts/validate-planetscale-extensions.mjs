@@ -19,6 +19,7 @@ if (failures.length) {
 
 const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 const required = manifest.required?.map((entry) => entry.name).filter(Boolean) ?? [];
+const optional = manifest.optional?.map((entry) => entry.name).filter(Boolean) ?? [];
 if (required.length === 0) failures.push('manifest has no required extensions');
 
 const migrationFiles = fs.existsSync(migrationDir)
@@ -52,7 +53,7 @@ if (failures.length) {
   console.error(failures.map((failure) => `- ${failure}`).join('\n'));
   process.exitCode = 1;
 } else if (catalogPath) {
-  console.log(`Validated ${required.length} required PlanetScale extensions against live catalog evidence.`);
+  console.log(`Validated ${required.length} required PlanetScale extensions against live catalog evidence; ${optional.length} optional extensions are non-blocking.`);
 } else {
-  console.log(`Validated ${required.length} required PlanetScale extension references; live catalog not supplied.`);
+  console.log(`Validated ${required.length} required PlanetScale extension references; ${optional.length} optional extensions are non-blocking.`);
 }

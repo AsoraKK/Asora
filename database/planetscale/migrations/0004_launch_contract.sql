@@ -1,5 +1,5 @@
 CREATE TABLE identity.email_verification_tokens (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   user_id uuid NOT NULL REFERENCES identity.users(id) ON DELETE CASCADE,
   token_hash bytea NOT NULL UNIQUE,
   expires_at timestamptz NOT NULL,
@@ -8,7 +8,7 @@ CREATE TABLE identity.email_verification_tokens (
 );
 
 CREATE TABLE identity.password_reset_tokens (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   user_id uuid NOT NULL REFERENCES identity.users(id) ON DELETE CASCADE,
   token_hash bytea NOT NULL UNIQUE,
   expires_at timestamptz NOT NULL,
@@ -17,7 +17,7 @@ CREATE TABLE identity.password_reset_tokens (
 );
 
 CREATE TABLE identity.account_events (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   user_id uuid NOT NULL REFERENCES identity.users(id),
   event_type text NOT NULL,
   actor_id uuid REFERENCES identity.users(id),
@@ -64,7 +64,7 @@ CREATE TABLE social.bookmarks (
 );
 
 CREATE TABLE social.custom_feeds (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   user_id uuid NOT NULL REFERENCES identity.users(id) ON DELETE CASCADE,
   name text NOT NULL CHECK (length(name) BETWEEN 1 AND 120),
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -72,7 +72,7 @@ CREATE TABLE social.custom_feeds (
 );
 
 CREATE TABLE social.custom_feed_rules (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   feed_id uuid NOT NULL REFERENCES social.custom_feeds(id) ON DELETE CASCADE,
   rule jsonb NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now()
@@ -91,7 +91,7 @@ CREATE TABLE content.content_declarations (
 );
 
 CREATE TABLE feed.feed_events (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   recipient_id uuid NOT NULL REFERENCES identity.users(id) ON DELETE CASCADE,
   post_id uuid REFERENCES content.posts(id) ON DELETE CASCADE,
   event_type text NOT NULL,
@@ -114,7 +114,7 @@ CREATE TABLE feed.regional_memberships (
 );
 
 CREATE TABLE feed.notifications (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   recipient_id uuid NOT NULL REFERENCES identity.users(id) ON DELETE CASCADE,
   notification_type text NOT NULL,
   entity_id uuid,
@@ -131,7 +131,7 @@ CREATE TABLE moderation.policy_versions (
 );
 
 CREATE TABLE moderation.enforcement_events (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   case_id uuid REFERENCES moderation.cases(id),
   subject_id uuid REFERENCES identity.users(id),
   action text NOT NULL,
@@ -142,7 +142,7 @@ CREATE TABLE moderation.enforcement_events (
 );
 
 CREATE TABLE trust.source_citations (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   content_id uuid NOT NULL,
   author_id uuid REFERENCES identity.users(id),
   citation_url text NOT NULL,
@@ -152,7 +152,7 @@ CREATE TABLE trust.source_citations (
 );
 
 CREATE TABLE trust.accountability_signals (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   user_id uuid NOT NULL REFERENCES identity.users(id),
   signal_type text NOT NULL,
   signal_value numeric NOT NULL,
@@ -176,7 +176,7 @@ CREATE TABLE media.ownership (
 CREATE VIEW media.storage_ledgers AS SELECT * FROM media.storage_ledger;
 
 CREATE TABLE media.deletion_events (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   object_id uuid REFERENCES media.objects(id),
   owner_id uuid REFERENCES identity.users(id),
   reason_code text NOT NULL,
@@ -186,7 +186,7 @@ CREATE TABLE media.deletion_events (
 );
 
 CREATE TABLE editorial.applications (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   user_id uuid NOT NULL REFERENCES identity.users(id),
   state text NOT NULL DEFAULT 'submitted',
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -194,7 +194,7 @@ CREATE TABLE editorial.applications (
 );
 
 CREATE TABLE editorial.portfolio_items (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   application_id uuid NOT NULL REFERENCES editorial.applications(id) ON DELETE CASCADE,
   title text NOT NULL,
   url text NOT NULL,
@@ -202,7 +202,7 @@ CREATE TABLE editorial.portfolio_items (
 );
 
 CREATE TABLE editorial.peer_reviews (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   application_id uuid NOT NULL REFERENCES editorial.applications(id) ON DELETE CASCADE,
   reviewer_id uuid NOT NULL REFERENCES identity.users(id),
   outcome text NOT NULL,
@@ -211,7 +211,7 @@ CREATE TABLE editorial.peer_reviews (
 );
 
 CREATE TABLE editorial.publications (
-  id uuid PRIMARY KEY DEFAULT uuidv7(),
+  id uuid PRIMARY KEY,
   membership_user_id uuid NOT NULL REFERENCES identity.users(id),
   title text NOT NULL,
   post_id uuid REFERENCES content.posts(id),

@@ -1,12 +1,16 @@
 # ADR: Azure data disposition
 
-- Status: **Pending owner decision**
+- Status: **Accepted — selective preservation**
 - Date: 2026-07-27
 - Scope: Azure data and the Cloudflare–PlanetScale clean-slate replacement
 
-## Decision required
+## Decision
 
-The owner must select exactly one disposition:
+The approved disposition is **selective-preservation authorised**. The owner
+confirmed that Azure must be read carefully, meaningful information extracted,
+and valid records replicated into the canonical PlanetScale model. This does
+not authorise Azure deletion, unresolved data loss, or migration writes before
+the access and measured-usage gates pass.
 
 ### Clean-state authorised
 
@@ -23,9 +27,9 @@ is accepted.
 
 ## Current state
 
-This run has not made the owner decision. The safe operating mode is
-**selective preservation**. The native platform may be developed with synthetic
-data, but Azure deletion and production cutover remain gated.
+The native platform may be developed with synthetic data, but Azure deletion
+and production cutover remain gated. The approved operation is selective
+preservation, with source authority proven per data class.
 
 ### Read-only evidence reviewed 2026-07-28
 
@@ -55,9 +59,9 @@ Evidence references: `docs/evidence/azure-exit/2026-07-26/dsr-reconciliation.md`
   reconciliation result, retention class, and audit event.
 - Evidence must not contain raw personal data or credentials.
 
-## Owner sign-off
+## Owner decision record
 
-- Decision: `clean-state authorised` / `selective-preservation authorised`
-- Owner: ____________________
-- Date: ______________________
-- Signature/reference: ____________________
+- Decision: `selective-preservation authorised`
+- Owner: Kyle Kern
+- Date: 2026-07-28
+- Reference: approved controlled clean-slate migration instruction

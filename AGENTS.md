@@ -27,25 +27,53 @@ Initial verification prompt: use PlanetScale MCP to confirm access to
 `lythaus/lythaus-core`, list all branches, and inspect the schema. Do not
 execute writes or DDL.
 Verified 2026-07-28 through PlanetScale CLI and MCP: `main` and the synthetic
-`development` branch exist. `development` is a ready Frankfurt PostgreSQL 18.4
-PS-DEV branch with five provisioned login roles. `pgcrypto`, `pg_trgm`, and
-`unaccent` are installed through the approved development SQL path; PostGIS is
-listed in the catalog but is excluded from PlanetScale's immutable extension
-allowlist and cannot be installed. The application schema is not yet present.
-Do not treat it as production-ready until the supported geospatial decision,
-development migrations, grants, Hyperdrive credentials, and negative
-permission tests pass.
+`development` branch exist. `main` is an empty Frankfurt PS-5 ARM PostgreSQL
+17.10 branch. `development` is a Frankfurt PS-DEV ARM PostgreSQL 18.4 branch
+with 74 application tables, one media view, 11 feature flags, and five
+provisioned login roles. `pgcrypto`, `pg_trgm`, and `unaccent` are installed;
+PostGIS is unavailable and is not a launch dependency. Do not apply writes or
+DDL to `main` until the PostgreSQL 17 compatibility test, exact baseline, data
+classification, migration reconciliation, and explicit migration gates pass.
 
-The current database is an empty Frankfurt PS-5 PostgreSQL 17.10 branch billed
-through the shared Cloudflare account. Do not apply the native PostgreSQL 18
-migrations to `main` until a development branch or separately reprovisioned
-empty database is available and the exact safety snapshot is recorded. The
-native implementation branch is `codex/cloudflare-planetscale-provisioning`.
+Use application-generated UUIDv7 identifiers for new records. Store them in
+native PostgreSQL `uuid` columns; do not add a database UUIDv7 function or
+default to `main`.
 
-Cloudflare development resources may temporarily use the shared account only
-when they are synthetic, prefixed `lythaus-`, and suffixed `-dev`. Production
-requires a dedicated Lythaus account. Never mutate Nite Owl or unrelated
-resources.
+The native implementation branch is `codex/cloudflare-planetscale-provisioning`.
+
+## Cloudflare Architecture
+
+Use only the existing shared Cloudflare account `e5b7ae46e04698f507b7e4b3d4ef1af0`
+and active zone `lythaus.co`. Approved resources are prefixed `lythaus-`, with
+the temporary legacy exception `asora-azure-compat`. Never mutate Nite Owl,
+`asora.co.za`, unrelated zones, or unrelated resources.
+
+Use only the existing Lythaus Workers, Hyperdrives, R2 buckets, Queues/DLQs,
+Workflows, KV namespace, and Access applications listed in
+`infrastructure/lythaus-resource-registry.json`. Existing `-development` and
+`-dev` resources are promoted in place for the initial production runtime;
+their physical names remain unchanged, but their logical environment,
+retention, access policy, and deletion protection become production.
+
+Before any agent creates or changes a provider resource it must read the
+registry, inspect live provider state, search for an equivalent, prefer reuse
+or rebinding, check possible cost, and stop if a duplicate or new cost may be
+required. No automatic create-if-missing behavior is permitted.
+
+Azure extraction is read-only until the owner supplies the approved Cosmos
+Built-in Data Reader, Storage Blob Data Reader, and PostgreSQL export access.
+Never import access tokens, refresh tokens, secrets, or reversible passwords.
+Import password hashes only when their algorithm, parameters, association, and
+security policy are verified compatible; otherwise mark password login
+reset-required.
+
+Before any Azure data write to PlanetScale `main` or R2, produce the measured
+record/object/byte, operation, included-usage, and worst-case incremental-cost
+report and stop for the exact approval phrase:
+`AUTHORISE MIGRATION USAGE: maximum additional cost US$___`.
+
+Do not delete PlanetScale `development`, Azure resources, or any other
+destructive target without the explicit gates defined in the migration runbook.
 
 ## Quick Start
 

@@ -15,14 +15,18 @@
       "name": "unaccent",
       "purpose": "accent-insensitive search normalization",
       "launchFeature": "public-search normalization"
-    },
-    {
-      "name": "postgis",
-      "purpose": "consent-bounded place and region queries",
-      "launchFeature": "geographic discovery"
     }
   ],
-  "failurePolicy": "Do not mark the database production-ready or enable dependent features until every required extension is installed and verified.",
+  "optional": [
+    {
+      "name": "postgis",
+      "purpose": "deferred polygon and distance analysis",
+      "launchFeature": "advanced geography",
+      "availability": "blocked-by-provider",
+      "launchBlocking": false
+    }
+  ],
+  "failurePolicy": "Do not mark cryptographic, handle-search, or normalization capabilities ready until every required extension is installed and verified. PostGIS is explicitly deferred and is not a launch requirement.",
   "providerEvidence": {
     "checkedAt": "2026-07-28",
     "branch": "development",

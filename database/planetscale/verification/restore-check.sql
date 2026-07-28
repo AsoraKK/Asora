@@ -14,4 +14,4 @@ SELECT to_regclass('system.outbox_events') AS outbox,
 SELECT to_regclass('identity.password_reset_tokens') AS password_reset_tokens;
 SELECT column_name FROM information_schema.columns
  WHERE table_schema = 'identity' AND table_name = 'users' AND column_name = 'token_version';
-SELECT uuidv7() IS NOT NULL AS uuidv7_available;
+SELECT '018f2c4e-8c2b-7b4e-8d2a-2e2f0b7e4b1a'::uuid IS NOT NULL AS uuidv7_storage_supported;

@@ -28,6 +28,8 @@ export interface EnvBindings {
   R2_SECRET_ACCESS_KEY?: string;
   R2_ACCOUNT_ID?: string;
   MEDIA_QUOTA_BYTES?: string;
+  MEDIA_UPLOADS_ENABLED?: string;
+  MEDIA_PROCESSING_ENABLED?: string;
   MEDIA_QUARANTINE_BUCKET?: string;
   MEDIA_APPROVED_BUCKET?: string;
   AUTH_PASSWORD_PEPPER_V1?: string;
@@ -39,6 +41,7 @@ export interface EnvBindings {
   PII_HMAC_KEY_V1?: string;
   EMAIL_PROVIDER_URL?: string;
   EMAIL_PROVIDER_TOKEN?: string;
+  EMAIL_PROVIDER_MODE?: 'cloudflare' | 'fallback' | 'disabled';
   EMAIL_FROM?: string;
   EMAIL_VERIFICATION_BASE_URL?: string;
   EMAIL_PASSWORD_RESET_BASE_URL?: string;

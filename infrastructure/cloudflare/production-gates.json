@@ -1,28 +1,36 @@
 {
   "schemaVersion": "lythaus-production-gates-v1",
-  "releaseSha": "2ab310e6f2cc8b62a2f8a9fcdb343f2edf03b19b",
+  "releaseSha": "d1e76d01b6b4db99e3e3d915c9fcbfff8c3bacf2",
   "cutoverAuthorized": false,
+  "migrationUsageAuthorized": false,
+  "migrationUsageMaxUsd": null,
   "azureDeletionAuthorized": false,
+  "requiredOwnerActions": [
+    "Grant Cosmos DB Built-in Data Reader at account or narrower database scope",
+    "Grant Storage Blob Data Reader at each required account or container scope",
+    "Provide PostgreSQL export host, database, approved read credentials or Entra access, firewall allowance, and compatible client tools",
+    "Authorize measured one-time migration usage after the cost report is complete"
+  ],
   "gates": {
-    "gate1OwnershipIsolation": {
-      "status": "BLOCKED",
-      "evidence": ["docs/architecture/data-disposition-adr.md", "docs/evidence/2026-07-28-planetscale-provisioning.md"]
+    "architectureSkeleton": {
+      "status": "COMPLETED",
+      "evidence": ["infrastructure/lythaus-resource-registry.json", "infrastructure/cloudflare/native-scope.json"]
     },
-    "gate2RegionTopology": {
+    "azureDataAccess": {
       "status": "BLOCKED",
-      "evidence": ["database/planetscale/benchmarks/README.md", "docs/evidence/2026-07-28-planetscale-provisioning.md"]
+      "evidence": ["docs/runbooks/lythaus-azure-exit.md", "docs/evidence/azure-exit/2026-07-26/cosmos-inventory.json"]
     },
-    "gate3DatabaseCryptography": {
+    "postgres17Compatibility": {
       "status": "BLOCKED",
-      "evidence": ["database/planetscale/extensions/required-extensions.json", "docs/architecture/password-hashing-adr.md"]
+      "evidence": ["scripts/ci/validate-planetscale-postgres17.mjs", "docs/evidence/2026-07-28-planetscale-provisioning.md"]
     },
-    "gate4RuntimeProduct": {
+    "migrationReconciliation": {
+      "status": "BLOCKED",
+      "evidence": ["infrastructure/azure-exit/migration-mappings.json", "scripts/azure-exit/calculate-migration-usage.mjs"]
+    },
+    "runtimeCutover": {
       "status": "IN PROGRESS",
       "evidence": ["scripts/tests/native-architecture-invariants.test.js", "docs/evidence/2026-07-28-planetscale-provisioning.md"]
-    },
-    "gate5RecoveryCutover": {
-      "status": "BLOCKED",
-      "evidence": ["docs/runbooks/planetscale-restore.md", "docs/evidence/2026-07-28-planetscale-provisioning.md"]
     }
   }
 }
