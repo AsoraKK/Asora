@@ -267,3 +267,7 @@ requirements recorded above.
   stale claims after five minutes, marks successful events `completed`, and
   releases failed claims for Queue retry. This source-level contract is tested
   locally; live execution awaits the blocked migration baseline.
+- Cloudflare subdomain verification reports public and admin development
+  subdomains enabled for synthetic testing, while `lythaus-jobs-development`
+  has both `enabled=false` and `previews_enabled=false`. The deleted diagnostic
+  Worker returns the expected not-found response.
