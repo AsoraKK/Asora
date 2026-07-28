@@ -497,6 +497,11 @@ entries remain as chronological evidence of the pre-migration state.
 - `npm run validate:native-azure-dependencies` passed for all three native
   Workers. The native runtime bundle has no Azure host, SDK, or origin
   dependency. The legacy Azure compatibility Worker remains separate.
+- PlanetScale Query Insights for the synthetic `development` branch returned
+  35 query patterns over the available window. The observed database-side
+  p99 values for the small readiness and discovery queries were below 6 ms;
+  this is development database evidence only and is not a South Africa-to-
+  Europe end-to-end SLO or a production capacity benchmark.
 
 ## Development resource inventory and validation recheck - 2026-07-28
 
