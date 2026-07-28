@@ -120,12 +120,18 @@ jobs:
             exit 21
           fi
 
-          export PGHOST="$(jq -r '.host' evidence/postgres-connection-summary.json)"
-          export PGPORT="$(jq -r '.port' evidence/postgres-connection-summary.json)"
-          export PGDATABASE="$(jq -r '.database' evidence/postgres-connection-summary.json)"
-          export PGUSER="$(jq -r '.username' evidence/postgres-connection-summary.json)"
-          export PGSSLMODE="$(jq -r '.sslMode' evidence/postgres-connection-summary.json | tr '[:upper:]' '[:lower:]')"
-          export PGPASSWORD="$PG_CONNECTION_STRING"
+          PGHOST="$(jq -r '.host' evidence/postgres-connection-summary.json)"
+          export PGHOST
+          PGPORT="$(jq -r '.port' evidence/postgres-connection-summary.json)"
+          export PGPORT
+          PGDATABASE="$(jq -r '.database' evidence/postgres-connection-summary.json)"
+          export PGDATABASE
+          PGUSER="$(jq -r '.username' evidence/postgres-connection-summary.json)"
+          export PGUSER
+          PGSSLMODE="$(jq -r '.sslMode' evidence/postgres-connection-summary.json | tr '[:upper:]' '[:lower:]')"
+          export PGSSLMODE
+          PGPASSWORD="$PG_CONNECTION_STRING"
+          export PGPASSWORD
 
           summarize_error() {
             python3 - "$1" <<'PY'
