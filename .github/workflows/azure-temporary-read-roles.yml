@@ -191,6 +191,7 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in {1..10}; do
+            echo "Checking read-role propagation (attempt $attempt/10)."
             if az cosmosdb sql database list --resource-group "$RESOURCE_GROUP" --account-name "$COSMOS_ACCOUNT" -o none && \
                az storage blob list --account-name "$DSR_STORAGE_ACCOUNT" --container-name "$DSR_CONTAINER" --auth-mode login -o none && \
                az storage blob list --account-name "$MEDIA_STORAGE_ACCOUNT" --container-name "$MEDIA_CONTAINER" --auth-mode login -o none; then
