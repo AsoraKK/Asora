@@ -1,0 +1,175 @@
+name: Temporary Azure Read Role Assignments
+
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+  id-token: write
+
+concurrency:
+  group: azure-temporary-read-roles
+  cancel-in-progress: false
+
+jobs:
+  assign:
+    runs-on: ubuntu-latest
+    environment: dev
+    timeout-minutes: 20
+    env:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      RESOURCE_GROUP: asora-psql-flex
+      COSMOS_ACCOUNT: asora-cosmos-dev
+      COSMOS_DATABASE: asora
+      DSR_STORAGE_ACCOUNT: stasoradsrdev
+      DSR_CONTAINER: dsr-exports
+      MEDIA_STORAGE_ACCOUNT: asoramediadev
+      MEDIA_CONTAINER: user-media
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v3
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Verify Azure context and target resources
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+
+          az account show -o json > evidence/account.json
+          test "$(jq -r '.tenantId' evidence/account.json)" = "$AZURE_TENANT_ID"
+          test "$(jq -r '.id' evidence/account.json)" = "$AZURE_SUBSCRIPTION_ID"
+
+          sp_object_id="$(az ad sp show --id "$AZURE_CLIENT_ID" --query id -o tsv)"
+          [[ "$sp_object_id" =~ ^[0-9a-fA-F-]{36}$ ]]
+
+          rg_scope="$(az group show --name "$RESOURCE_GROUP" --query id -o tsv)"
+          test -n "$rg_scope"
+
+          cosmos_scope="$(az cosmosdb show --resource-group "$RESOURCE_GROUP" --name "$COSMOS_ACCOUNT" --query id -o tsv)"
+          test -n "$cosmos_scope"
+
+          storage_scopes='[]'
+          for target in \
+            "$DSR_STORAGE_ACCOUNT|$DSR_CONTAINER" \
+            "$MEDIA_STORAGE_ACCOUNT|$MEDIA_CONTAINER"; do
+            storage_account="${target%%|*}"
+            container="${target#*|}"
+            account_id="$(az storage account show --name "$storage_account" --query id -o tsv)"
+            account_rg="$(az storage account show --name "$storage_account" --query resourceGroup -o tsv)"
+            test -n "$account_id"
+            test -n "$account_rg"
+            container_scope="$account_id/blobServices/default/containers/$container"
+            az resource show --ids "$container_scope" -o none
+            storage_scopes="$(jq -c --arg account "$storage_account" --arg container "$container" --arg resourceGroup "$account_rg" --arg scope "$container_scope" '. + [{account:$account,container:$container,resourceGroup:$resourceGroup,scope:$scope}]' <<< "$storage_scopes")"
+          done
+
+          jq -n \
+            --arg principalId "$sp_object_id" \
+            --arg resourceGroup "$RESOURCE_GROUP" \
+            --arg resourceGroupScope "$rg_scope" \
+            --arg cosmosAccount "$COSMOS_ACCOUNT" \
+            --arg cosmosDatabase "$COSMOS_DATABASE" \
+            --arg cosmosScope "$cosmos_scope/dbs/$COSMOS_DATABASE" \
+            --argjson storage "$storage_scopes" \
+            '{principalId:$principalId,resourceGroup:$resourceGroup,resourceGroupScope:$resourceGroupScope,cosmosAccount:$cosmosAccount,cosmosDatabase:$cosmosDatabase,cosmosScope:$cosmosScope,storage:$storage,tenantSubscriptionMatch:true,noResourceOrBillingMutation:true}' > evidence/target-context.json
+
+          {
+            echo "SP_OBJECT_ID=$sp_object_id"
+            echo "RG_SCOPE=$rg_scope"
+            echo "COSMOS_SCOPE=$cosmos_scope"
+          } >> "$GITHUB_ENV"
+
+      - name: Inspect existing assignments
+        shell: bash
+        run: |
+          set -euo pipefail
+          az role assignment list \
+            --assignee-object-id "$SP_OBJECT_ID" \
+            --all \
+            --query '[].{id:id,role:roleDefinitionName,scope:scope}' \
+            -o json > evidence/existing-management-assignments.json
+
+          az cosmosdb sql role definition list \
+            --resource-group "$RESOURCE_GROUP" \
+            --account-name "$COSMOS_ACCOUNT" \
+            -o json > evidence/cosmos-role-definitions.json
+
+          az cosmosdb sql role assignment list \
+            --resource-group "$RESOURCE_GROUP" \
+            --account-name "$COSMOS_ACCOUNT" \
+            -o json > evidence/existing-cosmos-assignments.json
+
+      - name: Create only missing temporary assignments
+        shell: bash
+        run: |
+          set -euo pipefail
+          assignments='[]'
+          now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          record_management() {
+            local role="$1" scope="$2" result="$3" id="$4" revoke="$5"
+            assignments="$(jq -c --arg id "$id" --arg principalId "$SP_OBJECT_ID" --arg role "$role" --arg scope "$scope" --arg createdAt "$now" --arg result "$result" --arg revoke "$revoke" '. + [{assignmentId:$id,principalObjectId:$principalId,role:$role,scope:$scope,creationTimestamp:$createdAt,commandResult:$result,plannedRevocationCommand:$revoke}]' <<< "$assignments")"
+          }
+
+          management_assignment() {
+            local role="$1" scope="$2"
+            jq -r --arg role "$role" --arg scope "$scope" '[.[] | select(.role == $role and .scope == $scope)] | first // empty | .id' evidence/existing-management-assignments.json
+          }
+
+          rg_assignment="$(management_assignment 'Reader' "$RG_SCOPE")"
+          if [[ -n "$rg_assignment" ]]; then
+            record_management 'Reader' "$RG_SCOPE" 'already-existed' "$rg_assignment" "az role assignment delete --ids $rg_assignment"
+          else
+            result="$(az role assignment create --assignee-object-id "$SP_OBJECT_ID" --assignee-principal-type ServicePrincipal --role 'Reader' --scope "$RG_SCOPE" -o json)"
+            id="$(jq -r '.id' <<< "$result")"
+            record_management 'Reader' "$RG_SCOPE" 'created' "$id" "az role assignment delete --ids $id"
+          fi
+
+          cosmos_role_id="$(jq -r '[.[] | select(.roleName == "Cosmos DB Built-in Data Reader")][0].id // empty' evidence/cosmos-role-definitions.json)"
+          test -n "$cosmos_role_id"
+          cosmos_scope="$COSMOS_SCOPE/dbs/$COSMOS_DATABASE"
+          cosmos_assignment="$(jq -r --arg principalId "$SP_OBJECT_ID" --arg roleId "$cosmos_role_id" --arg scope "$cosmos_scope" '[.[] | select(.principalId == $principalId and .roleDefinitionId == $roleId and .scope == $scope)] | first // empty | .id' evidence/existing-cosmos-assignments.json)"
+          if [[ -n "$cosmos_assignment" ]]; then
+            record_management 'Cosmos DB Built-in Data Reader' "$cosmos_scope" 'already-existed' "$cosmos_assignment" "az cosmosdb sql role assignment delete --resource-group $RESOURCE_GROUP --account-name $COSMOS_ACCOUNT --role-assignment-id $cosmos_assignment"
+          else
+            result="$(az cosmosdb sql role assignment create --resource-group "$RESOURCE_GROUP" --account-name "$COSMOS_ACCOUNT" --principal-id "$SP_OBJECT_ID" --role-definition-id "$cosmos_role_id" --scope "/dbs/$COSMOS_DATABASE" -o json)"
+            id="$(jq -r '.id' <<< "$result")"
+            record_management 'Cosmos DB Built-in Data Reader' "$cosmos_scope" 'created' "$id" "az cosmosdb sql role assignment delete --resource-group $RESOURCE_GROUP --account-name $COSMOS_ACCOUNT --role-assignment-id $id"
+          fi
+
+          while IFS='|' read -r storage_account container; do
+            [[ -n "$storage_account" && -n "$container" ]] || continue
+            account_id="$(az storage account show --name "$storage_account" --query id -o tsv)"
+            scope="$account_id/blobServices/default/containers/$container"
+            existing="$(jq -r --arg scope "$scope" '[.[] | select(.role == "Storage Blob Data Reader" and .scope == $scope)] | first // empty | .id' evidence/existing-management-assignments.json)"
+            if [[ -n "$existing" ]]; then
+              record_management 'Storage Blob Data Reader' "$scope" 'already-existed' "$existing" "az role assignment delete --ids $existing"
+            else
+              result="$(az role assignment create --assignee-object-id "$SP_OBJECT_ID" --assignee-principal-type ServicePrincipal --role 'Storage Blob Data Reader' --scope "$scope" -o json)"
+              id="$(jq -r '.id' <<< "$result")"
+              record_management 'Storage Blob Data Reader' "$scope" 'created' "$id" "az role assignment delete --ids $id"
+            fi
+          done <<EOF
+$DSR_STORAGE_ACCOUNT|$DSR_CONTAINER
+$MEDIA_STORAGE_ACCOUNT|$MEDIA_CONTAINER
+EOF
+
+          jq -n --argjson assignments "$assignments" --arg generatedAt "$now" --arg note 'Temporary read roles only; no Azure resource or billing mutation requested.' '{generatedAt:$generatedAt,assignments:$assignments,note:$note}' > evidence/temporary-role-assignments.json
+          echo 'Temporary read-role operation completed; private evidence artifact follows.' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload private assignment evidence
+        uses: actions/upload-artifact@v6
+        with:
+          name: azure-temporary-read-role-evidence
+          path: evidence/
+          if-no-files-found: error
+          retention-days: 7
