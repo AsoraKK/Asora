@@ -509,6 +509,11 @@ entries remain as chronological evidence of the pre-migration state.
   five Workflow bindings, Images, KV, and four R2 buckets. Secret values were
   not read. Development-only placeholders and localhost email URLs remain
   intentionally non-production configuration.
+- A second supported Cloudflare MCP `POST /accounts` attempt for `Lythaus
+  Production` returned `1002 Forbidden: Account creation is not allowed`. The
+  account list still contains only the mixed-use account. Dedicated-account
+  creation therefore requires Cloudflare Tenant/owner action outside this MCP
+  session; no account or production resource was created.
 
 ## Development resource inventory and validation recheck - 2026-07-28
 
