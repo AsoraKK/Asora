@@ -296,3 +296,7 @@ requirements recorded above.
 - The same telemetry dataset still contains historical pre-refresh readiness events
   from an earlier script version. Those events are retained as diagnostic history and
   do not change the current deployment result.
+- PlanetScale's current extension documentation states that `postgis`,
+  `postgis_sfcgal`, `postgis_topology` and related extensions are temporarily
+  disabled, and its troubleshooting guidance directs permission-denied cases to
+  PlanetScale support: https://planetscale.com/docs/postgres/extensions.
