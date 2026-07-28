@@ -65,13 +65,17 @@ jobs:
           echo '::add-mask::'"$admin_url"
           echo "PLANETSCALE_ADMIN_DATABASE_URL=$admin_url" >> "$GITHUB_ENV"
           role_urls='{}'
+          role_identifiers='{}'
           for role in lythaus_runtime lythaus_admin lythaus_jobs lythaus_privacy lythaus_migrations; do
             role_url="$(jq -er '.access_host_url' "$RUNNER_TEMP/$role-role.json")"
+            role_identifier="$(jq -er '.username' "$RUNNER_TEMP/$role-role.json" | cut -d. -f1)"
             echo '::add-mask::'"$role_url"
             role_urls="$(jq -c --arg role "$role" --arg url "$role_url" '. + {($role): $url}' <<< "$role_urls")"
+            role_identifiers="$(jq -c --arg role "$role" --arg identifier "$role_identifier" '. + {($role): $identifier}' <<< "$role_identifiers")"
           done
           echo '::add-mask::'"$role_urls"
           echo "PSCALE_ROLE_URLS=$role_urls" >> "$GITHUB_ENV"
+          echo "PSCALE_ROLE_IDENTIFIERS=$role_identifiers" >> "$GITHUB_ENV"
       - name: Apply migrations and verify direct connections
         run: node scripts/ci/apply-planetscale-migrations.mjs
       - name: Cleanup temporary branch

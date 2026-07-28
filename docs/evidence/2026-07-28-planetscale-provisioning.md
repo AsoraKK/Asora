@@ -412,3 +412,32 @@ requirements recorded above.
   provider behaviour and admin boundary enforcement only. They do not satisfy
   the schema, authentication, media, moderation, privacy, backup, account
   isolation or production cutover gates.
+
+## Development schema and role refresh - 2026-07-28
+
+This section supersedes the earlier empty-schema observations above; those
+entries remain as chronological evidence of the pre-migration state.
+
+- Migrations `0000` through `0006` were applied to the synthetic `development`
+  branch through the direct PlanetScale administrative path using the approved
+  PostGIS fallback. The branch now contains 74 application base tables and one
+  media view, 11 feature flags, and zero users, posts, or outbox events.
+- Installed extensions are `pgcrypto`, `pg_trgm`, and `unaccent`. PostGIS is
+  absent because PlanetScale's immutable extension allowlist excludes it;
+  `content.places` therefore stores `boundary_geojson` and does not claim
+  PostGIS-backed geography. The geospatial provider decision remains a Gate 3
+  and Gate 4 blocker for production.
+- Five managed PlanetScale login roles are provisioned on `development`.
+  Grants target the generated `pscale_api_*` identifiers resolved by the role
+  API; display labels are not SQL-visible in the web-console session. Positive
+  and negative permission checks pass for runtime, admin, jobs, privacy, and
+  migration roles. No role credentials or secret values are stored here.
+- Four development Hyperdrive configurations were refreshed after the
+  development role credential rotation. All use the generated branch-qualified
+  role, cache-disabled mode, and `sslmode=verify-full`. Live `/api/ready` and
+  `/api/feed/discover` probes now return HTTP 200.
+- Gate 3 now has schema, grants, TLS, and development connectivity evidence;
+  remaining blockers are the supported geospatial decision, production
+  credentials/topology, cryptographic rotation evidence, and restore tests.
+  Gate 4 remains blocked by end-to-end authentication, email, Hive, media,
+  privacy, queue, workflow, and product-transparency acceptance.

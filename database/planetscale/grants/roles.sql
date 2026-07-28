@@ -3,12 +3,12 @@
 --
 -- lythaus_runtime, lythaus_admin, lythaus_jobs and lythaus_privacy must be
 -- non-owning login roles. lythaus_migrations is the only DDL-capable role.
-
-ALTER ROLE lythaus_runtime NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
-ALTER ROLE lythaus_admin NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
-ALTER ROLE lythaus_jobs NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
-ALTER ROLE lythaus_privacy NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
-ALTER ROLE lythaus_migrations NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+-- PlanetScale-managed roles are not SQL-visible to the web-console postgres
+-- session, so their login/ownership attributes are enforced by the role API.
+-- Keep this file focused on object grants and default privileges. The CI and
+-- direct administrative runners resolve these labels to the generated
+-- pscale_api_* role prefixes before execution; do not paste this template
+-- directly into the web console.
 
 REVOKE ALL ON ALL TABLES IN SCHEMA identity, content, social, feed, moderation, privacy, trust, media, editorial, system FROM PUBLIC;
 REVOKE ALL ON ALL SEQUENCES IN SCHEMA identity, content, social, feed, moderation, privacy, trust, media, editorial, system FROM PUBLIC;
@@ -54,12 +54,14 @@ GRANT USAGE, CREATE ON SCHEMA identity, content, social, feed, moderation, priva
 
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA identity, content, social, feed, moderation, privacy, trust, media, editorial, system TO lythaus_migrations;
 
-ALTER DEFAULT PRIVILEGES FOR ROLE lythaus_migrations REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
-ALTER DEFAULT PRIVILEGES FOR ROLE lythaus_migrations REVOKE ALL ON TABLES FROM PUBLIC;
-ALTER DEFAULT PRIVILEGES FOR ROLE lythaus_migrations REVOKE ALL ON SEQUENCES FROM PUBLIC;
-ALTER DEFAULT PRIVILEGES FOR ROLE lythaus_migrations IN SCHEMA identity, content, social, feed, moderation, privacy, trust, media, editorial, system GRANT USAGE, SELECT ON SEQUENCES TO lythaus_runtime, lythaus_admin, lythaus_jobs, lythaus_privacy;
+-- These apply to the role executing the migration bundle. PlanetScale-managed
+-- role owners cannot be named in ALTER DEFAULT PRIVILEGES from another role.
+ALTER DEFAULT PRIVILEGES REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
+ALTER DEFAULT PRIVILEGES REVOKE ALL ON TABLES FROM PUBLIC;
+ALTER DEFAULT PRIVILEGES REVOKE ALL ON SEQUENCES FROM PUBLIC;
+ALTER DEFAULT PRIVILEGES IN SCHEMA identity, content, social, feed, moderation, privacy, trust, media, editorial, system GRANT USAGE, SELECT ON SEQUENCES TO lythaus_runtime, lythaus_admin, lythaus_jobs, lythaus_privacy;
 REVOKE CREATE, USAGE ON SCHEMA privacy FROM lythaus_runtime, lythaus_admin, lythaus_jobs;
-REVOKE CREATE, CREATEROLE, CREATEDB ON DATABASE postgres FROM lythaus_runtime, lythaus_admin, lythaus_jobs, lythaus_privacy;
+REVOKE CREATE ON DATABASE postgres FROM lythaus_runtime, lythaus_admin, lythaus_jobs, lythaus_privacy;
 
 -- Runtime roles must not own database objects or receive CREATE/CREATEROLE/CREATEDB.
 -- Verify with database/planetscale/verification/role-negative-tests.sql.

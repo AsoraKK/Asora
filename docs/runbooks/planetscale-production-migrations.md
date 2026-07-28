@@ -15,6 +15,10 @@ the release.
   `PLANETSCALE_PRODUCTION_MIGRATIONS_APPROVED` is exactly `approved`.
 - Required PlanetScale extensions, HA topology, backups, and role grants have
   already passed their acceptance gates.
+- `PSCALE_ROLE_IDENTIFIERS` is a reviewed JSON map from each repository role
+  label to its generated `pscale_api_*` SQL identifier. The production runner
+  validates and substitutes these identifiers before applying grants; display
+  labels are not assumed to be SQL-visible.
 
 ## Execution
 

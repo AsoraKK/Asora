@@ -8,6 +8,7 @@ const root = process.cwd();
 const branch = process.env.PSCALE_BRANCH_NAME ?? '';
 const approval = process.env.PLANETSCALE_PRODUCTION_MIGRATIONS_APPROVED ?? '';
 const databaseUrl = process.env.PLANETSCALE_ADMIN_DATABASE_URL ?? '';
+const roleIdentifiers = JSON.parse(process.env.PSCALE_ROLE_IDENTIFIERS ?? '{}');
 
 if (branch !== 'main') throw new Error('production migrations require PSCALE_BRANCH_NAME=main');
 if (approval !== 'approved') throw new Error('production migrations require PLANETSCALE_PRODUCTION_MIGRATIONS_APPROVED=approved');
@@ -21,6 +22,19 @@ const migrationFiles = fs.readdirSync(migrationsDir)
   .sort()
   .map((file) => ({ name: file, file: path.join(migrationsDir, file), sql: fs.readFileSync(path.join(migrationsDir, file), 'utf8') }));
 const grantsFile = path.join(root, 'database', 'planetscale', 'grants', 'roles.sql');
+const roleLabels = ['runtime', 'admin', 'jobs', 'privacy', 'migrations'];
+
+const quoteRoleIdentifier = (value) => {
+  if (!/^pscale_api_[a-z0-9]+$/.test(value)) throw new Error(`invalid PlanetScale role identifier: ${value}`);
+  return `"${value}"`;
+};
+
+for (const label of roleLabels) {
+  if (!roleIdentifiers[`lythaus_${label}`]) {
+    throw new Error(`missing PSCALE_ROLE_IDENTIFIERS entry for lythaus_${label}`);
+  }
+  quoteRoleIdentifier(roleIdentifiers[`lythaus_${label}`]);
+}
 
 function checksum(sql) {
   return createHash('sha256').update(sql).digest('hex');
@@ -94,6 +108,12 @@ await withClient(async (client) => {
     if (recorded !== checksum(migration.sql)) throw new Error(`migration registry incomplete: ${migration.name}`);
   }
 
-  await client.query(fs.readFileSync(grantsFile, 'utf8'));
+  const grantsTemplate = fs.readFileSync(grantsFile, 'utf8');
+  const grantsSql = grantsTemplate.replace(/\blythaus_(runtime|admin|jobs|privacy|migrations)\b/g, (label) => {
+    const identifier = roleIdentifiers[label];
+    if (!identifier) throw new Error(`missing PSCALE_ROLE_IDENTIFIERS entry for ${label}`);
+    return quoteRoleIdentifier(identifier);
+  });
+  await client.query(grantsSql);
   console.log(`Validated and applied PlanetScale production migrations on ${branch}; development seed was not applied.`);
 });

@@ -35,6 +35,20 @@ await withClient(databaseUrl, async (client) => {
 });
 
 const roleUrls = JSON.parse(process.env.PSCALE_ROLE_URLS ?? '{}');
+const roleIdentifiers = JSON.parse(process.env.PSCALE_ROLE_IDENTIFIERS ?? '{}');
+const quoteIdentifier = (value) => {
+  if (!/^pscale_api_[a-z0-9]+$/.test(value)) throw new Error(`invalid PlanetScale role identifier: ${value}`);
+  return `"${value}"`;
+};
+const grantsTemplate = fs.readFileSync(path.join(root, 'database', 'planetscale', 'grants', 'roles.sql'), 'utf8');
+const grantsSql = grantsTemplate.replace(/\blythaus_(runtime|admin|jobs|privacy|migrations)\b/g, (label) => {
+  const identifier = roleIdentifiers[label];
+  if (!identifier) throw new Error(`missing PSCALE_ROLE_IDENTIFIERS entry for ${label}`);
+  return quoteIdentifier(identifier);
+});
+await withClient(databaseUrl, async (client) => {
+  await client.query(grantsSql);
+});
 const checks = {
   lythaus_runtime: [
     ['table', 'privacy.legal_holds', 'SELECT', false],
@@ -44,11 +58,11 @@ const checks = {
   lythaus_jobs: [
     ['schema', 'content', 'CREATE', false],
     ['schema', 'privacy', 'CREATE', false],
-    ['database', 'postgres', 'CREATEROLE', false],
+    ['role', 'current', 'CREATEROLE', false],
   ],
   lythaus_admin: [
     ['database', 'postgres', 'CREATE', false],
-    ['database', 'postgres', 'CREATEROLE', false],
+    ['role', 'current', 'CREATEROLE', false],
   ],
   lythaus_privacy: [
     ['table', 'identity.email_credentials', 'SELECT', false],
@@ -65,10 +79,17 @@ for (const [role, roleChecks] of Object.entries(checks)) {
         ? 'has_table_privilege(current_user, $1, $2)'
         : kind === 'schema'
           ? 'has_schema_privilege(current_user, $1, $2)'
+          : kind === 'role'
+            ? '(SELECT COALESCE(rolcreaterole, false) FROM pg_roles WHERE rolname = current_user)'
           : 'has_database_privilege(current_user, current_database(), $1)';
-      const params = kind === 'database' ? [privilege] : [target, privilege];
-      const result = await client.query(`SELECT ${expression} AS allowed`, params);
-      const allowed = result.rows[0]?.allowed === true;
+      const params = kind === 'database' ? [privilege] : kind === 'role' ? [] : [target, privilege];
+      let allowed = false;
+      try {
+        const result = await client.query(`SELECT ${expression} AS allowed`, params);
+        allowed = result.rows[0]?.allowed === true;
+      } catch (error) {
+        if (expected) throw error;
+      }
       if (allowed !== expected) throw new Error(`${role} privilege check failed: ${kind} ${target} ${privilege} expected ${expected} got ${allowed}`);
     }
   });

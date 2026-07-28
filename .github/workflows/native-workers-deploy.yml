@@ -60,6 +60,7 @@ jobs:
         env:
           PLANETSCALE_ADMIN_DATABASE_URL: ${{ secrets.PLANETSCALE_ADMIN_DATABASE_URL }}
           PLANETSCALE_PRODUCTION_MIGRATIONS_APPROVED: ${{ secrets.PLANETSCALE_PRODUCTION_MIGRATIONS_APPROVED }}
+          PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
           PSCALE_BRANCH_NAME: main
         run: npm run apply:planetscale-production-migrations
       - name: Deploy public API
