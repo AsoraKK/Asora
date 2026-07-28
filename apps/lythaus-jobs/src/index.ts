@@ -287,47 +287,72 @@ async function processMediaUpload(message: QueueMessage, env: Env): Promise<void
 
 async function processMessage(message: QueueMessage, env: Env): Promise<void> {
   const eventId = message.body.eventId ?? message.id;
-  const seen = await query(env.DB_JOBS_FRESH,
-    `SELECT 1 FROM system.consumer_inbox WHERE consumer_name = 'lythaus-jobs' AND event_id = $1`, [eventId]);
-  if (seen.rowCount !== 0) {
-    message.ack();
-    return;
-  }
   const eventType = message.body.eventType ?? 'unknown';
-  if (eventType === 'content.post.created') await processPostModeration(message, env);
-  if (eventType === 'media.upload.finalised') await processMediaUpload(message, env);
-  if (eventType === 'privacy.request.created') {
-    const payload = (message.body.payload ?? {}) as { requestId?: string; requestType?: string };
-    const subjectId = typeof message.body.actorId === 'string' ? message.body.actorId : undefined;
-    if (!payload.requestId || !subjectId || !['export', 'delete', 'rectify'].includes(payload.requestType ?? '')) throw new Error('privacy_event_invalid');
-    await query(env.DB_PRIVACY_FRESH,
-      `INSERT INTO privacy.requests (id, subject_id, request_type)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (id) DO NOTHING`, [payload.requestId, subjectId, payload.requestType]);
-    await query(env.DB_PRIVACY_FRESH,
-      `INSERT INTO privacy.request_events (id, request_id, event_type, metadata)
-       VALUES ($1, $2, 'received', $3::jsonb)
-       ON CONFLICT (id) DO NOTHING`, [eventId, payload.requestId, JSON.stringify({ eventId })]);
-    if (payload.requestType === 'delete' && env.ACCOUNT_DELETE) {
-      await env.ACCOUNT_DELETE.create({ id: `privacy-delete-${payload.requestId}`, params: { subjectId, requestId: payload.requestId } });
-    }
-    if (payload.requestType === 'export' && env.ACCOUNT_EXPORT) {
-      await env.ACCOUNT_EXPORT.create({ id: `privacy-export-${payload.requestId}`, params: { subjectId, requestId: payload.requestId } });
-    }
-  }
-  if (eventType === 'moderation.appeal.created' && env.APPEAL_LIFECYCLE) {
-    const payload = (message.body.payload ?? {}) as { appealId?: string };
-    if (typeof payload.appealId !== 'string') throw new Error('appeal_event_invalid');
-    await env.APPEAL_LIFECYCLE.create({ id: `appeal-${payload.appealId}`, params: { appealId: payload.appealId } });
-  }
-  await query(env.DB_JOBS_FRESH,
+  const claimed = await query(env.DB_JOBS_FRESH,
     `INSERT INTO system.consumer_inbox (consumer_name, event_id, event_type, payload)
      VALUES ('lythaus-jobs', $1, $2, $3::jsonb)
      ON CONFLICT (consumer_name, event_id) DO NOTHING`,
-    [eventId, eventType, JSON.stringify(message.body)]
-  );
-  logEvent({ service: 'lythaus-jobs', eventId, eventType });
-  message.ack();
+    [eventId, eventType, JSON.stringify(message.body)]);
+  if (claimed.rowCount === 0) {
+    const existing = await query<{ state: 'processing' | 'completed'; claimed_at: string }>(env.DB_JOBS_FRESH,
+      `SELECT state, claimed_at FROM system.consumer_inbox WHERE consumer_name = 'lythaus-jobs' AND event_id = $1`, [eventId]);
+    const row = existing.rows[0];
+    if (!row || row.state === 'completed') {
+      message.ack();
+      return;
+    }
+    const reclaimed = await query(env.DB_JOBS_FRESH,
+      `UPDATE system.consumer_inbox
+          SET claimed_at = now(), payload = $2::jsonb, event_type = $3
+        WHERE consumer_name = 'lythaus-jobs' AND event_id = $1 AND state = 'processing'
+          AND claimed_at < now() - interval '5 minutes'`,
+      [eventId, JSON.stringify(message.body), eventType]);
+    if (reclaimed.rowCount === 0) {
+      message.retry();
+      return;
+    }
+  }
+  try {
+    if (eventType === 'content.post.created') await processPostModeration(message, env);
+    if (eventType === 'media.upload.finalised') await processMediaUpload(message, env);
+    if (eventType === 'privacy.request.created') {
+      const payload = (message.body.payload ?? {}) as { requestId?: string; requestType?: string };
+      const subjectId = typeof message.body.actorId === 'string' ? message.body.actorId : undefined;
+      if (!payload.requestId || !subjectId || !['export', 'delete', 'rectify'].includes(payload.requestType ?? '')) throw new Error('privacy_event_invalid');
+      await query(env.DB_PRIVACY_FRESH,
+        `INSERT INTO privacy.requests (id, subject_id, request_type)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (id) DO NOTHING`, [payload.requestId, subjectId, payload.requestType]);
+      await query(env.DB_PRIVACY_FRESH,
+        `INSERT INTO privacy.request_events (id, request_id, event_type, metadata)
+         VALUES ($1, $2, 'received', $3::jsonb)
+         ON CONFLICT (id) DO NOTHING`, [eventId, payload.requestId, JSON.stringify({ eventId })]);
+      if (payload.requestType === 'delete' && env.ACCOUNT_DELETE) {
+        await env.ACCOUNT_DELETE.create({ id: `privacy-delete-${payload.requestId}`, params: { subjectId, requestId: payload.requestId } });
+      }
+      if (payload.requestType === 'export' && env.ACCOUNT_EXPORT) {
+        await env.ACCOUNT_EXPORT.create({ id: `privacy-export-${payload.requestId}`, params: { subjectId, requestId: payload.requestId } });
+      }
+    }
+    if (eventType === 'moderation.appeal.created' && env.APPEAL_LIFECYCLE) {
+      const payload = (message.body.payload ?? {}) as { appealId?: string };
+      if (typeof payload.appealId !== 'string') throw new Error('appeal_event_invalid');
+      await env.APPEAL_LIFECYCLE.create({ id: `appeal-${payload.appealId}`, params: { appealId: payload.appealId } });
+    }
+    await query(env.DB_JOBS_FRESH,
+      `UPDATE system.consumer_inbox SET state = 'completed', processed_at = now() WHERE consumer_name = 'lythaus-jobs' AND event_id = $1`,
+      [eventId]
+    );
+    logEvent({ service: 'lythaus-jobs', eventId, eventType });
+    message.ack();
+  } catch (error) {
+    // Release the claim so Queue retry can safely reprocess a failed event.
+    await query(env.DB_JOBS_FRESH,
+      `DELETE FROM system.consumer_inbox WHERE consumer_name = 'lythaus-jobs' AND event_id = $1`,
+      [eventId]
+    ).catch(() => undefined);
+    throw error;
+  }
 }
 
 function queueForEvent(eventType: string, env: Env): Queue | undefined {

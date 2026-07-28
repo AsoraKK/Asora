@@ -43,7 +43,17 @@ test('migration baseline contains subject locator and idempotency tables', () =>
   assert.match(migration, /CREATE TABLE system\.outbox_events/);
   assert.match(migration, /CREATE TABLE system\.consumer_inbox/);
   assert.match(migration, /CREATE TABLE system\.idempotency_keys/);
+  assert.match(migration, /state text NOT NULL DEFAULT 'processing'/);
+  assert.match(migration, /claimed_at timestamptz NOT NULL DEFAULT now\(\)/);
   assert.match(migration, /uuidv7\(\)/);
+});
+
+test('native queue consumers claim, retry, and complete duplicate events safely', () => {
+  const jobs = fs.readFileSync(path.join(root, 'apps/lythaus-jobs/src/index.ts'), 'utf8');
+  assert.match(jobs, /ON CONFLICT \(consumer_name, event_id\) DO NOTHING/);
+  assert.match(jobs, /message\.retry\(\)/);
+  assert.match(jobs, /state = 'completed'/);
+  assert.match(jobs, /claimed_at < now\(\) - interval '5 minutes'/);
 });
 
 test('launch schema and media boundary are explicit', () => {

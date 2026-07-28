@@ -220,3 +220,50 @@ this recheck. Development DDL remains pending explicit human approval.
   provisioned through the PlanetScale role-management API.
 - PostGIS remains the single provider capability blocker for the approved
   migration baseline; no geospatial downgrade or substitute type was applied.
+
+## Hyperdrive readiness and native Worker refresh - 2026-07-28
+
+- The public development Worker was rebuilt from the current repository bundle
+  and uploaded through the authenticated Cloudflare API as deployment
+  `e66ef74d16e3429f85e0606cee5ebbea` (tag
+  `f939c50929804735ac7800394619058d`).
+- The Worker binding exposes a Cloudflare-generated local connection string
+  using `hyperdrive.local` and `sslmode=disable`. This is the Worker-to-
+  Hyperdrive hop; the Hyperdrive origin configuration remains `verify-full`
+  with the PlanetScale system root CA. The application guard now accepts only
+  this exact platform-local mode and rejects weaker modes elsewhere.
+- Live probes against
+  `lythaus-public-api-development.asora.workers.dev` returned:
+  `GET /api/health` HTTP 200, `GET /api/ready` HTTP 200 with `status=ready`,
+  and `GET /api/feed/discover` HTTP 400 because the approved application
+  schema has not yet been applied.
+- A temporary Hyperdrive diagnostic Worker used to inspect only sanitized
+  binding metadata was deleted after the probe; it is not a retained runtime
+  dependency.
+- Local native database connection contracts passed `6/6`; native TypeScript
+  checking passed. The public Worker dry-run bundle resolved the development
+  KV, R2, Queue, email and Hyperdrive bindings before upload.
+- Johannesburg TCP handshake baseline (10 samples per endpoint, no complete
+  query transaction) was: Frankfurt p50 `157.7 ms`, p95 `209.0 ms`; Dublin
+  candidate p50 `161.7 ms`, p95 `175.8 ms`; the second Dublin candidate p50
+  `164.0 ms`, p95 `256.1 ms`. These figures are inputs to Gate 2, not final
+  endpoint SLOs.
+- The current unauthenticated public benchmark recorded health p50 `34.07 ms`
+  and p95/p99 `184.92 ms`; readiness is now healthy after the Hyperdrive local
+  mode correction. Discovery remains intentionally unseeded until the
+  PostGIS-dependent schema baseline is available.
+
+Gate 4 is now partially evidenced for native health/readiness and Worker
+connectivity, but remains incomplete for the launch API, schema, auth,
+moderation, media, privacy and duplicate-delivery acceptance suite. Gates 1,
+2, 3 and 5 remain blocked by the dedicated-account, data-disposition,
+provider-extension, production-topology, role/migration, backup and cutover
+requirements recorded above.
+
+- The jobs Worker was rebuilt and uploaded as deployment
+  `f733a25670364425a283f081af4b9ede` (tag
+  `ad2eb5a5bffe42779b3eb358eb8b08c7`). Its consumer now atomically claims
+  `system.consumer_inbox` events, retries concurrent processing claims, leases
+  stale claims after five minutes, marks successful events `completed`, and
+  releases failed claims for Queue retry. This source-level contract is tested
+  locally; live execution awaits the blocked migration baseline.

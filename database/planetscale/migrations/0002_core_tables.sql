@@ -354,6 +354,8 @@ CREATE TABLE system.consumer_inbox (
   event_id uuid NOT NULL,
   event_type text NOT NULL,
   payload jsonb NOT NULL,
+  state text NOT NULL DEFAULT 'processing' CHECK (state IN ('processing', 'completed')),
+  claimed_at timestamptz NOT NULL DEFAULT now(),
   processed_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (consumer_name, event_id)
 );
