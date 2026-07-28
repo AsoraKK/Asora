@@ -86,9 +86,13 @@ All four point to the synthetic Frankfurt `development` branch.
 - A pre-production attempt to create a 30-day, quarantine-bucket-scoped R2 API
   token through `/user/tokens` was rejected by the current Cloudflare identity
   (`1001` policy reuse / authorization validation). No token or Worker R2 secret
-  was created. The required owner action is to create a bucket-scoped R2 token
-  from the R2 dashboard or grant the necessary token-management authority;
-  production token creation remains deferred to the dedicated account.
+  was created. Cloudflare MCP remains the management/control plane and is
+  sufficient for resource inspection and Worker configuration; it does not
+  replace the separate R2 S3 data-plane credential required to sign direct
+  client upload URLs. The required owner action is to create a bucket-scoped
+  R2 token from the R2 dashboard or grant the necessary token-management
+  authority; production token creation remains deferred to the dedicated
+  account.
 - This inventory remains synthetic pre-production in a mixed-use account and
   cannot satisfy Gate 1 or authorize production data, DNS cutover, or Azure
   deletion.
