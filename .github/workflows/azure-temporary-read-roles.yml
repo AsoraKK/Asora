@@ -180,9 +180,9 @@ jobs:
               record_management 'Storage Blob Data Reader' "$scope" 'created' "$id" "$(jq -r '.createdOn // empty' <<<"$result")" "az role assignment delete --ids $id"
             fi
           done <<EOF
-$DSR_STORAGE_ACCOUNT|$DSR_CONTAINER
-$MEDIA_STORAGE_ACCOUNT|$MEDIA_CONTAINER
-EOF
+          $DSR_STORAGE_ACCOUNT|$DSR_CONTAINER
+          $MEDIA_STORAGE_ACCOUNT|$MEDIA_CONTAINER
+          EOF
 
           jq -n --arg observedAt "$observed_at" --argjson assignments "$assignments" --arg note 'Temporary read roles only; no Azure resource or billing mutation requested.' '{observedAt:$observedAt,assignments:$assignments,note:$note}' > evidence/temporary-role-assignments.json
 
