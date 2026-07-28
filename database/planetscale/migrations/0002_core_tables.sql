@@ -89,9 +89,20 @@ CREATE TABLE content.places (
   country_code text,
   region_code text,
   municipality_code text,
-  boundary geography(MultiPolygon, 4326),
+  -- Provider-neutral representation used until PostGIS is available.
+  boundary_geojson jsonb,
   created_at timestamptz NOT NULL DEFAULT now()
 );
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'postgis') THEN
+    EXECUTE 'ALTER TABLE content.places ADD COLUMN IF NOT EXISTS boundary geography(MultiPolygon, 4326)';
+  ELSE
+    RAISE NOTICE 'PostGIS unavailable; content.places.boundary remains disabled';
+  END IF;
+END
+$$;
 
 CREATE TABLE content.posts (
   id uuid PRIMARY KEY DEFAULT uuidv7(),

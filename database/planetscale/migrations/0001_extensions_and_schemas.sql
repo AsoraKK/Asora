@@ -1,4 +1,15 @@
-CREATE EXTENSION IF NOT EXISTS postgis;
+-- PostGIS is a required launch capability, but PlanetScale may temporarily
+-- exclude it from the extension allowlist. The explicit install script lives
+-- in extensions/postgis.sql and must be applied before geography features are
+-- enabled. Development can continue with the documented JSON boundary
+-- fallback while the provider capability remains unavailable.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'postgis') THEN
+    RAISE NOTICE 'PostGIS is not installed; geography features remain blocked and content.places uses the JSON boundary fallback';
+  END IF;
+END
+$$;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE EXTENSION IF NOT EXISTS unaccent;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
