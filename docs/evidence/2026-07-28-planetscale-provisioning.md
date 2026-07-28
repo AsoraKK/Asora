@@ -316,3 +316,9 @@ requirements recorded above.
 - The repository `lint-check` remains unavailable because the `functions`
   workspace declares no `lint` script. This is an unrelated pre-existing CI
   configuration issue and was not changed as part of the native implementation.
+- Cloudflare's read-only `GET /user/tenants` returned an empty list. The
+  dedicated-account create attempt therefore remains blocked by missing Tenant
+  authority (the account API is intended for Tenant/Channel administration), not
+  by a naming or resource collision. The required owner action is to create or
+  grant a dedicated Lythaus account through Cloudflare Tenant administration,
+  then provide its account and zone IDs for the production gate.
