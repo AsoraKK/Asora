@@ -51,7 +51,7 @@
       "workers_dev": true,
       "preview_urls": true,
       "routes": [],
-      "hyperdrive": [{ "binding": "DB_APP_FRESH", "id": "REPLACE_WITH_DB_APP_FRESH_DEV_ID" }],
+      "hyperdrive": [{ "binding": "DB_APP_FRESH", "id": "3e59f07db51345aa896333ca861d1adf" }],
       "vars": {
         "ENVIRONMENT": "development",
         "EXPECTED_HOSTNAMES": "lythaus-public-api-development.workers.dev",

@@ -64,8 +64,8 @@
       "preview_urls": true,
       "routes": [],
       "hyperdrive": [
-        { "binding": "DB_JOBS_FRESH", "id": "REPLACE_WITH_DB_JOBS_FRESH_DEV_ID" },
-        { "binding": "DB_PRIVACY_FRESH", "id": "REPLACE_WITH_DB_PRIVACY_FRESH_DEV_ID" }
+        { "binding": "DB_JOBS_FRESH", "id": "442bb04b99004cb38c6974ec031d65ee" },
+        { "binding": "DB_PRIVACY_FRESH", "id": "bae909aa72e244bfa9b8ca8a948053b6" }
       ],
       "vars": {
         "ENVIRONMENT": "development",

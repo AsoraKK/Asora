@@ -27,6 +27,6 @@
     "checkedAt": "2026-07-28",
     "branch": "development",
     "status": "blocked",
-    "reason": "PlanetScale extension catalog currently omits all four required extensions and the provider has temporarily disabled PostGIS."
+    "reason": "pgcrypto, pg_trgm, and unaccent are installed on development; PostGIS is temporarily disabled by PlanetScale and excluded from the immutable extension allowlist."
   }
 }

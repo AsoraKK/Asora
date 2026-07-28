@@ -28,9 +28,11 @@ Initial verification prompt: use PlanetScale MCP to confirm access to
 execute writes or DDL.
 Verified 2026-07-28 through PlanetScale CLI and MCP: `main` and the synthetic
 `development` branch exist. `development` is a ready Frankfurt PostgreSQL 18.4
-PS-DEV branch with five provisioned login roles. The required extensions are now
-available in the catalog but remain uninstalled, and the application schema is
-not yet present. Do not treat it as production-ready until the approved
+PS-DEV branch with five provisioned login roles. `pgcrypto`, `pg_trgm`, and
+`unaccent` are installed through the approved development SQL path; PostGIS is
+listed in the catalog but is excluded from PlanetScale's immutable extension
+allowlist and cannot be installed. The application schema is not yet present.
+Do not treat it as production-ready until the supported geospatial decision,
 development migrations, grants, Hyperdrive credentials, and negative
 permission tests pass.
 

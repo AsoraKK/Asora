@@ -30,10 +30,10 @@ application records.
   `permission denied to create extension "postgis"`.
 - The provider temporarily reported PostGIS unavailable during the first
   migration attempt; no application schema was created then.
-- A subsequent read-only catalog probe now reports all four required extensions
-  (`postgis`, `pgcrypto`, `pg_trgm`, and `unaccent`) as available, but none is
-  installed. Installing them and applying the baseline still requires an
-  explicitly approved development-branch DDL operation.
+- A subsequent read-only catalog probe reported all four required extensions
+  (`postgis`, `pgcrypto`, `pg_trgm`, and `unaccent`) as available, but none was
+  installed at that point. The later direct-admin attempt installed the three
+  non-geospatial extensions; PostGIS remained blocked by the provider allowlist.
 - No application tables or user data were created on `development`.
 
 ## Reversible attempts
@@ -65,9 +65,9 @@ application records.
 - Available autoscaling tiers include PS-5 ARM at US$15/month plus US$5/month
   per replica and PS-10 ARM at US$30/month plus US$10/month per replica;
   storage, backup, egress, and regional adjustments remain unpriced here.
-- Read-only SQL on `development` confirmed required extensions are available in
-  `pg_available_extensions` but `installed_required_extensions` is null. The MCP
-  session uses an ephemeral read-only role;
+- The initial read-only SQL on `development` confirmed required extensions were
+  available in `pg_available_extensions` but `installed_required_extensions`
+  was null. The MCP session uses an ephemeral read-only role;
   its role catalog does not expose the five branch login roles, so role
   provisioning remains evidenced by the PlanetScale role-management API/CLI.
 
@@ -92,13 +92,14 @@ this recheck. Development DDL remains pending explicit human approval.
   the bundle resolved the synthetic KV, R2, queue, email, and placeholder
   Hyperdrive bindings without deploying a Worker.
 - `wrangler whoami` remains blocked because the local token expired and cannot
-  refresh in the non-interactive shell. No live Worker deployment was claimed.
+  refresh in the non-interactive shell. Live development deployments were
+  performed through the authenticated Cloudflare MCP API instead.
 - The new scope validator and native Worker validator both pass in
   pre-production mode. Production mode correctly fails closed until protected
   dedicated-account identifiers and the production environment are supplied.
-- A later read-only Cloudflare MCP inventory attempt returned API error `10000`
-  (authentication error); no Cloudflare state was changed and email/Turnstile
-  readiness remains unverified until the MCP session is reauthenticated.
+- The current Cloudflare MCP session is authenticated for the shared account;
+  production account isolation, Access configuration, email-domain verification
+  and Turnstile readiness remain unverified.
 
 ## Exact MCP recheck — 2026-07-28
 
@@ -154,12 +155,29 @@ this recheck. Development DDL remains pending explicit human approval.
 
 ## Extension availability refresh — 2026-07-28
 
-- PlanetScale read-only SQL reports PostgreSQL `18.4`, with
+- PlanetScale read-only SQL initially reported PostgreSQL `18.4`, with
   `pg_trgm,pgcrypto,postgis,unaccent` available in the extension catalog and
-  none installed.
+  none installed at that time.
 - The provider-side availability outage is no longer the blocker. The next
-  operation is still DDL on the synthetic `development` branch; no such query
-  has been executed pending explicit human approval.
+  operation was attempted through the direct PlanetScale admin SQL path. The
+  three non-geospatial extensions installed successfully; PostGIS returned
+  `permission denied` because it is absent from the branch's immutable
+  `extwlist.pscale_allowed_extensions` value.
+
+## Topology and extension matrix — 2026-07-28
+
+- Temporary branch `ci-ext-frankfurt-ps10` (`kc1toai6ks4a`) reached ready state
+  in Frankfurt as PostgreSQL 18.4 PS-10 ARM with two replicas. Its extension
+  allowlist also excludes PostGIS, and `CREATE EXTENSION postgis` failed with
+  SQLSTATE `42501`.
+- Temporary branch `ci-ext-dublin-ps10` (`f9ii01hy7ooz`) reached ready state in
+  Dublin as PostgreSQL 18.4 PS-10 ARM with two replicas. It reproduced the same
+  PostGIS restriction.
+- A temporary standalone London PG18 PS-10 X86 HA database could not be
+  created because PlanetScale rejected the account's payment verification.
+  London ARM branches are also unsupported by the current ARM-only database.
+- `development` now has `pgcrypto`, `pg_trgm`, and `unaccent` installed;
+  PostGIS remains unavailable and no application tables were created.
 
 ## Exact-head CI refresh — 2026-07-28
 
@@ -168,3 +186,27 @@ this recheck. Development DDL remains pending explicit human approval.
   `30315614015`, and secret-scan run `30315615763`.
 - These checks validate repository contracts only; they do not satisfy the
   live account, extension, benchmark, deployment, backup or cutover gates.
+
+## Development Cloudflare deployment evidence — 2026-07-28
+
+- Four cache-disabled Hyperdrive configurations were created for the synthetic
+  development branch: application, admin, jobs and privacy. Each uses the
+  PlanetScale system root CA and `sslmode=verify-full`; production bindings
+  remain placeholders until the dedicated account and production database are
+  approved.
+- `lythaus-public-api-development`, `lythaus-admin-api-development`, and
+  `lythaus-jobs-development` are deployed through the Cloudflare API with
+  `nodejs_compat`. Public and admin development workers have workers.dev
+  endpoints; the jobs worker has no public workers.dev or preview endpoint.
+- Public and admin `/health` probes returned HTTP 200. Database-backed routes
+  remain expected to fail closed because the PostGIS provider blocker prevented
+  the application migration baseline from being applied.
+- Six development queues have worker consumers with bounded batches, retries,
+  and dead-letter queues. Five development Workflows are registered against the
+  jobs worker, and its fifteen-minute cron trigger is configured.
+- Sampled Worker observability is enabled on all three development scripts with
+  persisted invocation logs; this is operational evidence only and not the
+  permanent audit store.
+- These are synthetic pre-production resources in the mixed-use shared account;
+  they do not satisfy Gate 1 or authorize production data, DNS cutover, or
+  Azure deletion.
