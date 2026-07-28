@@ -1,0 +1,432 @@
+name: Temporary Azure PostgreSQL Read Validation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  EXPECTED_PRINCIPAL_ID: 6d9e43cf-c68a-4e1e-bd29-441e9e32e256
+  RESOURCE_GROUP: asora-psql-flex
+  KEY_VAULT: kv-asora-flex-dev
+  POSTGRES_SECRET_NAME: postgres-connection-string
+  COSMOS_ACCOUNT: asora-cosmos-dev
+  COSMOS_DATABASE: asora
+  DSR_STORAGE_ACCOUNT: stasoradsrdev
+  DSR_CONTAINER: dsr-exports
+  MEDIA_STORAGE_ACCOUNT: asoramediadev
+  MEDIA_CONTAINER: user-media
+
+jobs:
+  postgres-read-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository for reference screening
+        uses: actions/checkout@v5
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v3
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Retrieve named PostgreSQL secret and validate with PostgreSQL 17
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          kv_error_file="$(mktemp)"
+          set +e
+          PG_CONNECTION_STRING="$(az keyvault secret show \
+            --vault-name "$KEY_VAULT" \
+            --name "$POSTGRES_SECRET_NAME" \
+            --query value \
+            --output tsv 2>"$kv_error_file")"
+          kv_status=$?
+          set -e
+          if [[ "$kv_status" -ne 0 || -z "$PG_CONNECTION_STRING" ]]; then
+            kv_error_code="$(grep -Eo 'Forbidden|AuthorizationFailed|ResourceNotFound|BadParameter' "$kv_error_file" | head -n 1 || true)"
+            jq -n \
+              --arg status "failed" \
+              --arg errorCode "${kv_error_code:-unknown}" \
+              --arg secretName "$POSTGRES_SECRET_NAME" \
+              '{status:$status,stage:"key-vault-named-secret-retrieval",secretName:$secretName,errorCode:$errorCode,valuePersisted:false,valueLogged:false}' \
+              > evidence/postgresql-access.json
+            rm -f "$kv_error_file"
+            exit 20
+          fi
+
+          printf '::add-mask::%s\n' "$PG_CONNECTION_STRING"
+          rm -f "$kv_error_file"
+
+          parsed_connection="$(PG_CONNECTION_STRING="$PG_CONNECTION_STRING" python3 - <<'PY'
+          import json
+          import os
+          from urllib.parse import parse_qs, unquote, urlsplit
+
+          raw = os.environ["PG_CONNECTION_STRING"].strip()
+          values = {}
+
+          def normalize(key):
+              return key.lower().replace(" ", "").replace("_", "")
+
+          if "://" in raw:
+              parsed = urlsplit(raw)
+              values["host"] = parsed.hostname or ""
+              values["port"] = str(parsed.port or "")
+              values["database"] = unquote(parsed.path.lstrip("/"))
+              values["username"] = unquote(parsed.username or "")
+              query = parse_qs(parsed.query)
+              values["sslmode"] = query.get("sslmode", [""])[0]
+          else:
+              for item in raw.split(";"):
+                  if "=" not in item:
+                      continue
+                  key, value = item.split("=", 1)
+                  values[normalize(key)] = value.strip()
+
+          def first(*keys):
+              for key in keys:
+                  value = values.get(key, "")
+                  if value:
+                      return value
+              return ""
+
+          safe = {
+              "status": "valid",
+              "host": first("host", "server", "datasource"),
+              "port": first("port"),
+              "database": first("database", "initialcatalog"),
+              "username": first("username", "userid", "user"),
+              "sslMode": first("sslmode", "sslmode"),
+          }
+          missing = [key for key in ("host", "port", "database", "username", "sslMode") if not safe[key]]
+          if missing:
+              safe = {"status": "invalid", "missingFields": missing}
+          print(json.dumps(safe))
+          PY
+          )"
+          printf '%s\n' "$parsed_connection" > evidence/postgres-connection-summary.json
+          if [[ "$(jq -r '.status' evidence/postgres-connection-summary.json)" != "valid" ]]; then
+            jq '{status:"failed",stage:"connection-string-parsing",summary:.}' evidence/postgres-connection-summary.json > evidence/postgresql-access.json
+            unset PG_CONNECTION_STRING
+            exit 21
+          fi
+
+          PGHOST="$(jq -r '.host' evidence/postgres-connection-summary.json)"
+          export PGHOST
+          PGPORT="$(jq -r '.port' evidence/postgres-connection-summary.json)"
+          export PGPORT
+          PGDATABASE="$(jq -r '.database' evidence/postgres-connection-summary.json)"
+          export PGDATABASE
+          PGUSER="$(jq -r '.username' evidence/postgres-connection-summary.json)"
+          export PGUSER
+          PGSSLMODE="$(jq -r '.sslMode' evidence/postgres-connection-summary.json | tr '[:upper:]' '[:lower:]')"
+          export PGSSLMODE
+          PGPASSWORD="$PG_CONNECTION_STRING"
+          export PGPASSWORD
+
+          summarize_error() {
+            python3 - "$1" <<'PY'
+          import json
+          import re
+          import sys
+          from pathlib import Path
+
+          raw = Path(sys.argv[1]).read_text(errors="replace").lower()
+          match = re.search(r"sqlstate[^0-9a-z]*([0-9a-z]{5})", raw)
+          code = match.group(1).upper() if match else "unknown"
+          if "could not translate host name" in raw or "name or service not known" in raw:
+              category = "dns"
+          elif "certificate" in raw or "ssl" in raw or "tls" in raw:
+              category = "tls"
+          elif "password authentication" in raw or "no password" in raw or "role" in raw and "does not exist" in raw:
+              category = "credentials"
+          elif "does not exist" in raw and "database" in raw:
+              category = "database-name"
+          elif "timeout" in raw or "could not connect" in raw or "connection refused" in raw:
+              category = "firewall-or-network"
+          else:
+              category = "unknown"
+          print(json.dumps({"errorCode": code, "category": category}))
+          PY
+          }
+
+          docker_psql() {
+            docker run --rm --network host \
+              --env PGPASSWORD \
+              --env PGHOST \
+              --env PGPORT \
+              --env PGDATABASE \
+              --env PGUSER \
+              --env PGSSLMODE \
+              postgres:17-alpine psql --no-psqlrc "$@"
+          }
+
+          docker_pg_dump() {
+            docker run --rm --network host \
+              --env PGPASSWORD \
+              --env PGHOST \
+              --env PGPORT \
+              --env PGDATABASE \
+              --env PGUSER \
+              --env PGSSLMODE \
+              postgres:17-alpine pg_dump "$@"
+          }
+
+          dns_output="$(mktemp)"
+          dns_error="$(mktemp)"
+          set +e
+          docker run --rm --network host postgres:17-alpine getent hosts "$PGHOST" >"$dns_output" 2>"$dns_error"
+          dns_status=$?
+          set -e
+
+          session_output="$(mktemp)"
+          session_error="$(mktemp)"
+          set +e
+          docker_psql \
+            --set=ON_ERROR_STOP=1 \
+            --set=VERBOSITY=verbose \
+            --tuples-only \
+            --no-align \
+            --field-separator $'\t' \
+            --command "SELECT current_setting('server_version'), current_user, current_database(), COALESCE((SELECT ssl::text FROM pg_stat_ssl WHERE pid=pg_backend_pid()), 'false'), COALESCE((SELECT version FROM pg_stat_ssl WHERE pid=pg_backend_pid()), ''), COALESCE((SELECT cipher FROM pg_stat_ssl WHERE pid=pg_backend_pid()), '');" \
+            >"$session_output" 2>"$session_error"
+          session_status=$?
+          set -e
+
+          if [[ "$session_status" -ne 0 ]]; then
+            connection_error="$(summarize_error "$session_error")"
+            jq -n \
+              --argjson dnsStatus "$dns_status" \
+              --argjson error "$connection_error" \
+              --arg sslMode "$PGSSLMODE" \
+              '{status:"failed",stage:"postgresql-connection",dnsStatus:$dnsStatus,sslMode:$sslMode,error:$error,secretPersisted:false,secretLogged:false}' \
+              > evidence/postgresql-access.json
+            rm -f "$dns_output" "$dns_error" "$session_output" "$session_error"
+            unset PGPASSWORD PG_CONNECTION_STRING
+            exit 22
+          fi
+
+          python3 - "$session_output" <<'PY' > evidence/postgresql-session.json
+          import json
+          import sys
+          from pathlib import Path
+
+          parts = Path(sys.argv[1]).read_text().strip().split("\t")
+          keys = ["serverVersion", "currentUser", "currentDatabase", "tlsActive", "tlsVersion", "tlsCipher"]
+          print(json.dumps(dict(zip(keys, parts))))
+          PY
+
+          inventory_output="$(mktemp)"
+          inventory_error="$(mktemp)"
+          set +e
+          docker_psql \
+            --set=ON_ERROR_STOP=1 \
+            --tuples-only \
+            --no-align \
+            --field-separator $'\t' \
+            --command "SELECT 'schema', nspname, '' FROM pg_namespace WHERE nspname NOT LIKE 'pg_%' AND nspname <> 'information_schema' ORDER BY nspname; SELECT 'table', table_schema || '.' || table_name, '' FROM information_schema.tables WHERE table_type='BASE TABLE' AND table_schema NOT IN ('pg_catalog','information_schema') ORDER BY 2; SELECT 'view', schemaname || '.' || viewname, '' FROM pg_catalog.pg_views WHERE schemaname NOT IN ('pg_catalog','information_schema') ORDER BY 2; SELECT 'approx_rows', n.nspname || '.' || c.relname, greatest(c.reltuples, 0)::bigint::text FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE c.relkind IN ('r','p') AND n.nspname NOT IN ('pg_catalog','information_schema') ORDER BY 2;" \
+            >"$inventory_output" 2>"$inventory_error"
+          inventory_status=$?
+          set -e
+
+          dump_output="$(mktemp)"
+          dump_error="$(mktemp)"
+          set +e
+          docker_pg_dump --schema-only --no-owner --no-privileges --no-comments >"$dump_output" 2>"$dump_error"
+          dump_status=$?
+          set -e
+
+          if [[ "$inventory_status" -ne 0 || "$dump_status" -ne 0 ]]; then
+            inventory_error_summary="$(summarize_error "$inventory_error")"
+            dump_error_summary="$(summarize_error "$dump_error")"
+            jq -n \
+              --argjson dnsStatus "$dns_status" \
+              --argjson inventoryStatus "$inventory_status" \
+              --argjson schemaDumpStatus "$dump_status" \
+              --argjson inventoryError "$inventory_error_summary" \
+              --argjson schemaDumpError "$dump_error_summary" \
+              '{status:"partial",stage:"postgresql-inventory-or-schema-dump",dnsStatus:$dnsStatus,inventoryStatus:$inventoryStatus,schemaDumpStatus:$schemaDumpStatus,inventoryError:$inventoryError,schemaDumpError:$schemaDumpError,secretPersisted:false,secretLogged:false}' \
+              > evidence/postgresql-access.json
+            rm -f "$dns_output" "$dns_error" "$session_output" "$session_error" "$inventory_output" "$inventory_error" "$dump_output" "$dump_error"
+            unset PGPASSWORD PG_CONNECTION_STRING
+            exit 23
+          fi
+
+          python3 - "$inventory_output" <<'PY' > evidence/postgres-inventory.json
+          import json
+          import sys
+          from pathlib import Path
+
+          result = {"schemas": [], "tables": [], "views": [], "approximateRowCounts": {}}
+          for line in Path(sys.argv[1]).read_text().splitlines():
+              parts = line.split("\t")
+              if len(parts) < 2:
+                  continue
+              kind, name = parts[0], parts[1]
+              if kind == "schema":
+                  result["schemas"].append(name)
+              elif kind == "table":
+                  result["tables"].append(name)
+              elif kind == "view":
+                  result["views"].append(name)
+              elif kind == "approx_rows":
+                  try:
+                      result["approximateRowCounts"][name] = int(parts[2])
+                  except (IndexError, ValueError):
+                      result["approximateRowCounts"][name] = None
+          print(json.dumps(result, indent=2))
+          PY
+
+          jq -n \
+            --argjson dnsStatus "$dns_status" \
+            --argjson session "$(<evidence/postgresql-session.json)" \
+            --argjson inventory "$(<evidence/postgres-inventory.json)" \
+            --arg sslMode "$PGSSLMODE" \
+            '{status:"passed",dnsStatus:$dnsStatus,sslMode:$sslMode,session:$session,inventory:$inventory,schemaOnlyDump:"passed",fullDataExport:"not-run",secretPersisted:false,secretLogged:false}' \
+            > evidence/postgresql-access.json
+
+          rm -f "$dns_output" "$dns_error" "$session_output" "$session_error" "$inventory_output" "$inventory_error" "$dump_output" "$dump_error"
+          unset PGPASSWORD PG_CONNECTION_STRING
+
+      - name: Build read-only Cosmos and storage inventory plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          cosmos_containers="$(az cosmosdb sql container list --resource-group "$RESOURCE_GROUP" --account-name "$COSMOS_ACCOUNT" --database-name "$COSMOS_DATABASE" -o json)"
+          printf '%s\n' "$cosmos_containers" > evidence/cosmos-container-source.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          nonempty = {
+              "counters", "privacy_requests", "users", "posts", "privacy_audit",
+              "receipt_events", "audit_logs", "legal_holds", "profiles",
+              "custom_feeds", "moderation_decisions",
+          }
+          roots = ["functions", "apps", "scripts", "infra", "cloudflare", "workers", "docs"]
+          ignored = {"node_modules", "build", "dist", ".dart_tool", ".git"}
+          files = []
+          for root in roots:
+              path = Path(root)
+              if not path.exists():
+                  continue
+              files.extend(p for p in path.rglob("*") if p.is_file() and not any(part in ignored for part in p.parts) and p.stat().st_size < 2_000_000)
+
+          def references(term):
+              matches = []
+              lowered = term.lower()
+              for path in files:
+                  try:
+                      if lowered in path.read_text(errors="ignore").lower():
+                          matches.append(path.as_posix())
+                  except OSError:
+                      pass
+              return matches
+
+          source = json.loads(Path("evidence/cosmos-container-source.json").read_text())
+          containers = source if isinstance(source, list) else source.get("value", [])
+          inventory = []
+          for row in containers:
+              resource = row.get("resource", {})
+              name = row.get("name") or resource.get("id")
+              refs = references(name)
+              inventory.append({
+                  "container": name,
+                  "partitionKey": resource.get("partitionKey", {}).get("paths", []),
+                  "lastWriteTimestamp": resource.get("ts"),
+                  "documentCount": None,
+                  "documentCountStatus": "not-scanned; bounded probe evidence only",
+                  "classification": "MIGRATE" if name in nonempty else "PRESERVE AS EVIDENCE",
+                  "authorityStatus": "PENDING - validate code references, deployment history, overlap and source authority",
+                  "codeReferenceCount": len(refs),
+                  "codeReferenceFiles": refs[:20],
+              })
+
+          postgres = json.loads(Path("evidence/postgres-inventory.json").read_text())
+          postgres_tables = []
+          for table in postgres.get("tables", []):
+              refs = references(table.split(".")[-1])
+              postgres_tables.append({
+                  "table": table,
+                  "approximateRowCount": postgres.get("approximateRowCounts", {}).get(table),
+                  "classification": "MIGRATE" if refs else "PRESERVE AS EVIDENCE",
+                  "authorityStatus": "PENDING - validate application ownership and migration history",
+                  "codeReferenceCount": len(refs),
+                  "codeReferenceFiles": refs[:20],
+              })
+
+          plan = {
+              "cosmos": {
+                  "database": "asora",
+                  "containerCount": len(inventory),
+                  "containers": inventory,
+                  "fullDataExtraction": "not-authorized",
+              },
+              "postgresql": {
+                  "schemas": postgres.get("schemas", []),
+                  "tables": postgres_tables,
+                  "views": postgres.get("views", []),
+                  "schemaOnlyDumpValidated": True,
+                  "fullDataExtraction": "not-authorized",
+              },
+              "classificationPolicy": {
+                  "MIGRATE": "candidate source with bounded data evidence and/or current code references; final authority reconciliation required",
+                  "PRESERVE AS EVIDENCE": "retain inventory/schema evidence while authority or product use remains unresolved",
+                  "DISCARD TEST/DERIVED": "not assigned automatically",
+                  "BLOCKED - ACCESS REQUIRED": "use only when a required read failed",
+              },
+          }
+          Path("evidence/inventory-plan.json").write_text(json.dumps(plan, indent=2) + "\n")
+          PY
+
+      - name: Inventory approved storage metadata without downloading objects
+        shell: bash
+        run: |
+          set -euo pipefail
+          results='[]'
+          for pair in "$DSR_STORAGE_ACCOUNT|$DSR_CONTAINER" "$MEDIA_STORAGE_ACCOUNT|$MEDIA_CONTAINER"; do
+            IFS='|' read -r account container <<< "$pair"
+            account_json="$(az storage account show --name "$account" -o json)"
+            container_json="$(az storage container show --auth-mode login --account-name "$account" --name "$container" -o json)"
+            blob_file="$(mktemp)"
+            az storage blob list --auth-mode login --account-name "$account" --container-name "$container" --num-results 1 -o json > "$blob_file"
+            blob_count="$(jq 'length' "$blob_file")"
+            metadata_read=false
+            if [[ "$blob_count" -gt 0 ]]; then
+              blob_name="$(jq -r '.[0].name' "$blob_file")"
+              az storage blob show --auth-mode login --account-name "$account" --container-name "$container" --name "$blob_name" -o json > /dev/null
+              metadata_read=true
+            fi
+            row="$(jq -n \
+              --arg account "$account" \
+              --arg container "$container" \
+              --arg accountId "$(jq -r '.id' <<<"$account_json")" \
+              --arg location "$(jq -r '.location' <<<"$account_json")" \
+              --arg kind "$(jq -r '.kind' <<<"$account_json")" \
+              --arg sku "$(jq -r '.sku.name' <<<"$account_json")" \
+              --arg publicAccess "$(jq -r '.publicAccess // ""' <<<"$container_json")" \
+              --argjson boundedObjectCount "$blob_count" \
+              --argjson metadataRead "$metadata_read" \
+              '{account:$account,container:$container,accountId:$accountId,location:$location,kind:$kind,sku:$sku,publicAccess:$publicAccess,boundedObjectCount:$boundedObjectCount,metadataRead:$metadataRead,objectDownload:false,classification:"PRESERVE AS EVIDENCE pending migration-object classification"}')"
+            results="$(jq --argjson row "$row" '. + [$row]' <<< "$results")"
+            rm -f "$blob_file"
+          done
+          printf '%s\n' "$results" > evidence/storage-inventory.json
+
+      - name: Upload sanitized PostgreSQL and inventory evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: azure-postgres-read-validation-evidence
+          path: evidence/
+          if-no-files-found: error
+          retention-days: 7
