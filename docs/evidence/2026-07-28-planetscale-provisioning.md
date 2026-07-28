@@ -471,3 +471,7 @@ entries remain as chronological evidence of the pre-migration state.
   responses for invalid email, invalid password, and malformed JSON. This
   closes the development error-boundary defect; authentication success and
   production acceptance remain gated.
+- Cloudflare Observability retained the pre-fix events with
+  `outcome=exception`, HTTP 500, and the `normalizeEmail` stack. Those events
+  are historical evidence for the defect and are not treated as post-fix
+  failures; the corrected deployment is the one verified by the live probes.
