@@ -300,3 +300,8 @@ requirements recorded above.
   `postgis_sfcgal`, `postgis_topology` and related extensions are temporarily
   disabled, and its troubleshooting guidance directs permission-denied cases to
   PlanetScale support: https://planetscale.com/docs/postgres/extensions.
+- PlanetScale MCP branch recheck found exactly `main` and `development`. `main`
+  is still the Frankfurt `PS-5` production branch with zero replicas and no
+  application tables; `development` is the Frankfurt `PS-DEV` branch with zero
+  replicas, no application tables and the five provisioned login roles. No
+  `ci-*` or permanent `ai-development` database branch was created.
