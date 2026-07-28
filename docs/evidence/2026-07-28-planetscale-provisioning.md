@@ -454,3 +454,20 @@ entries remain as chronological evidence of the pre-migration state.
 - These results prove native Worker routing, database readiness, empty
   discovery, JWKS publication, disabled-provider behavior, and admin access
   enforcement in development. They do not authorize production cutover.
+
+## Public API async-error fix - 2026-07-28
+
+- A live invalid-email probe initially exposed an uncaught 1101 because async
+  route handlers were returned without `await`; rejected validation promises
+  bypassed the enclosing `try/catch`.
+- The public dispatch now awaits rejection-prone handlers, and a regression
+  invariant covers email, verification, password-reset, post, and media
+  handlers.
+- The corrected development bundle was uploaded through the authenticated
+  Cloudflare MCP at deployment `400041e966dd444eadba19ecb623cc18`, inheriting
+  existing bindings and explicitly carrying the development vars and
+  `nodejs_compat` metadata. No Cloudflare API token was created.
+- Post-deploy probes returned HTTP 200 for health/readiness and HTTP 400 JSON
+  responses for invalid email, invalid password, and malformed JSON. This
+  closes the development error-boundary defect; authentication success and
+  production acceptance remain gated.

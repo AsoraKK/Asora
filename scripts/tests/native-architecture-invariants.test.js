@@ -42,6 +42,13 @@ test('native public and admin APIs enforce configured hostnames', () => {
   assert.match(fs.readFileSync(path.join(root, 'apps/lythaus-admin-api/wrangler.jsonc'), 'utf8'), /lythaus-admin-api-development\.asora\.workers\.dev/);
 });
 
+test('public API dispatch awaits rejection-prone async handlers', () => {
+  const source = fs.readFileSync(path.join(root, 'apps/lythaus-public-api/src/index.ts'), 'utf8');
+  for (const handler of ['emailAuth', 'verifyEmail', 'requestPasswordReset', 'createPost', 'createUploadSession']) {
+    assert.match(source, new RegExp(`return await ${handler}\\(`));
+  }
+});
+
 test('native Workers declare cache-disabled Hyperdrive intent', () => {
   for (const relative of configs) {
     const source = fs.readFileSync(path.join(root, relative), 'utf8');

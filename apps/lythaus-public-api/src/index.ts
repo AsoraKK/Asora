@@ -737,16 +737,16 @@ export default {
         resultResponse.headers.set('cache-control', 'public, s-maxage=30, stale-while-revalidate=60');
         return resultResponse;
       }
-      if (request.method === 'GET' && url.pathname === '/api/feed') return getPersonalFeed(request, env, await principal(request, env));
+      if (request.method === 'GET' && url.pathname === '/api/feed') return await getPersonalFeed(request, env, await principal(request, env));
       const post = url.pathname.match(/^\/api\/posts\/([^/]+)$/);
-      if (request.method === 'GET' && post) return getPost(request, env, post[1]);
+      if (request.method === 'GET' && post) return await getPost(request, env, post[1]);
       const comments = url.pathname.match(/^\/api\/posts\/([^/]+)\/comments$/);
-      if (request.method === 'GET' && comments) return getComments(request, env, comments[1]);
-      if (request.method === 'GET' && url.pathname === '/api/users/me') return getUserProfile(request, env, (await principal(request, env)).userId, true);
-      if (request.method === 'PUT' && url.pathname === '/api/users/me') return updateProfile(request, env, await principal(request, env));
+      if (request.method === 'GET' && comments) return await getComments(request, env, comments[1]);
+      if (request.method === 'GET' && url.pathname === '/api/users/me') return await getUserProfile(request, env, (await principal(request, env)).userId, true);
+      if (request.method === 'PUT' && url.pathname === '/api/users/me') return await updateProfile(request, env, await principal(request, env));
       const publicProfile = url.pathname.match(/^\/api\/users\/([^/]+)$/);
-      if (request.method === 'GET' && publicProfile) return getUserProfile(request, env, publicProfile[1]);
-      if (request.method === 'POST' && (url.pathname === '/api/follows' || url.pathname === '/api/users/follow')) return createFollow(request, env, await principal(request, env));
+      if (request.method === 'GET' && publicProfile) return await getUserProfile(request, env, publicProfile[1]);
+      if (request.method === 'POST' && (url.pathname === '/api/follows' || url.pathname === '/api/users/follow')) return await createFollow(request, env, await principal(request, env));
       if (request.method === 'DELETE' && url.pathname.match(/^\/api\/follows\/([^/]+)$/)) {
         const user = await principal(request, env);
         const followedId = url.pathname.match(/^\/api\/follows\/([^/]+)$/)?.[1] ?? '';
@@ -756,49 +756,49 @@ export default {
       if (request.method === 'POST' && (url.pathname === '/api/blocks' || url.pathname === '/api/users/block')) {
         const user = await principal(request, env);
         const input = await readJson<{ userId?: string }>(request, 8 * 1024);
-        return setBlock(request, env, user, input.userId ?? '', true);
+        return await setBlock(request, env, user, input.userId ?? '', true);
       }
       const block = url.pathname.match(/^\/api\/blocks\/([^/]+)$/);
-      if (request.method === 'DELETE' && block) return setBlock(request, env, await principal(request, env), block[1], false);
+      if (request.method === 'DELETE' && block) return await setBlock(request, env, await principal(request, env), block[1], false);
       if (request.method === 'POST' && (url.pathname === '/api/mutes' || url.pathname === '/api/users/mute')) {
         const user = await principal(request, env);
         const input = await readJson<{ userId?: string }>(request, 8 * 1024);
-        return setMute(request, env, user, input.userId ?? '', true);
+        return await setMute(request, env, user, input.userId ?? '', true);
       }
       const mute = url.pathname.match(/^\/api\/mutes\/([^/]+)$/);
-      if (request.method === 'DELETE' && mute) return setMute(request, env, await principal(request, env), mute[1], false);
+      if (request.method === 'DELETE' && mute) return await setMute(request, env, await principal(request, env), mute[1], false);
       if (request.method === 'POST' && url.pathname === '/api/bookmarks') {
         const user = await principal(request, env);
         const input = await readJson<{ postId?: string }>(request, 8 * 1024);
-        return setBookmark(request, env, user, input.postId ?? '', true);
+        return await setBookmark(request, env, user, input.postId ?? '', true);
       }
       const bookmark = url.pathname.match(/^\/api\/bookmarks\/([^/]+)$/);
-      if (request.method === 'DELETE' && bookmark) return setBookmark(request, env, await principal(request, env), bookmark[1], false);
+      if (request.method === 'DELETE' && bookmark) return await setBookmark(request, env, await principal(request, env), bookmark[1], false);
       const comment = url.pathname.match(/^\/api\/posts\/([^/]+)\/comments$/);
-      if (request.method === 'POST' && comment) return createComment(request, env, await principal(request, env), comment[1]);
+      if (request.method === 'POST' && comment) return await createComment(request, env, await principal(request, env), comment[1]);
       const reaction = url.pathname.match(/^\/api\/posts\/([^/]+)\/reactions$/);
-      if (request.method === 'POST' && reaction) return createReaction(request, env, await principal(request, env), reaction[1]);
-      if (request.method === 'POST' && (url.pathname === '/api/flags' || url.pathname === '/api/content/flags')) return createFlag(request, env, await principal(request, env));
-      if (request.method === 'POST' && url.pathname === '/api/appeals') return createAppeal(request, env, await principal(request, env));
+      if (request.method === 'POST' && reaction) return await createReaction(request, env, await principal(request, env), reaction[1]);
+      if (request.method === 'POST' && (url.pathname === '/api/flags' || url.pathname === '/api/content/flags')) return await createFlag(request, env, await principal(request, env));
+      if (request.method === 'POST' && url.pathname === '/api/appeals') return await createAppeal(request, env, await principal(request, env));
       const appeal = url.pathname.match(/^\/api\/appeals\/([^/]+)$/);
-      if (request.method === 'GET' && appeal) return getAppeal(request, env, await principal(request, env), appeal[1]);
-      if (request.method === 'POST' && (url.pathname === '/api/privacy/requests' || url.pathname === '/api/privacy/request')) return createPrivacyRequest(request, env, await principal(request, env));
-      if (request.method === 'GET' && (url.pathname === '/api/storage' || url.pathname === '/api/storage/usage')) return getStorage(request, env, await principal(request, env));
-      if (request.method === 'PUT' && (url.pathname === '/api/users/me/region' || url.pathname === '/api/privacy/region')) return updateRegionPreferences(request, env, await principal(request, env));
-      if (request.method === 'PUT' && (url.pathname === '/api/users/me/retention' || url.pathname === '/api/privacy/retention')) return updateRetentionRule(request, env, await principal(request, env));
-      if (request.method === 'GET' && url.pathname === '/api/auth/userinfo') return getUserProfile(request, env, (await principal(request, env)).userId, true);
-      if (request.method === 'POST' && (url.pathname === '/api/auth/email' || url.pathname === '/api/authEmail')) return emailAuth(request, env);
-      if ((request.method === 'GET' || request.method === 'POST') && url.pathname === '/api/auth/email/verify') return verifyEmail(request, env);
-      if (request.method === 'POST' && (url.pathname === '/api/auth/password/reset/request' || url.pathname === '/api/auth/password-reset')) return requestPasswordReset(request, env);
-      if (request.method === 'POST' && url.pathname === '/api/auth/password/reset/complete') return completePasswordReset(request, env);
-      if (request.method === 'POST' && url.pathname === '/api/auth/refresh') return refreshSession(request, env);
-      if (request.method === 'POST' && url.pathname === '/api/auth/logout') return logout(request, env);
-      if (request.method === 'GET' && url.pathname === '/api/auth/google') return googleAuthStart(request, env);
-      if (request.method === 'GET' && url.pathname === '/api/auth/google/callback') return googleAuthCallback(request, env);
-      if (request.method === 'POST' && url.pathname === '/api/posts') return createPost(request, env, await principal(request, env));
-      if (request.method === 'POST' && url.pathname === '/api/media/uploads') return createUploadSession(request, env, await principal(request, env));
+      if (request.method === 'GET' && appeal) return await getAppeal(request, env, await principal(request, env), appeal[1]);
+      if (request.method === 'POST' && (url.pathname === '/api/privacy/requests' || url.pathname === '/api/privacy/request')) return await createPrivacyRequest(request, env, await principal(request, env));
+      if (request.method === 'GET' && (url.pathname === '/api/storage' || url.pathname === '/api/storage/usage')) return await getStorage(request, env, await principal(request, env));
+      if (request.method === 'PUT' && (url.pathname === '/api/users/me/region' || url.pathname === '/api/privacy/region')) return await updateRegionPreferences(request, env, await principal(request, env));
+      if (request.method === 'PUT' && (url.pathname === '/api/users/me/retention' || url.pathname === '/api/privacy/retention')) return await updateRetentionRule(request, env, await principal(request, env));
+      if (request.method === 'GET' && url.pathname === '/api/auth/userinfo') return await getUserProfile(request, env, (await principal(request, env)).userId, true);
+      if (request.method === 'POST' && (url.pathname === '/api/auth/email' || url.pathname === '/api/authEmail')) return await emailAuth(request, env);
+      if ((request.method === 'GET' || request.method === 'POST') && url.pathname === '/api/auth/email/verify') return await verifyEmail(request, env);
+      if (request.method === 'POST' && (url.pathname === '/api/auth/password/reset/request' || url.pathname === '/api/auth/password-reset')) return await requestPasswordReset(request, env);
+      if (request.method === 'POST' && url.pathname === '/api/auth/password/reset/complete') return await completePasswordReset(request, env);
+      if (request.method === 'POST' && url.pathname === '/api/auth/refresh') return await refreshSession(request, env);
+      if (request.method === 'POST' && url.pathname === '/api/auth/logout') return await logout(request, env);
+      if (request.method === 'GET' && url.pathname === '/api/auth/google') return await googleAuthStart(request, env);
+      if (request.method === 'GET' && url.pathname === '/api/auth/google/callback') return await googleAuthCallback(request, env);
+      if (request.method === 'POST' && url.pathname === '/api/posts') return await createPost(request, env, await principal(request, env));
+      if (request.method === 'POST' && url.pathname === '/api/media/uploads') return await createUploadSession(request, env, await principal(request, env));
       const finalise = url.pathname.match(/^\/api\/media\/uploads\/([^/]+)\/finalise$/);
-      if (request.method === 'POST' && finalise) return finaliseUpload(request, env, await principal(request, env), finalise[1]);
+      if (request.method === 'POST' && finalise) return await finaliseUpload(request, env, await principal(request, env), finalise[1]);
       if (url.pathname === '/api/auth/apple' || url.pathname === '/api/auth/world-id' || url.pathname === '/api/auth/world') {
         return response(request, env, { error: 'provider_unavailable', provider: url.pathname.includes('apple') ? 'apple' : 'world_id', correlationId: id }, { status: 404 });
       }
