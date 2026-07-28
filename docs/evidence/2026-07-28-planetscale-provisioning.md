@@ -210,3 +210,13 @@ this recheck. Development DDL remains pending explicit human approval.
 - These are synthetic pre-production resources in the mixed-use shared account;
   they do not satisfy Gate 1 or authorize production data, DNS cutover, or
   Azure deletion.
+
+## Final read-only development probe — 2026-07-28
+
+- PlanetScale MCP returned PostgreSQL `18.4`, database `postgres`, installed
+  `pg_trgm,pgcrypto,unaccent`, zero application schemas, and no application
+  tables. The MCP query uses an ephemeral read-only role, so its filtered role
+  catalog cannot independently enumerate the five branch login roles already
+  provisioned through the PlanetScale role-management API.
+- PostGIS remains the single provider capability blocker for the approved
+  migration baseline; no geospatial downgrade or substitute type was applied.
