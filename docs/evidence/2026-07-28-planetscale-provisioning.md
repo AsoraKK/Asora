@@ -487,6 +487,17 @@ entries remain as chronological evidence of the pre-migration state.
 - Post-deploy probes returned HTTP 200 for `/health` and HTTP 401 JSON
   `access_required` for `/api/admin/health` without an Access identity.
 
+## Current-head boundary probes - 2026-07-28
+
+- Windows `curl.exe` probes against the live development hosts returned JSON
+  responses with these statuses: public `/api/health` 200, `/api/ready` 200,
+  and `/api/feed/discover` 200; public `/api/storage` 401; admin `/health`
+  200; and admin `/api/admin/health` 401. This confirms the expected public,
+  authenticated, and Access-protected boundaries after the latest deployment.
+- `npm run validate:native-azure-dependencies` passed for all three native
+  Workers. The native runtime bundle has no Azure host, SDK, or origin
+  dependency. The legacy Azure compatibility Worker remains separate.
+
 ## Development resource inventory and validation recheck - 2026-07-28
 
 - Cloudflare MCP read-only inventory confirms the three native development
