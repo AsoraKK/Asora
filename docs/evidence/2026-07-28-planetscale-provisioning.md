@@ -371,6 +371,18 @@ requirements recorded above.
   protected admin health route now returns `access_required` (HTTP 401) rather
   than `admin_subject_key_not_configured`; no Access identity was supplied.
 
+## Empty-state recheck - 2026-07-28
+
+- A fresh read-only query against the `development` branch returned PostgreSQL
+  `18.4`, the installed extension set `hypopg, pg_trgm, pgcrypto, plpgsql,
+  unaccent`, and no approved PostGIS capability.
+- The only two non-system relations visible to the query are PlanetScale's
+  `pscale_extensions.hypopg_hidden_indexes` and
+  `pscale_extensions.hypopg_list_indexes` views. No application schema or
+  application table exists. This satisfies the empty application-state check
+  for development; it does not authorise changes to `main` or replacement of
+  the production branch.
+
 ## Native Worker acceptance refresh - 2026-07-28
 
 - Compact live probes against the current public development deployment
