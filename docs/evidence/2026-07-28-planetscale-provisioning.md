@@ -502,6 +502,13 @@ entries remain as chronological evidence of the pre-migration state.
   p99 values for the small readiness and discovery queries were below 6 ms;
   this is development database evidence only and is not a South Africa-to-
   Europe end-to-end SLO or a production capacity benchmark.
+- Cloudflare Worker settings inspection confirms the MCP-uploaded bindings:
+  the public Worker has `DB_APP_FRESH`, feed/moderation/privacy queues, KV,
+  R2, and the remote Email binding; admin has both Hyperdrive bindings and
+  Access subject secret; jobs has both Hyperdrive bindings, all six queues,
+  five Workflow bindings, Images, KV, and four R2 buckets. Secret values were
+  not read. Development-only placeholders and localhost email URLs remain
+  intentionally non-production configuration.
 
 ## Development resource inventory and validation recheck - 2026-07-28
 
