@@ -305,3 +305,14 @@ requirements recorded above.
   application tables; `development` is the Frankfurt `PS-DEV` branch with zero
   replicas, no application tables and the five provisioned login roles. No
   `ci-*` or permanent `ai-development` database branch was created.
+
+## Validation recheck — 2026-07-28
+
+- Native Worker scope/configuration, Azure-dependency, migration, typecheck,
+  architecture (21/21), database-connection (6/6), route-guard and OpenAPI
+  contract checks passed.
+- `validate:production-gates` passed manifest validation. The required-pass mode
+  correctly failed closed because all five production gates are incomplete.
+- The repository `lint-check` remains unavailable because the `functions`
+  workspace declares no `lint` script. This is an unrelated pre-existing CI
+  configuration issue and was not changed as part of the native implementation.
