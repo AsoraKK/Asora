@@ -441,3 +441,16 @@ entries remain as chronological evidence of the pre-migration state.
   credentials/topology, cryptographic rotation evidence, and restore tests.
   Gate 4 remains blocked by end-to-end authentication, email, Hive, media,
   privacy, queue, workflow, and product-transparency acceptance.
+
+## Final development endpoint probe - 2026-07-28
+
+- After the Hyperdrive credential refresh, the public development Worker
+  returned HTTP 200 for `/api/health`, `/api/ready`, `/api/feed/discover`, and
+  `/.well-known/jwks.json`.
+- The public storage endpoint returned HTTP 401 `authentication_required`,
+  and the disabled Apple provider returned HTTP 404 `provider_unavailable`.
+- The admin development Worker returned HTTP 200 for `/health` and HTTP 401
+  `access_required` for `/api/admin/health` without an Access identity.
+- These results prove native Worker routing, database readiness, empty
+  discovery, JWKS publication, disabled-provider behavior, and admin access
+  enforcement in development. They do not authorize production cutover.
