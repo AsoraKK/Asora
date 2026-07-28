@@ -1,0 +1,315 @@
+name: Temporary Azure Read Verification
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  EXPECTED_PRINCIPAL_ID: 6d9e43cf-c68a-4e1e-bd29-441e9e32e256
+  RESOURCE_GROUP: asora-psql-flex
+  COSMOS_ACCOUNT: asora-cosmos-dev
+  COSMOS_DATABASE: asora
+  COSMOS_DATA_SCOPE: /dbs/asora
+  DSR_STORAGE_ACCOUNT: stasoradsrdev
+  DSR_CONTAINER: dsr-exports
+  DSR_ASSIGNMENT_ID: b766beaa-d60b-4247-8dad-bd119d37af43
+  MEDIA_STORAGE_ACCOUNT: asoramediadev
+  MEDIA_CONTAINER: user-media
+  MEDIA_ASSIGNMENT_ID: a865269d-86e4-4a1f-a752-35825841e7f4
+  COSMOS_ASSIGNMENT_ID: ef524417-f93c-45ca-8636-c80614c5a842
+  KEY_VAULT: kv-asora-flex-dev
+  POSTGRES_SECRET_NAME: postgres-connection-string
+
+jobs:
+  bounded-read-verification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Azure login (OIDC)
+        uses: azure/login@v3
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Verify identity and target resources
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          account_json="$(az account show -o json)"
+          tenant_id="$(jq -r '.tenantId' <<<"$account_json")"
+          subscription_id="$(jq -r '.id' <<<"$account_json")"
+          principal_id="$(az ad sp show --id "$AZURE_CLIENT_ID" --query id -o tsv)"
+          [[ "$tenant_id" == "$AZURE_TENANT_ID" ]]
+          [[ "$subscription_id" == "$AZURE_SUBSCRIPTION_ID" ]]
+          [[ "$principal_id" == "$EXPECTED_PRINCIPAL_ID" ]]
+
+          rg_scope="$(az group show --name "$RESOURCE_GROUP" --query id -o tsv)"
+          cosmos_json="$(az cosmosdb show --resource-group "$RESOURCE_GROUP" --name "$COSMOS_ACCOUNT" -o json)"
+          cosmos_scope="$(jq -r '.id' <<<"$cosmos_json")"
+          cosmos_endpoint="$(jq -r '.documentEndpoint' <<<"$cosmos_json")"
+          dsr_scope="$(az storage account show --name "$DSR_STORAGE_ACCOUNT" --query id -o tsv)/blobServices/default/containers/$DSR_CONTAINER"
+          media_scope="$(az storage account show --name "$MEDIA_STORAGE_ACCOUNT" --query id -o tsv)/blobServices/default/containers/$MEDIA_CONTAINER"
+          kv_scope="$(az keyvault show --name "$KEY_VAULT" --resource-group "$RESOURCE_GROUP" --query id -o tsv)"
+          secret_scope="$kv_scope/secrets/$POSTGRES_SECRET_NAME"
+
+          jq -n \
+            --arg principalId "$principal_id" \
+            --arg tenantId "$tenant_id" \
+            --arg subscriptionId "$subscription_id" \
+            --arg resourceGroup "$RESOURCE_GROUP" \
+            --arg resourceGroupScope "$rg_scope" \
+            --arg cosmosAccount "$COSMOS_ACCOUNT" \
+            --arg cosmosScope "$cosmos_scope" \
+            --arg cosmosDataScope "$COSMOS_DATA_SCOPE" \
+            --arg cosmosEndpoint "$cosmos_endpoint" \
+            --arg dsrScope "$dsr_scope" \
+            --arg mediaScope "$media_scope" \
+            --arg keyVaultScope "$kv_scope" \
+            --arg secretScope "$secret_scope" \
+            '{principalId:$principalId,tenantSubscriptionMatch:($tenantId == env.AZURE_TENANT_ID and $subscriptionId == env.AZURE_SUBSCRIPTION_ID),targetResourcesVerified:true,resourceGroup:$resourceGroup,resourceGroupScope:$resourceGroupScope,cosmosAccount:$cosmosAccount,cosmosScope:$cosmosScope,cosmosDataScope:$cosmosDataScope,cosmosEndpoint:$cosmosEndpoint,dsrScope:$dsrScope,mediaScope:$mediaScope,keyVaultScope:$keyVaultScope,secretScope:$secretScope}' \
+            > evidence/target-context.json
+
+      - name: Inspect approved assignments and Key Vault metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          rg_scope="$(jq -r '.resourceGroupScope' evidence/target-context.json)"
+          dsr_scope="$(jq -r '.dsrScope' evidence/target-context.json)"
+          media_scope="$(jq -r '.mediaScope' evidence/target-context.json)"
+          secret_scope="$(jq -r '.secretScope' evidence/target-context.json)"
+
+          az role assignment list --scope "$dsr_scope" -o json > evidence/dsr-role-assignments.json
+          az role assignment list --scope "$media_scope" -o json > evidence/media-role-assignments.json
+          az role assignment list --scope "$rg_scope" -o json > evidence/resource-group-role-assignments.json
+          az role assignment list --scope "$secret_scope" -o json > evidence/key-vault-secret-role-assignments.json
+          az cosmosdb sql role assignment list --resource-group "$RESOURCE_GROUP" --account-name "$COSMOS_ACCOUNT" -o json > evidence/cosmos-data-role-assignments.json
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          expected_principal = "6d9e43cf-c68a-4e1e-bd29-441e9e32e256"
+          expected = {
+              "cosmos": "ef524417-f93c-45ca-8636-c80614c5a842",
+              "dsr-exports": "b766beaa-d60b-4247-8dad-bd119d37af43",
+              "user-media": "a865269d-86e4-4a1f-a752-35825841e7f4",
+          }
+
+          def matches(path, assignment_id=None):
+              value = json.loads(Path(path).read_text())
+              rows = value if isinstance(value, list) else value.get("value", [])
+              return [
+                  {
+                      "id": row.get("id"),
+                      "principalId": row.get("principalId"),
+                      "role": row.get("roleDefinitionName"),
+                      "scope": row.get("scope"),
+                  }
+                  for row in rows
+                  if row.get("principalId", "").lower() == expected_principal.lower()
+                  and (assignment_id is None or row.get("name") == assignment_id)
+              ]
+
+          def cosmos_matches(path, assignment_id):
+              value = json.loads(Path(path).read_text())
+              rows = value if isinstance(value, list) else value.get("value", [])
+              return [
+                  {
+                      "id": row.get("id"),
+                      "principalId": row.get("principalId"),
+                      "roleDefinitionId": row.get("roleDefinitionId"),
+                      "scope": row.get("scope"),
+                  }
+                  for row in rows
+                  if row.get("principalId", "").lower() == expected_principal.lower()
+                  and row.get("scope") == "/dbs/asora"
+                  and (row.get("id") == assignment_id or row.get("name") == assignment_id)
+              ]
+
+          result = {
+              "principalId": expected_principal,
+              "approvedAssignments": {
+                  "cosmos": cosmos_matches("evidence/cosmos-data-role-assignments.json", expected["cosmos"]),
+                  "dsr-exports": matches("evidence/dsr-role-assignments.json", expected["dsr-exports"]),
+                  "user-media": matches("evidence/media-role-assignments.json", expected["user-media"]),
+              },
+              "resourceGroupAssignments": matches("evidence/resource-group-role-assignments.json"),
+              "keyVaultSecretAssignments": matches("evidence/key-vault-secret-role-assignments.json"),
+          }
+          Path("evidence/assignment-verification.json").write_text(json.dumps(result, indent=2) + "\n")
+          PY
+
+          kv_error_file="$(mktemp)"
+          set +e
+          az keyvault secret list --vault-name "$KEY_VAULT" --query "[?name=='$POSTGRES_SECRET_NAME'].{name:name,id:id}" -o json > evidence/key-vault-secret-list.json 2>"$kv_error_file"
+          kv_status=$?
+          set -e
+          kv_error_code="$(grep -Eo 'Forbidden|AuthorizationFailed|ResourceNotFound|BadParameter' "$kv_error_file" | head -n 1 || true)"
+          jq -n \
+            --arg status "$([[ "$kv_status" -eq 0 ]] && echo accessible || echo not-accessible)" \
+            --arg errorCode "${kv_error_code:-none}" \
+            --arg secretName "$POSTGRES_SECRET_NAME" \
+            '{status:$status,errorCode:$errorCode,secretName:$secretName,valueRead:false,diagnosis:"The existing Key Vault role is secret-scoped; a vault-level secret list may remain Forbidden without list permission. No secret value was requested."}' \
+            > evidence/key-vault-diagnosis.json
+          rm -f "$kv_error_file"
+
+      - name: Install read-only verification SDKs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test_dir="$(mktemp -d)"
+          npm install --prefix "$test_dir" --ignore-scripts --no-audit --no-fund \
+            @azure/cosmos@4 @azure/identity@4 @azure/storage-blob@12
+          cat > "$test_dir/read-only-check.mjs" <<'NODE'
+          import fs from "node:fs";
+          import { CosmosClient } from "@azure/cosmos";
+          import { DefaultAzureCredential } from "@azure/identity";
+          import { BlobServiceClient } from "@azure/storage-blob";
+
+          const output = {
+            cosmos: { status: "not-run", containerResults: [] },
+            blobs: {
+              "dsr-exports": { status: "not-run", listedCount: 0, metadataRead: false },
+              "user-media": { status: "not-run", listedCount: 0, metadataRead: false },
+            },
+          };
+          const containers = JSON.parse(fs.readFileSync(process.env.CONTAINER_FILE, "utf8"));
+          const credential = new DefaultAzureCredential();
+
+          try {
+            const client = new CosmosClient({
+              endpoint: process.env.COSMOS_ENDPOINT,
+              aadCredentials: credential,
+            });
+            const database = client.database(process.env.COSMOS_DATABASE);
+            for (const name of containers) {
+              try {
+                const page = await database.container(name).items
+                  .query("SELECT TOP 1 c.id FROM c")
+                  .fetchNext();
+                output.cosmos.containerResults.push({
+                  container: name,
+                  returnedCount: Math.min((page.resources ?? []).length, 1),
+                  status: "ok",
+                });
+              } catch (error) {
+                output.cosmos.containerResults.push({
+                  container: name,
+                  returnedCount: 0,
+                  status: "error",
+                  errorCode: error.code ?? error.statusCode ?? "unknown",
+                });
+              }
+            }
+            output.cosmos.status = output.cosmos.containerResults.every((row) => row.status === "ok")
+              ? "ok"
+              : "partial-error";
+          } catch (error) {
+            output.cosmos.status = "error";
+            output.cosmos.errorCode = error.code ?? error.statusCode ?? "unknown";
+          }
+
+          for (const [label, account, container] of [
+            ["dsr-exports", process.env.DSR_STORAGE_ACCOUNT, process.env.DSR_CONTAINER],
+            ["user-media", process.env.MEDIA_STORAGE_ACCOUNT, process.env.MEDIA_CONTAINER],
+          ]) {
+            try {
+              const service = new BlobServiceClient(
+                `https://${account}.blob.core.windows.net`,
+                credential,
+              );
+              const containerClient = service.getContainerClient(container);
+              let firstName;
+              for await (const blob of containerClient.listBlobsFlat()) {
+                firstName = blob.name;
+                break;
+              }
+              output.blobs[label].listedCount = firstName ? 1 : 0;
+              if (firstName) {
+                await containerClient.getBlobClient(firstName).getProperties();
+                output.blobs[label].metadataRead = true;
+              }
+              output.blobs[label].status = "ok";
+            } catch (error) {
+              output.blobs[label].status = "error";
+              output.blobs[label].errorCode = error.code ?? error.statusCode ?? "unknown";
+            }
+          }
+
+          fs.writeFileSync(process.env.RESULT_FILE, `${JSON.stringify(output, null, 2)}\n`);
+          NODE
+          echo "TEST_DIR=$test_dir" >> "$GITHUB_ENV"
+
+      - name: Wait for RBAC propagation and run bounded reads
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          readiness="false"
+          for attempt in $(seq 1 10); do
+            echo "Bounded Azure read verification attempt $attempt/10."
+            cosmos_status_file="$(mktemp)"
+            containers_status_file="$(mktemp)"
+            set +e
+            az cosmosdb show --resource-group "$RESOURCE_GROUP" --name "$COSMOS_ACCOUNT" -o json > evidence/cosmos-account.json 2> evidence/cosmos-account.err
+            cosmos_status=$?
+            az cosmosdb sql database list --resource-group "$RESOURCE_GROUP" --account-name "$COSMOS_ACCOUNT" -o json > evidence/cosmos-databases.json 2> evidence/cosmos-databases.err
+            databases_status=$?
+            az cosmosdb sql container list --resource-group "$RESOURCE_GROUP" --account-name "$COSMOS_ACCOUNT" --database-name "$COSMOS_DATABASE" -o json > evidence/cosmos-containers.json 2> evidence/cosmos-containers.err
+            containers_status=$?
+            set -e
+            echo "$cosmos_status" > "$cosmos_status_file"
+            echo "$containers_status" > "$containers_status_file"
+            if [[ "$containers_status" -ne 0 ]] || ! jq -e 'type == "array"' evidence/cosmos-containers.json >/dev/null 2>&1; then
+              echo '[]' > evidence/cosmos-containers.json
+            fi
+            cosmos_endpoint="$(jq -r '.documentEndpoint // empty' evidence/cosmos-account.json 2>/dev/null || true)"
+            jq -r 'map(.name)' evidence/cosmos-containers.json > evidence/cosmos-container-names.json
+            CONTAINER_FILE="$GITHUB_WORKSPACE/evidence/cosmos-container-names.json" \
+            RESULT_FILE="$GITHUB_WORKSPACE/evidence/bounded-read-results.json" \
+            COSMOS_ENDPOINT="$cosmos_endpoint" \
+            NODE_PATH="$TEST_DIR/node_modules" \
+            node "$TEST_DIR/read-only-check.mjs"
+            jq -n \
+              --argjson attempt "$attempt" \
+              --argjson cosmosCliStatus "$cosmos_status" \
+              --argjson databasesCliStatus "$databases_status" \
+              --argjson containersCliStatus "$containers_status" \
+              --argjson results "$(cat evidence/bounded-read-results.json)" \
+              '{attempt:$attempt,cosmosCliStatus:$cosmosCliStatus,databasesCliStatus:$databasesCliStatus,containersCliStatus:$containersCliStatus,results:$results}' \
+              > evidence/bounded-read-attempt.json
+            cosmos_ok="$(jq -r '.results.cosmos.status == "ok"' evidence/bounded-read-attempt.json)"
+            blobs_ok="$(jq -r '.results.blobs["dsr-exports"].status == "ok" and .results.blobs["user-media"].status == "ok"' evidence/bounded-read-attempt.json)"
+            if [[ "$cosmos_status" -eq 0 && "$databases_status" -eq 0 && "$containers_status" -eq 0 && "$cosmos_ok" == "true" && "$blobs_ok" == "true" ]]; then
+              readiness="true"
+              break
+            fi
+            if [[ "$attempt" -lt 10 ]]; then
+              sleep 30
+            fi
+          done
+          jq -n \
+            --arg status "$( [[ "$readiness" == "true" ]] && echo complete || echo blocked )" \
+            --argjson attempts "$attempt" \
+            '{status:$status,attempts:$attempt,roleAssignmentsChanged:false,azureDataWritten:false}' \
+            > evidence/propagation.json
+          if [[ "$readiness" != "true" ]]; then
+            exit 30
+          fi
+
+      - name: Upload sanitized read evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: azure-temporary-read-verification-evidence
+          path: evidence/
+          if-no-files-found: error
+          retention-days: 7
