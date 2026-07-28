@@ -486,3 +486,47 @@ entries remain as chronological evidence of the pre-migration state.
   vars and inherited Hyperdrive, R2, and Access-subject bindings.
 - Post-deploy probes returned HTTP 200 for `/health` and HTTP 401 JSON
   `access_required` for `/api/admin/health` without an Access identity.
+
+## Development resource inventory and validation recheck - 2026-07-28
+
+- Cloudflare MCP read-only inventory confirms the three native development
+  Workers: `lythaus-public-api-development`, `lythaus-admin-api-development`,
+  and `lythaus-jobs-development`. The jobs Worker has fetch, queue, and
+  scheduled handlers but no route or public hostname.
+- Five development Hyperdrive configurations are visible. The four native
+  role-specific configurations are cache-disabled, target the Frankfurt
+  PlanetScale host, and expose `sslmode=verify-full`; the older
+  `lythaus-core-fresh` configuration remains separate and is not used by the
+  native development Workers.
+- Development R2 buckets, twelve queues including six dead-letter queues, five
+  Workflows, and the `lythaus-config-dev` KV namespace are present. Workflow
+  inventory shows one successful retention-cleanup instance and no errored
+  instances at inventory time.
+- Cloudflare Access contains an existing Lythaus Admin API application with an
+  explicit administrator allow policy and deny-all fallback. This is shared
+  account evidence only and does not satisfy the dedicated production-account
+  gate.
+- Cloudflare Email Sending limits are readable, but no production sending
+  domain or delivery acceptance has been proved. Turnstile widget inventory is
+  not available through the current API session; the development Worker keeps
+  registration Turnstile disabled and production remains gated.
+- Current-head validation passed: TypeScript native typecheck, 24 native
+  architecture invariants, native scope validation, native Worker config
+  validation, migration baseline validation, extension-reference validation,
+  and `git diff --check`. The provisioned Worker validator remains correctly
+  fail-closed until production account and resource IDs are supplied.
+- No Cloudflare API token was created. All provider inventory and Worker
+  deployment actions recorded here used the authenticated Cloudflare MCP.
+
+## Owner data-disposition decision - pending
+
+- The implementation remains under the safe default of selective preservation.
+  No owner-signed clean-state declaration has been located in the repository.
+- Before Azure deletion or production cutover, the owner must select and sign
+  one of: (a) clean-state authorised, confirming Azure contains only
+  development/test data and no active users, unresolved privacy requests,
+  legal holds, or contractual retention obligations; or (b) selective
+  preservation authorised, identifying the required data classes and preserving
+  identity continuity and reconciliation evidence.
+- This pending decision does not block synthetic development work. It blocks
+  Azure deletion and any cutover that could abandon unresolved user records.
