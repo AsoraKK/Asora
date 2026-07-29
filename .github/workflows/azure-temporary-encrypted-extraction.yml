@@ -198,6 +198,7 @@ jobs:
             newBillingProductCreated: false,
           };
           await writeFile(join(root, "usage-preflight.json"), `${JSON.stringify(guard, null, 2)}\n`);
+          console.log(`AZURE_EXTRACTION_USAGE_PREFLIGHT ${JSON.stringify(guard)}`);
           if (totalRecords > Number(process.env.MAX_COSMOS_RECORDS)) {
             throw new Error("Cosmos record guard exceeded");
           }
