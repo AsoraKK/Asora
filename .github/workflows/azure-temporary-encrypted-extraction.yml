@@ -1,0 +1,364 @@
+name: Temporary Encrypted Azure Extraction
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  AZURE_EXPORT_ENCRYPTION_KEY: ${{ secrets.AZURE_EXPORT_ENCRYPTION_KEY }}
+  EXPECTED_PRINCIPAL_ID: 6d9e43cf-c68a-4e1e-bd29-441e9e32e256
+  RESOURCE_GROUP: asora-psql-flex
+  COSMOS_ACCOUNT: asora-cosmos-dev
+  COSMOS_DATABASE: asora
+  DSR_STORAGE_ACCOUNT: stasoradsrdev
+  DSR_CONTAINER: dsr-exports
+  MEDIA_STORAGE_ACCOUNT: asoramediadev
+  MEDIA_CONTAINER: user-media
+  MAX_COSMOS_RECORDS: "10000"
+  MAX_DSR_OBJECTS: "10"
+  MAX_DSR_BYTES: "52428800"
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out default branch
+        uses: actions/checkout@v5
+
+      - name: Azure login using existing OIDC identity
+        uses: azure/login@v3
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Verify identity, subscription, and approved sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ -n "$AZURE_EXPORT_ENCRYPTION_KEY" ]]
+          printf '::add-mask::%s\n' "$AZURE_EXPORT_ENCRYPTION_KEY"
+
+          account_json="$(az account show --output json)"
+          tenant_id="$(jq -r '.tenantId' <<<"$account_json")"
+          subscription_id="$(jq -r '.id' <<<"$account_json")"
+          principal_id="$(az ad sp show --id "$AZURE_CLIENT_ID" --query id --output tsv)"
+          [[ "$tenant_id" == "$AZURE_TENANT_ID" ]]
+          [[ "$subscription_id" == "$AZURE_SUBSCRIPTION_ID" ]]
+          [[ "$principal_id" == "$EXPECTED_PRINCIPAL_ID" ]]
+
+          rg_id="$(az group show --name "$RESOURCE_GROUP" --query id --output tsv)"
+          cosmos_endpoint="$(az cosmosdb show \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$COSMOS_ACCOUNT" \
+            --query documentEndpoint \
+            --output tsv)"
+          dsr_account_id="$(az storage account show \
+            --name "$DSR_STORAGE_ACCOUNT" \
+            --query id \
+            --output tsv)"
+          media_account_id="$(az storage account show \
+            --name "$MEDIA_STORAGE_ACCOUNT" \
+            --query id \
+            --output tsv)"
+
+          az storage container show \
+            --auth-mode login \
+            --account-name "$DSR_STORAGE_ACCOUNT" \
+            --name "$DSR_CONTAINER" \
+            --query '{name:name}' \
+            --output json >/dev/null
+          az storage container show \
+            --auth-mode login \
+            --account-name "$MEDIA_STORAGE_ACCOUNT" \
+            --name "$MEDIA_CONTAINER" \
+            --query '{name:name}' \
+            --output json >/dev/null
+
+          mkdir -p "$RUNNER_TEMP/azure-export/raw"
+          jq -n \
+            --arg principalId "$principal_id" \
+            --arg resourceGroupId "$rg_id" \
+            --arg cosmosEndpoint "$cosmos_endpoint" \
+            --arg dsrContainerScope "$dsr_account_id/blobServices/default/containers/$DSR_CONTAINER" \
+            --arg mediaContainerScope "$media_account_id/blobServices/default/containers/$MEDIA_CONTAINER" \
+            '{
+              principalId:$principalId,
+              tenantSubscriptionVerified:true,
+              resourceGroupId:$resourceGroupId,
+              cosmosEndpoint:$cosmosEndpoint,
+              dsrContainerScope:$dsrContainerScope,
+              mediaContainerScope:$mediaContainerScope
+            }' >"$RUNNER_TEMP/azure-export/context.json"
+
+      - name: Install read-only Azure SDKs
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdk_dir="$RUNNER_TEMP/azure-export-sdk"
+          npm install --prefix "$sdk_dir" --ignore-scripts --no-audit --no-fund \
+            @azure/cosmos@4 @azure/identity@4 @azure/storage-blob@12
+          echo "AZURE_EXPORT_SDK_DIR=$sdk_dir" >>"$GITHUB_ENV"
+
+      - name: Count, cost-guard, and extract approved Azure data
+        shell: bash
+        run: |
+          set -euo pipefail
+          export COSMOS_ENDPOINT
+          COSMOS_ENDPOINT="$(jq -r '.cosmosEndpoint' "$RUNNER_TEMP/azure-export/context.json")"
+          export EXPORT_ROOT="$RUNNER_TEMP/azure-export"
+          cat >"$AZURE_EXPORT_SDK_DIR/extract-azure.mjs" <<'NODE'
+          import { createHash } from "node:crypto";
+          import { mkdir, writeFile } from "node:fs/promises";
+          import { join } from "node:path";
+          import { CosmosClient } from "@azure/cosmos";
+          import { DefaultAzureCredential } from "@azure/identity";
+          import { BlobServiceClient } from "@azure/storage-blob";
+
+          const root = process.env.EXPORT_ROOT;
+          const rawRoot = join(root, "raw");
+          const credential = new DefaultAzureCredential();
+          const utf8 = (value) => Buffer.from(value, "utf8");
+          const sha256 = (value) => createHash("sha256").update(value).digest("hex");
+          const canonical = (value) => {
+            if (value === null || typeof value !== "object") return JSON.stringify(value);
+            if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
+            return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonical(value[key])}`).join(",")}}`;
+          };
+          const recordKey = (record) => String(record?.id ?? record?._id ?? canonical(record));
+          const safeName = (value) => value.replace(/[^A-Za-z0-9_.-]/g, "_");
+          const timestampValue = (record) => {
+            for (const key of ["updatedAt", "updated_at", "createdAt", "created_at", "_ts"]) {
+              const value = record?.[key];
+              if (value === undefined || value === null || value === "") continue;
+              if (key === "_ts" && Number.isFinite(Number(value))) return Number(value) * 1000;
+              const parsed = Date.parse(String(value));
+              if (Number.isFinite(parsed)) return parsed;
+            }
+            return undefined;
+          };
+
+          const cosmos = new CosmosClient({
+            endpoint: process.env.COSMOS_ENDPOINT,
+            aadCredentials: credential,
+          });
+          const database = cosmos.database(process.env.COSMOS_DATABASE);
+          const { resources: definitions } = await database.containers.readAll().fetchAll();
+          definitions.sort((a, b) => a.id.localeCompare(b.id));
+
+          const counts = [];
+          let totalRecords = 0;
+          for (const definition of definitions) {
+            const result = await database.container(definition.id).items
+              .query("SELECT VALUE COUNT(1) FROM c")
+              .fetchAll();
+            const count = Number(result.resources?.[0] ?? 0);
+            totalRecords += count;
+            counts.push({
+              container: definition.id,
+              count,
+              partitionKey: definition.partitionKey?.paths ?? [],
+              indexingMode: definition.indexingPolicy?.indexingMode ?? null,
+            });
+          }
+
+          const blobPreflight = {};
+          for (const [label, account, container] of [
+            ["dsr-exports", process.env.DSR_STORAGE_ACCOUNT, process.env.DSR_CONTAINER],
+            ["user-media", process.env.MEDIA_STORAGE_ACCOUNT, process.env.MEDIA_CONTAINER],
+          ]) {
+            const client = new BlobServiceClient(
+              `https://${account}.blob.core.windows.net`,
+              credential,
+            ).getContainerClient(container);
+            let count = 0;
+            let bytes = 0;
+            for await (const blob of client.listBlobsFlat({ includeMetadata: true })) {
+              count += 1;
+              bytes += Number(blob.properties.contentLength ?? 0);
+            }
+            blobPreflight[label] = { count, bytes };
+          }
+
+          const guard = {
+            estimatedCosmosQueries: definitions.length * 2,
+            cosmosContainerCount: definitions.length,
+            cosmosRecordCount: totalRecords,
+            dsrObjectCount: blobPreflight["dsr-exports"].count,
+            dsrBytes: blobPreflight["dsr-exports"].bytes,
+            mediaObjectCount: blobPreflight["user-media"].count,
+            expectedIncrementalCostUsd: 0,
+            newBillingProductCreated: false,
+          };
+          await writeFile(join(root, "usage-preflight.json"), `${JSON.stringify(guard, null, 2)}\n`);
+          if (totalRecords > Number(process.env.MAX_COSMOS_RECORDS)) {
+            throw new Error("Cosmos record guard exceeded");
+          }
+          if (blobPreflight["dsr-exports"].count > Number(process.env.MAX_DSR_OBJECTS)) {
+            throw new Error("DSR object-count guard exceeded");
+          }
+          if (blobPreflight["dsr-exports"].bytes > Number(process.env.MAX_DSR_BYTES)) {
+            throw new Error("DSR byte guard exceeded");
+          }
+          if (blobPreflight["user-media"].count !== 0) {
+            throw new Error("User-media is no longer empty; a revised cost and disposition review is required");
+          }
+
+          await mkdir(join(rawRoot, "cosmos"), { recursive: true });
+          const containerManifest = [];
+          for (const definition of definitions) {
+            const { resources } = await database.container(definition.id).items
+              .query("SELECT * FROM c", { maxItemCount: 100 })
+              .fetchAll();
+            resources.sort((a, b) => recordKey(a).localeCompare(recordKey(b)));
+            const canonicalRecords = canonical(resources);
+            const schemaVersions = [...new Set(resources
+              .map((record) => record.schemaVersion ?? record.schema_version ?? record.version)
+              .filter((value) => value !== undefined && value !== null)
+              .map(String))].sort();
+            const writes = resources.map(timestampValue).filter(Number.isFinite);
+            const lastWriteAt = writes.length ? new Date(Math.max(...writes)).toISOString() : null;
+            const fileName = `${safeName(definition.id)}.json`;
+            await writeFile(join(rawRoot, "cosmos", fileName), canonicalRecords);
+            containerManifest.push({
+              container: definition.id,
+              partitionKey: definition.partitionKey?.paths ?? [],
+              recordCount: resources.length,
+              schemaVersions,
+              lastWriteAt,
+              sourceSha256: sha256(utf8(canonicalRecords)),
+            });
+          }
+
+          await mkdir(join(rawRoot, "blobs", "dsr-exports"), { recursive: true });
+          const dsrClient = new BlobServiceClient(
+            `https://${process.env.DSR_STORAGE_ACCOUNT}.blob.core.windows.net`,
+            credential,
+          ).getContainerClient(process.env.DSR_CONTAINER);
+          const dsrObjects = [];
+          for await (const blob of dsrClient.listBlobsFlat({ includeMetadata: true })) {
+            const download = await dsrClient.getBlobClient(blob.name).downloadToBuffer();
+            const nameHash = sha256(utf8(blob.name));
+            await writeFile(join(rawRoot, "blobs", "dsr-exports", nameHash), download);
+            dsrObjects.push({
+              sourceName: blob.name,
+              sourceNameSha256: nameHash,
+              bytes: download.byteLength,
+              contentSha256: sha256(download),
+              contentType: blob.properties.contentType ?? null,
+              createdOn: blob.properties.createdOn?.toISOString() ?? null,
+              lastModified: blob.properties.lastModified?.toISOString() ?? null,
+              metadata: blob.metadata ?? {},
+            });
+          }
+          dsrObjects.sort((a, b) => a.sourceName.localeCompare(b.sourceName));
+          await writeFile(
+            join(rawRoot, "blobs", "dsr-exports-manifest.json"),
+            canonical(dsrObjects),
+          );
+
+          const rawManifest = {
+            formatVersion: 1,
+            canonicalization: {
+              encoding: "UTF-8",
+              objectKeyOrder: "lexicographic",
+              recordOrder: "source identifier then canonical record",
+              nullMissingEmptyDistinct: true,
+              hash: "SHA-256",
+            },
+            cosmos: containerManifest,
+            blobs: {
+              "dsr-exports": dsrObjects,
+              "user-media": [],
+            },
+          };
+          await writeFile(join(rawRoot, "manifest.json"), `${canonical(rawManifest)}\n`);
+
+          const sanitized = {
+            ...rawManifest,
+            blobs: {
+              "dsr-exports": dsrObjects.map((object) => ({
+                sourceNameSha256: object.sourceNameSha256,
+                bytes: object.bytes,
+                contentSha256: object.contentSha256,
+                contentType: object.contentType,
+                createdOn: object.createdOn,
+                lastModified: object.lastModified,
+              })),
+              "user-media": [],
+            },
+          };
+          await writeFile(join(root, "sanitized-manifest.json"), `${JSON.stringify(sanitized, null, 2)}\n`);
+          NODE
+
+          node "$AZURE_EXPORT_SDK_DIR/extract-azure.mjs"
+
+      - name: Encrypt export before artifact upload
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '::add-mask::%s\n' "$AZURE_EXPORT_ENCRYPTION_KEY"
+          key_file="$RUNNER_TEMP/azure-export-key"
+          umask 077
+          printf '%s' "$AZURE_EXPORT_ENCRYPTION_KEY" >"$key_file"
+          tar -C "$RUNNER_TEMP/azure-export" -czf "$RUNNER_TEMP/azure-export.tar.gz" raw context.json usage-preflight.json
+          gpg --batch --yes --pinentry-mode loopback \
+            --passphrase-file "$key_file" \
+            --symmetric --cipher-algo AES256 --compress-algo none \
+            --output "$RUNNER_TEMP/azure-export.tar.gz.gpg" \
+            "$RUNNER_TEMP/azure-export.tar.gz"
+          sha256sum "$RUNNER_TEMP/azure-export.tar.gz.gpg" \
+            >"$RUNNER_TEMP/azure-export.tar.gz.gpg.sha256"
+          stat --printf='%s\n' "$RUNNER_TEMP/azure-export.tar.gz.gpg" \
+            >"$RUNNER_TEMP/azure-export-encrypted-bytes.txt"
+          shred -u "$key_file" "$RUNNER_TEMP/azure-export.tar.gz"
+          find "$RUNNER_TEMP/azure-export/raw" -type f -exec shred -u {} +
+          rm -rf "$RUNNER_TEMP/azure-export/raw"
+
+      - name: Upload encrypted export and sanitized reconciliation manifest
+        uses: actions/upload-artifact@v6
+        with:
+          name: azure-encrypted-extraction
+          path: |
+            ${{ runner.temp }}/azure-export.tar.gz.gpg
+            ${{ runner.temp }}/azure-export.tar.gz.gpg.sha256
+            ${{ runner.temp }}/azure-export-encrypted-bytes.txt
+            ${{ runner.temp }}/azure-export/sanitized-manifest.json
+            ${{ runner.temp }}/azure-export/usage-preflight.json
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Write sanitized extraction summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "## Temporary encrypted Azure extraction"
+            echo
+            echo "- OIDC principal verified: yes"
+            echo "- Azure writes: none"
+            echo "- New billing product: none"
+            echo "- Expected incremental cost: US\$0"
+            echo "- Cosmos containers: $(jq '.cosmos | length' "$RUNNER_TEMP/azure-export/sanitized-manifest.json")"
+            echo "- Cosmos records: $(jq '[.cosmos[].recordCount] | add' "$RUNNER_TEMP/azure-export/sanitized-manifest.json")"
+            echo "- DSR objects: $(jq '.blobs[\"dsr-exports\"] | length' "$RUNNER_TEMP/azure-export/sanitized-manifest.json")"
+            echo "- User-media objects: $(jq '.blobs[\"user-media\"] | length' "$RUNNER_TEMP/azure-export/sanitized-manifest.json")"
+          } >>"$GITHUB_STEP_SUMMARY"
+
+      - name: Remove remaining plaintext runner evidence
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          if [[ -d "$RUNNER_TEMP/azure-export/raw" ]]; then
+            find "$RUNNER_TEMP/azure-export/raw" -type f -exec shred -u {} +
+          fi
+          rm -rf "$RUNNER_TEMP/azure-export/raw"
+          rm -f "$AZURE_EXPORT_SDK_DIR/extract-azure.mjs"
