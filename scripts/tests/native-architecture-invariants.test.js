@@ -232,28 +232,42 @@ test('PlanetScale CI uses a disposable local PostgreSQL 17 service', () => {
   assert.doesNotMatch(workflow, /pscale branch create|PSCALE_SERVICE_TOKEN|ci-\$\{\{/);
 });
 
-test('production migrations are explicit, TLS-verified, and approval-gated', () => {
+test('production migrations remain explicit while Worker deployment verifies read-only', () => {
   const workflow = fs.readFileSync(path.join(root, '.github/workflows/native-workers-deploy.yml'), 'utf8');
   const script = fs.readFileSync(path.join(root, 'scripts/ci/apply-planetscale-production-migrations.mjs'), 'utf8');
-  assert.match(workflow, /Apply approved production migrations/);
-  assert.match(workflow, /PLANETSCALE_PRODUCTION_MIGRATIONS_APPROVED/);
+  const verifier = fs.readFileSync(path.join(root, 'scripts/ci/verify-planetscale-production-schema.mjs'), 'utf8');
+  assert.match(workflow, /Verify production schema read-only/);
+  assert.match(workflow, /PLANETSCALE_SCHEMA_READ_DATABASE_URL/);
+  assert.doesNotMatch(workflow, /apply:planetscale-production-migrations|PLANETSCALE_PRODUCTION_MIGRATIONS_APPROVED/);
   assert.match(workflow, /PSCALE_BRANCH_NAME: main/);
   assert.match(script, /branch !== 'main'/);
   assert.match(script, /approval !== 'approved'/);
   assert.match(script, /sslmode.*verify-full/);
   assert.match(script, /migration checksum mismatch/);
   assert.doesNotMatch(script, /0001_feature_flags/);
+  assert.match(verifier, /system\.schema_migrations/);
+  assert.match(verifier, /expectedMigrationBytes = 45_647/);
+  assert.match(verifier, /5cae370456c8b6083dc7342130f6214444d0452c494660e52c175b18f5da4110/);
+  assert.match(verifier, /committed migration SHA-256 mismatch/);
+  assert.match(verifier, /approved applied migration payload mismatch/);
+  assert.doesNotMatch(verifier, /to_regclass|identity\.users|content\.posts/);
 });
 
-test('production deployment is fail-closed on all acceptance gates', () => {
+test('production deployment is fail-closed on predeploy and final gate phases', () => {
   const workflow = fs.readFileSync(path.join(root, '.github/workflows/native-workers-deploy.yml'), 'utf8');
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'infrastructure/cloudflare/production-gates.json'), 'utf8'));
   const validator = fs.readFileSync(path.join(root, 'scripts/validate-production-gates.mjs'), 'utf8');
-  assert.match(workflow, /Validate all production acceptance gates/);
-  assert.ok(Object.keys(manifest.gates).length >= 8);
-  assert.equal(manifest.cutoverAuthorized, false);
+  assert.match(workflow, /Validate production predeployment gates/);
+  assert.ok(Object.keys(manifest.gates.predeploy).length >= 6);
+  assert.ok(Object.keys(manifest.gates.final).length >= 5);
+  assert.equal(manifest.cutoverAuthorized, true);
+  assert.equal(manifest.migrationUsageAuthorized, false);
+  assert.equal(manifest.migrationUsageMaxUsd, 0);
+  assert.equal(manifest.estimatedIncrementalCostUsd, 0);
   assert.equal(manifest.azureDeletionAuthorized, false);
-  assert.match(validator, /--require-pass/);
+  assert.match(validator, /phase === 'predeploy'/);
+  assert.match(validator, /phase === 'final'/);
+  assert.match(validator, /zero-cost deployment requires migration usage authorization false and maximum US\$0/);
 });
 
 test('production deployment accepts only the exact merged main SHA', () => {
