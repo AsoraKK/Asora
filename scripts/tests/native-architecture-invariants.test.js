@@ -250,6 +250,9 @@ test('production migrations remain explicit while Worker deployment verifies rea
   assert.match(verifier, /5cae370456c8b6083dc7342130f6214444d0452c494660e52c175b18f5da4110/);
   assert.match(verifier, /committed migration SHA-256 mismatch/);
   assert.match(verifier, /approved applied migration payload mismatch/);
+  assert.match(verifier, /searchParams\.get\('sslrootcert'\) === 'system'/);
+  assert.match(verifier, /searchParams\.delete\('sslrootcert'\)/);
+  assert.match(verifier, /ssl: \{ rejectUnauthorized: true \}/);
   assert.doesNotMatch(verifier, /to_regclass|identity\.users|content\.posts/);
 });
 
