@@ -93,8 +93,11 @@ const connection = new URL(databaseUrl);
 if (connection.searchParams.get('sslmode') !== 'verify-full') {
   throw new Error('production schema verification requires sslmode=verify-full');
 }
+if (connection.searchParams.get('sslrootcert') === 'system') {
+  connection.searchParams.delete('sslrootcert');
+}
 
-const client = new Client({ connectionString: databaseUrl, ssl: { rejectUnauthorized: true } });
+const client = new Client({ connectionString: connection.toString(), ssl: { rejectUnauthorized: true } });
 await client.connect();
 try {
   await client.query('BEGIN READ ONLY');
