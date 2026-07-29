@@ -30,14 +30,19 @@ data are never stored in this file or in Git.
 
 ## Protected CI and migration environment
 
-- `CLOUDFLARE_PRODUCTION_ACCOUNT_ID`
-- `CLOUDFLARE_PRODUCTION_ZONE_ID`
-- `CLOUDFLARE_PRODUCTION_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+- `CLOUDFLARE_API_TOKEN`
+- `PLANETSCALE_SCHEMA_READ_DATABASE_URL` (registry-only deployment verification)
+
+The protected manual migration environment, which is not invoked by Worker
+deployment, may separately use:
+
 - `PLANETSCALE_ADMIN_DATABASE_URL`
 - `PLANETSCALE_PRODUCTION_MIGRATIONS_APPROVED`
 - `PLANETSCALE_SERVICE_TOKEN`
 - `PLANETSCALE_SERVICE_TOKEN_ID`
 
-Secrets are provisioned per Worker with least privilege. Production values
-remain unconfigured until the dedicated Cloudflare account and production
-database pass the five acceptance gates.
+Secrets are provisioned per Worker with least privilege. The existing shared
+Cloudflare account is constrained by the Lythaus account, zone, and resource
+registry. Worker deployment requires the predeployment gate group; final gates
+are completed only after live runtime acceptance.
