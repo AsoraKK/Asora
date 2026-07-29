@@ -38,8 +38,12 @@ jobs:
             echo "release_sha must be a full 40-character commit SHA" >&2
             exit 1
           fi
-          if [[ "$RELEASE_SHA" != "$checked_out_sha" || "$RELEASE_SHA" != "$remote_main_sha" ]]; then
-            echo "Refusing deployment: release_sha is not the checked-out origin/main SHA." >&2
+          if [[ "$RELEASE_SHA" != "$checked_out_sha" ]]; then
+            echo "Refusing deployment: release_sha is not the checked-out main SHA." >&2
+            exit 1
+          fi
+          if [[ "$checked_out_sha" != "$remote_main_sha" ]]; then
+            echo "Refusing deployment: checked-out main is not current origin/main." >&2
             exit 1
           fi
       - uses: actions/setup-node@v4
