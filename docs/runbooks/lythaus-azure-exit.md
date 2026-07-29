@@ -32,9 +32,12 @@ test in `docs/architecture/data-disposition-adr.md`.
 1. Inspect Azure read-only and write sanitised inventory evidence.
 2. Export to an encrypted staging directory outside Git. Never upload raw
    plaintext records as a GitHub artifact.
-3. Classify every source using `infrastructure/azure-exit/migration-mappings.json`.
+3. Classify every source using `infrastructure/azure-exit/migration-mappings.json`
+   and `scripts/azure-exit/source-disposition.mjs`.
 4. Reject unknown, unverifiable, duplicate, orphaned, token, secret, test, and provider-runtime records.
-5. Transform only explicit canonical mappings with `scripts/azure-exit/transform-records.mjs`.
+5. Prepare the full canonical import outside Git with
+   `scripts/azure-exit/prepare-canonical-import.mjs`; unknown non-empty sources
+   fail closed.
 6. Validate migrations against local PostgreSQL 17 with `npm run validate:planetscale-postgres17`.
 7. Validate transformations on synthetic fixtures and PlanetScale `development` only.
 8. Re-export fresh Azure data for final migration.
@@ -62,13 +65,20 @@ test in `docs/architecture/data-disposition-adr.md`.
 
 ## DSR object handling
 
-Inventory and hash the one source DSR object. If genuine, encrypt the package
+Inventory and hash every source DSR object. The measured export contains 11
+packages; record-level classification selects only packages attached to
+non-drill unresolved requests. Encrypt each selected package
 before target storage unless it is already strongly encrypted. Store the
 encrypted user-facing package separately from sanitised audit metadata. Before
 copying, inspect exact R2 lifecycle rules and prove the selected prefix is not
 subject to automatic deletion; record retention or object-lock behavior,
 checksum, source metadata, and provenance. Never preserve plaintext personal
 data solely as evidence.
+
+The protected migration prefix is `protected-migration/dsr/`, which is outside
+the live `exports/` 30-day lifecycle rule. The selected source packages remain
+manual-review evidence until the native privacy workflow reissues or resolves
+the corresponding requests.
 
 The management-plane inventory command is:
 

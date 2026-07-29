@@ -332,14 +332,16 @@ async function googleAuthCallback(request: Request, env: Env): Promise<Response>
   let userId = existing.rows[0]?.id;
   let accountStatus = existing.rows[0]?.status;
   if (!userId) {
-    const byEmail = await query<{ id: string; status: string }>(env.DB_APP_FRESH,
-      `SELECT u.id, u.status
+    const byEmail = await query<{ id: string; status: string; source_provider: string | null; verified_at: string | null }>(env.DB_APP_FRESH,
+      `SELECT u.id, u.status, c.source_provider, c.verified_at
          FROM identity.users u
-        WHERE EXISTS (SELECT 1 FROM identity.email_credentials c WHERE c.user_id = u.id AND c.email_lookup_hmac = decode($1, 'base64'))
-           OR EXISTS (SELECT 1 FROM identity.contact_emails c WHERE c.user_id = u.id AND c.email_lookup_hmac = decode($1, 'base64'))
+         LEFT JOIN identity.contact_emails c ON c.user_id = u.id AND c.email_lookup_hmac = decode($1, 'base64')
+        WHERE EXISTS (SELECT 1 FROM identity.email_credentials e WHERE e.user_id = u.id AND e.email_lookup_hmac = decode($1, 'base64'))
+           OR c.user_id IS NOT NULL
         LIMIT 1`, [emailHmac]);
     userId = byEmail.rows[0]?.id;
     accountStatus = byEmail.rows[0]?.status;
+    if (userId && accountStatus === 'relink_required') throw new Error('account_relink_required');
     const encryptedSubject = await encryptField(claims.sub, env.PII_ENCRYPTION_KEY_V1, 'v1');
     await transaction(env.DB_APP_FRESH, async (client) => {
       if (!userId) {

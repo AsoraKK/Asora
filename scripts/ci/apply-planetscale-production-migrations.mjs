@@ -14,7 +14,9 @@ const roleIdentifiers = JSON.parse(process.env.PSCALE_ROLE_IDENTIFIERS ?? '{}');
 
 if (branch !== 'main') throw new Error('production migrations require PSCALE_BRANCH_NAME=main');
 if (approval !== 'approved') throw new Error('production migrations require PLANETSCALE_PRODUCTION_MIGRATIONS_APPROVED=approved');
-if (usageApproval !== 'approved' || !(usageMaxUsd > 0)) throw new Error('production migrations require measured migration usage approval and a positive PLANETSCALE_MIGRATION_USAGE_MAX_USD');
+if (usageApproval !== 'approved' || !Number.isFinite(usageMaxUsd) || usageMaxUsd < 0) {
+  throw new Error('production migrations require measured migration usage approval and a non-negative PLANETSCALE_MIGRATION_USAGE_MAX_USD');
+}
 if (!databaseUrl) throw new Error('PLANETSCALE_ADMIN_DATABASE_URL is required');
 const connection = new URL(databaseUrl);
 if (connection.searchParams.get('sslmode') !== 'verify-full') throw new Error('production migrations require sslmode=verify-full');

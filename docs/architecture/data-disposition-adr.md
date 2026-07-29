@@ -28,19 +28,21 @@ preservation, with source authority proven per data class.
 - OIDC authentication and the three temporary data-reader assignments are
   active.
 - All 32 Cosmos containers under database `asora` are readable.
-- Bounded verification found records in `counters`, `privacy_requests`,
-  `users`, `posts`, `privacy_audit`, `receipt_events`, `audit_logs`,
-  `legal_holds`, `profiles`, `custom_feeds`, and `moderation_decisions`.
-- The `stasoradsrdev/dsr-exports` container contains one readable object.
-- The `asoramediadev/user-media` container was empty at verification time.
+- The encrypted full export contains 224 records across all 32 containers.
+  Eleven containers are non-empty; the other 21 have a verified zero count.
+- `stasoradsrdev/dsr-exports` contains 11 ZIP packages totaling 17,641 bytes.
+  Five packages totaling 5,140 bytes are attached to unresolved non-drill
+  requests and are selected for encrypted preservation.
+- `asoramediadev/user-media` has a verified zero object count.
 - Azure PostgreSQL is network reachable, but the documented credential was
-  rejected. It remains `BLOCKED — ACCESS REQUIRED / CANDIDATE FOR
-  PRE-PRODUCTION ABANDONMENT` until the Cosmos classification proves whether
-  identity continuity requires it.
+  rejected.
 
-Bounded access proves readability, not disposition. Complete counts, hashes,
-relationships, privacy state, legal state, and synthetic markers are still
-required before migration or deletion approval.
+Record-level disposition preserves seven canonical identities, including five
+`relink_required` identities and two deletion tombstones. Three source contact
+addresses are selected for encrypted, unverified migration contact records;
+no provider subject is imported or invented. Five explicit legal-hold drills
+are discarded, while one active hold without proven test provenance is
+preserved.
 
 ## Controls
 
@@ -75,6 +77,17 @@ account-continuity obligation was identified that requires recovery of the
 inaccessible PostgreSQL records.`
 
 If any condition is unproved, retain `BLOCKED — ACCESS REQUIRED`.
+
+### Current PostgreSQL decision
+
+`Azure PostgreSQL disposition: BLOCKED — ACCESS REQUIRED`
+
+The exported DSR identity for one unresolved profile has no email or provider
+subject, while five canonical identities require relinking. The inaccessible
+store may contain the only safe continuity signal for that profile. Until a
+read-only PostgreSQL export proves otherwise, or the owner explicitly accepts
+pre-production abandonment, clean Google sign-in could create an ownership
+ambiguity for the preserved profile and its privacy history.
 
 ## Owner decision record
 

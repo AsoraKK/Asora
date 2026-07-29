@@ -57,7 +57,7 @@
     "validate:planetscale-extensions:live": "node scripts/validate-planetscale-extensions.mjs --require-catalog",
     "validate:planetscale-postgres17": "node scripts/ci/validate-planetscale-postgres17.mjs",
     "calculate:migration-usage": "node scripts/azure-exit/calculate-migration-usage.mjs",
-    "test:azure-migration": "node --test scripts/tests/canonical-azure-hash.test.mjs",
+    "test:azure-migration": "node --test scripts/tests/canonical-azure-hash.test.mjs scripts/tests/azure-source-disposition.test.mjs scripts/tests/prepare-canonical-import.test.mjs",
     "benchmark:native-endpoints": "node scripts/benchmarks/native-endpoint-benchmark.mjs",
     "validate:planetscale-ci-script": "node --check scripts/ci/apply-planetscale-migrations.mjs",
     "validate:planetscale-production-script": "node --check scripts/ci/apply-planetscale-production-migrations.mjs",

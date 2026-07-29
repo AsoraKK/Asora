@@ -123,10 +123,14 @@ test('native auth and user controls are implemented behind configured secrets', 
 
 test('native authentication supports account-level token revocation and social controls', () => {
   const migration = fs.readFileSync(path.join(root, 'database/planetscale/migrations/0005_auth_revocation.sql'), 'utf8');
+  const relinkMigration = fs.readFileSync(path.join(root, 'database/planetscale/migrations/0008_legacy_relink_status.sql'), 'utf8');
   const source = fs.readFileSync(path.join(root, 'apps/lythaus-public-api/src/index.ts'), 'utf8');
   const admin = fs.readFileSync(path.join(root, 'apps/lythaus-admin-api/src/index.ts'), 'utf8');
   assert.match(migration, /token_version/);
+  assert.match(relinkMigration, /relink_required/);
   assert.match(source, /tokenVersion/);
+  assert.match(source, /account_relink_required/);
+  assert.match(source, /source_provider/);
   assert.match(source, /social\.blocks/);
   assert.match(source, /social\.mutes/);
   assert.match(source, /social\.bookmarks/);

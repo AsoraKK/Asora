@@ -3,7 +3,7 @@ import path from 'node:path';
 
 const root = process.cwd();
 const migrationDir = path.join(root, 'database', 'planetscale', 'migrations');
-const requiredMigrations = ['0000_preflight.sql', '0001_extensions_and_schemas.sql', '0002_core_tables.sql', '0003_domain_extensions.sql', '0004_launch_contract.sql', '0005_auth_revocation.sql', '0006_admin_role_expansion.sql', '0007_contact_emails.sql'];
+const requiredMigrations = ['0000_preflight.sql', '0001_extensions_and_schemas.sql', '0002_core_tables.sql', '0003_domain_extensions.sql', '0004_launch_contract.sql', '0005_auth_revocation.sql', '0006_admin_role_expansion.sql', '0007_contact_emails.sql', '0008_legacy_relink_status.sql'];
 const requiredSeeds = ['0001_feature_flags.sql'];
 const requiredRecoveryFiles = ['restore-verify.sql'];
 const requiredSchemas = ['identity', 'content', 'social', 'feed', 'moderation', 'privacy', 'trust', 'media', 'editorial', 'system'];
@@ -62,6 +62,7 @@ for (const required of ['pg_trgm', 'unaccent', 'pgcrypto', 'uuid']) {
 }
 if (/uuidv7\(\)/i.test(source)) failures.push('database-generated uuidv7 default is forbidden; generate UUIDv7 in application code');
 if (!/server_version_num.*170000/s.test(source)) failures.push('PostgreSQL 17 preflight missing');
+if (!/relink_required/.test(source)) failures.push('legacy account relink status is missing');
 if (/password|token/i.test(source) && /plaintext|secret_value/i.test(source)) failures.push('migration appears to contain secret material');
 if (failures.length) {
   console.error(failures.map((failure) => `- ${failure}`).join('\n'));

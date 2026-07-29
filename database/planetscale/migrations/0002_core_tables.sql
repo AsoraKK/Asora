@@ -1,6 +1,6 @@
 CREATE TABLE identity.users (
   id uuid PRIMARY KEY,
-  status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'suspended', 'deleted', 'locked')),
+  status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'suspended', 'deleted', 'locked', 'relink_required')),
   display_name text NOT NULL DEFAULT '',
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
