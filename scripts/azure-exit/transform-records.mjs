@@ -1,6 +1,13 @@
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 import path from 'node:path';
+import {
+  canonicalDataset,
+  canonicalDatasetHash,
+  canonicalJson,
+  deterministicUuidv7,
+  sourceIdentifier,
+} from './canonical-hash.mjs';
 
 const arg = (name) => {
   const index = process.argv.indexOf(name);
@@ -26,22 +33,16 @@ if (!mapping) throw new Error(`no explicit mapping exists for source: ${source}`
 if (/BLOCKED|PRESERVE AS EVIDENCE/i.test(mapping.classification)) throw new Error(`source is not importable until authority/access review: ${source}`);
 
 const validUuid = (value) => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-function uuidv7() {
-  const bytes = crypto.randomBytes(16);
-  const timestamp = BigInt(Date.now());
-  for (let index = 5; index >= 0; index -= 1) {
-    bytes[index] = Number(timestamp >> BigInt((5 - index) * 8)) & 0xff;
-  }
-  bytes[6] = (bytes[6] & 0x0f) | 0x70;
-  bytes[8] = (bytes[8] & 0x3f) | 0x80;
-  const hex = bytes.toString('hex');
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
-}
 const first = (document, keys) => keys.map((key) => document[key]).find((value) => value !== undefined && value !== null);
-const idFor = (document) => {
+const idFor = (document, createdAt) => {
   const sourceId = first(document, ['id', 'userId', 'postId', 'commentId', 'requestId', 'appealId']);
   if (typeof sourceId !== 'string' || sourceId.trim() === '') throw new Error('record has no stable source identifier');
-  return { sourceId, id: validUuid(sourceId) ? sourceId : uuidv7() };
+  return {
+    sourceId,
+    id: validUuid(sourceId)
+      ? sourceId
+      : deterministicUuidv7(sourceId, createdAt, evidenceKeyHex),
+  };
 };
 const timestamp = (document, keys, fallback = new Date().toISOString()) => {
   const value = first(document, keys);
@@ -63,8 +64,8 @@ const uuidReference = (value, label) => {
 };
 
 function transformDocument(document) {
-  const { sourceId, id } = idFor(document);
   const createdAt = timestamp(document, ['createdAt', 'created_at', '_ts']);
+  const { sourceId, id } = idFor(document, createdAt);
   if (source === 'Cosmos asora/users') {
     const status = first(document, ['status', 'accountStatus']) ?? 'active';
     if (!['active', 'suspended', 'deleted', 'locked'].includes(status)) throw new Error(`invalid account status: ${status}`);
@@ -88,15 +89,15 @@ function transformDocument(document) {
 }
 
 const lines = fs.readFileSync(inputPath, 'utf8').split(/\r?\n/).filter(Boolean);
+const parsedSource = lines.map((line) => JSON.parse(line));
+const sourceSha256 = canonicalDatasetHash(parsedSource);
 const output = [];
 const rejects = [];
 const seen = new Set();
 const idMappings = [];
 let duplicateCount = 0;
-for (const [index, line] of lines.entries()) {
-  let document;
+for (const [index, document] of [...parsedSource].sort((left, right) => sourceIdentifier(left).localeCompare(sourceIdentifier(right))).entries()) {
   try {
-    document = JSON.parse(line);
     const transformed = transformDocument(document);
     const key = `${transformed.destinationTable}:${transformed.record.id ?? `${transformed.record.user_id}:${transformed.record.post_id}`}`;
     if (seen.has(key)) {
@@ -111,14 +112,30 @@ for (const [index, line] of lines.entries()) {
     rejects.push({ line: index + 1, reason: error instanceof Error ? error.message : 'record_rejected' });
   }
 }
-fs.writeFileSync(outputPath, output.map((record) => JSON.stringify(record)).join('\n') + (output.length ? '\n' : ''), { encoding: 'utf8', mode: 0o600 });
-const digest = crypto.createHash('sha256').update(fs.readFileSync(outputPath)).digest('hex');
+const canonicalOutput = canonicalDataset(output, (record) => record.sourceIdentifierHmac);
+fs.writeFileSync(outputPath, canonicalOutput, { encoding: 'utf8', mode: 0o600 });
+const digest = canonicalDatasetHash(output, (record) => record.sourceIdentifierHmac);
 const iv = crypto.randomBytes(12);
 const cipher = crypto.createCipheriv('aes-256-gcm', Buffer.from(evidenceKeyHex, 'hex'), iv);
 const ciphertext = Buffer.concat([cipher.update(JSON.stringify(idMappings), 'utf8'), cipher.final()]);
 const encryptedIdentityMapping = { algorithm: 'aes-256-gcm', iv: iv.toString('base64'), tag: cipher.getAuthTag().toString('base64'), ciphertext: ciphertext.toString('base64') };
-fs.writeFileSync(evidencePath, JSON.stringify({ source, destination: mapping.destination, sourceClassification: mapping.classification, exportedRows: lines.length, transformedRows: output.length, rejectedRows: rejects.length, duplicateCount, rejects, encryptedIdentityMapping, outputSha256: digest, generatedAt: new Date().toISOString() }, null, 2), { encoding: 'utf8', mode: 0o600 });
+fs.writeFileSync(evidencePath, JSON.stringify({
+  source,
+  destination: mapping.destination,
+  sourceClassification: mapping.classification,
+  canonicalization: 'lythaus-canonical-json-v1',
+  hashAlgorithm: 'sha256',
+  exportedRows: lines.length,
+  transformedRows: output.length,
+  rejectedRows: rejects.length,
+  duplicateCount,
+  rejects,
+  encryptedIdentityMapping,
+  rawSourceSha256: sourceSha256,
+  transformedSha256: digest,
+  generatedAt: new Date().toISOString(),
+}, null, 2), { encoding: 'utf8', mode: 0o600 });
 if (rejects.length) process.exitCode = 2;
-console.log(JSON.stringify({ source, transformedRows: output.length, rejectedRows: rejects.length, outputSha256: digest }, null, 2));
+console.log(canonicalJson({ source, transformedRows: output.length, rejectedRows: rejects.length, rawSourceSha256: sourceSha256, transformedSha256: digest }));
 
-export { transformDocument, uuidv7 };
+export { transformDocument };

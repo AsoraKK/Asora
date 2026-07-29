@@ -131,6 +131,10 @@ import 'package:asora_api_client/src/model/post_proof_signals.dart';
 import 'package:asora_api_client/src/model/post_trust_timeline.dart';
 import 'package:asora_api_client/src/model/post_view.dart';
 import 'package:asora_api_client/src/model/post_view_all_of_recent_comments.dart';
+import 'package:asora_api_client/src/model/privacy_request.dart';
+import 'package:asora_api_client/src/model/privacy_request_accepted.dart';
+import 'package:asora_api_client/src/model/privacy_request_create.dart';
+import 'package:asora_api_client/src/model/privacy_request_status_response.dart';
 import 'package:asora_api_client/src/model/public_authorship.dart';
 import 'package:asora_api_client/src/model/public_reputation_view.dart';
 import 'package:asora_api_client/src/model/rate_limit_error.dart';
@@ -279,6 +283,10 @@ part 'serializers.g.dart';
   PostTrustTimeline,
   PostView,
   PostViewAllOfRecentComments,
+  PrivacyRequest,$PrivacyRequest,
+  PrivacyRequestAccepted,
+  PrivacyRequestCreate,
+  PrivacyRequestStatusResponse,
   PublicAuthorship,
   PublicReputationView,
   RateLimitError,
@@ -315,6 +323,7 @@ Serializers serializers = (_$serializers.toBuilder()
       ..add(AdminInvite.serializer)
       ..add(CursorPaginatedPostView.serializer)
       ..add(Post.serializer)
+      ..add(PrivacyRequest.serializer)
       ..add(const OneOfSerializer())
       ..add(const AnyOfSerializer())
       ..add(const DateSerializer())

@@ -3,7 +3,7 @@ import type { EnvBindings } from '@lythaus/cloudflare-env';
 import type { CreatePostInput, EmailDeliveryReference, TransactionalEmailProvider } from '@lythaus/contracts';
 import { createPresignedPutUrl, ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES, type AllowedImageType } from '@lythaus/media';
 import { assertExpectedHostname, correlationId, json, logEvent } from '@lythaus/observability';
-import { encryptField, hashPassword, hashResetToken, hmacLookup, needsPasswordRehash, randomToken, signAccessToken, uuidv7, verifyAccessToken, verifyPassword, type PasswordHash, type Principal } from '@lythaus/security';
+import { decryptField, encryptField, hashPassword, hashResetToken, hmacLookup, needsPasswordRehash, randomToken, signAccessToken, uuidv7, verifyAccessToken, verifyPassword, type PasswordHash, type Principal } from '@lythaus/security';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 
 interface Env extends EnvBindings {
@@ -73,7 +73,7 @@ async function issueSession(env: Env, userId: string, roles: string[] = []): Pro
   const familyId = uuidv7();
   await transaction(env.DB_APP_FRESH, async (client) => {
     await client.query(`INSERT INTO identity.refresh_token_families (id, user_id) VALUES ($1, $2)`, [familyId, userId]);
-    await client.query(`INSERT INTO identity.auth_sessions (user_id, refresh_family_id, refresh_token_hash, expires_at) VALUES ($1, $2, decode($3, 'base64'), now() + interval '30 days')`, [userId, familyId, refreshHash]);
+    await client.query(`INSERT INTO identity.auth_sessions (id, user_id, refresh_family_id, refresh_token_hash, expires_at) VALUES ($1, $2, $3, decode($4, 'base64'), now() + interval '30 days')`, [uuidv7(), userId, familyId, refreshHash]);
   });
   const accessToken = await signAccessToken({ userId, roles, tokenVersion, privateKeyPem: secrets.privateKey, keyId: secrets.keyId });
   return { accessToken, refreshToken, expiresIn: 900 };
@@ -151,8 +151,8 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
     if (!account || account.verified_at) return privateResponse(request, env, { state: 'verification_required' }, { status: 202 });
     const verificationToken = randomToken(32);
     await query(env.DB_APP_FRESH,
-      `INSERT INTO identity.email_verification_tokens (user_id, token_hash, expires_at) VALUES ($1, decode($2, 'base64'), now() + interval '30 minutes')`,
-      [account.id, hashResetToken(verificationToken)]);
+      `INSERT INTO identity.email_verification_tokens (id, user_id, token_hash, expires_at) VALUES ($1, $2, decode($3, 'base64'), now() + interval '30 minutes')`,
+      [uuidv7(), account.id, hashResetToken(verificationToken)]);
     await deliverAuthEmail(env, { type: 'verification', to: email, token: verificationToken });
     return privateResponse(request, env, { state: 'verification_required' }, { status: 202 });
   }
@@ -165,8 +165,8 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
     await transaction(env.DB_APP_FRESH, async (client) => {
       await client.query(`INSERT INTO identity.users (id) VALUES ($1)`, [userId]);
       await client.query(`INSERT INTO identity.email_credentials (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, hmac_key_version, password_hash) VALUES ($1, convert_to($2, 'utf8'), decode($3, 'base64'), 'v1', 'v1', $4::jsonb)`, [userId, encrypted.ciphertext, lookup, JSON.stringify(passwordHash)]);
-      await client.query(`INSERT INTO identity.email_verification_tokens (user_id, token_hash, expires_at) VALUES ($1, decode($2, 'base64'), now() + interval '30 minutes')`, [userId, hashResetToken(verificationToken)]);
-      await client.query(`INSERT INTO identity.account_events (user_id, event_type, metadata) VALUES ($1, 'email_registration_started', '{}'::jsonb)`, [userId]);
+      await client.query(`INSERT INTO identity.email_verification_tokens (id, user_id, token_hash, expires_at) VALUES ($1, $2, decode($3, 'base64'), now() + interval '30 minutes')`, [uuidv7(), userId, hashResetToken(verificationToken)]);
+      await client.query(`INSERT INTO identity.account_events (id, user_id, event_type, metadata) VALUES ($1, $2, 'email_registration_started', '{}'::jsonb)`, [uuidv7(), userId]);
     });
     await deliverAuthEmail(env, { type: 'verification', to: email, token: verificationToken });
     return privateResponse(request, env, { userId, state: 'verification_required' }, { status: 202 });
@@ -192,7 +192,7 @@ async function verifyEmail(request: Request, env: Env): Promise<Response> {
     if (!found.rows[0]) throw new Error('verification_token_invalid');
     await client.query(`UPDATE identity.email_verification_tokens SET consumed_at = now() WHERE token_hash = decode($1, 'base64') AND consumed_at IS NULL`, [hashResetToken(token)]);
     await client.query(`UPDATE identity.email_credentials SET verified_at = COALESCE(verified_at, now()), updated_at = now() WHERE user_id = $1`, [found.rows[0].user_id]);
-    await client.query(`INSERT INTO identity.account_events (user_id, event_type, metadata) VALUES ($1, 'email_verified', '{}'::jsonb)`, [found.rows[0].user_id]);
+    await client.query(`INSERT INTO identity.account_events (id, user_id, event_type, metadata) VALUES ($1, $2, 'email_verified', '{}'::jsonb)`, [uuidv7(), found.rows[0].user_id]);
     return found.rows[0].user_id;
   });
   return response(request, env, { userId: result, state: 'verified' });
@@ -219,7 +219,7 @@ async function refreshSession(request: Request, env: Env): Promise<Response> {
       throw new Error('refresh_token_reuse');
     }
     await client.query(`UPDATE identity.refresh_token_families SET last_used_at = now() WHERE id = $1`, [session.family_id]);
-    await client.query(`INSERT INTO identity.auth_sessions (user_id, refresh_family_id, refresh_token_hash, expires_at) VALUES ($1, $2, decode($3, 'base64'), now() + interval '30 days')`, [session.user_id, session.family_id, hashResetToken(replacement)]);
+    await client.query(`INSERT INTO identity.auth_sessions (id, user_id, refresh_family_id, refresh_token_hash, expires_at) VALUES ($1, $2, $3, decode($4, 'base64'), now() + interval '30 days')`, [uuidv7(), session.user_id, session.family_id, hashResetToken(replacement)]);
   });
   const secrets = requireAuthSecrets(env);
   const tokenVersion = await query<{ token_version: number }>(env.DB_APP_FRESH,
@@ -238,11 +238,55 @@ async function logout(request: Request, env: Env): Promise<Response> {
   return privateResponse(request, env, { loggedOut: true });
 }
 
+interface OAuthStateRecord {
+  verifier: string;
+  appState: string;
+  redirectUri: string;
+  codeChallenge: string;
+  clientId: string;
+}
+
+interface OAuthExchangeRecord {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+  redirectUri: string;
+  codeChallenge: string;
+  clientId: string;
+}
+
+function allowedOAuthRedirect(value: string, env: Env): boolean {
+  try {
+    const uri = new URL(value);
+    if (uri.protocol === 'https:' && uri.pathname === '/auth/callback') {
+      const origins = (env.CORS_ALLOWED_ORIGINS ?? '').split(',').map((origin) => origin.trim()).filter(Boolean);
+      return origins.includes(uri.origin);
+    }
+    return (uri.protocol === 'asora:' || uri.protocol === 'lythaus:' || uri.protocol === 'com.asora.app:')
+      && uri.hostname === 'oauth'
+      && uri.pathname === '/callback';
+  } catch {
+    return false;
+  }
+}
+
 async function googleAuthStart(request: Request, env: Env): Promise<Response> {
   if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_REDIRECT_URI || !env.LYTHAUS_CONFIG) throw new Error('google_not_configured');
+  const url = new URL(request.url);
+  const appState = url.searchParams.get('state') ?? '';
+  const redirectUri = url.searchParams.get('redirect_uri') ?? '';
+  const codeChallenge = url.searchParams.get('code_challenge') ?? '';
+  const clientId = url.searchParams.get('client_id') ?? '';
+  const provider = (url.searchParams.get('idp') ?? 'Google').toLowerCase();
+  if (provider !== 'google') throw new Error('provider_unavailable');
+  if (!appState || !redirectUri || !codeChallenge || !clientId || !allowedOAuthRedirect(redirectUri, env)) {
+    throw new Error('oauth_request_invalid');
+  }
+  if (!/^[A-Za-z0-9_-]{43,128}$/.test(codeChallenge)) throw new Error('oauth_challenge_invalid');
   const state = randomToken(24);
   const verifier = randomToken(32);
-  await env.LYTHAUS_CONFIG.put(`oauth:google:${state}`, JSON.stringify({ verifier, createdAt: Date.now() }), { expirationTtl: 600 });
+  const stateRecord: OAuthStateRecord = { verifier, appState, redirectUri, codeChallenge, clientId };
+  await env.LYTHAUS_CONFIG.put(`oauth:google:${state}`, JSON.stringify(stateRecord), { expirationTtl: 600 });
   const authorization = new URL('https://accounts.google.com/o/oauth2/v2/auth');
   authorization.search = new URLSearchParams({
     client_id: env.GOOGLE_CLIENT_ID,
@@ -266,8 +310,8 @@ async function googleAuthCallback(request: Request, env: Env): Promise<Response>
   if (!state || !code) throw new Error('google_callback_invalid');
   const stateValue = await env.LYTHAUS_CONFIG.get(`oauth:google:${state}`);
   if (!stateValue) throw new Error('google_state_invalid');
-  const stateRecord = typeof stateValue === 'string' ? JSON.parse(stateValue) as { verifier?: string } : null;
-  if (!stateRecord?.verifier) throw new Error('google_state_invalid');
+  const stateRecord = typeof stateValue === 'string' ? JSON.parse(stateValue) as OAuthStateRecord : null;
+  if (!stateRecord?.verifier || !stateRecord.appState || !allowedOAuthRedirect(stateRecord.redirectUri, env)) throw new Error('google_state_invalid');
   await env.LYTHAUS_CONFIG.delete(`oauth:google:${state}`);
   const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
@@ -289,7 +333,11 @@ async function googleAuthCallback(request: Request, env: Env): Promise<Response>
   let accountStatus = existing.rows[0]?.status;
   if (!userId) {
     const byEmail = await query<{ id: string; status: string }>(env.DB_APP_FRESH,
-      `SELECT u.id, u.status FROM identity.email_credentials c JOIN identity.users u ON u.id = c.user_id WHERE c.email_lookup_hmac = decode($1, 'base64')`, [emailHmac]);
+      `SELECT u.id, u.status
+         FROM identity.users u
+        WHERE EXISTS (SELECT 1 FROM identity.email_credentials c WHERE c.user_id = u.id AND c.email_lookup_hmac = decode($1, 'base64'))
+           OR EXISTS (SELECT 1 FROM identity.contact_emails c WHERE c.user_id = u.id AND c.email_lookup_hmac = decode($1, 'base64'))
+        LIMIT 1`, [emailHmac]);
     userId = byEmail.rows[0]?.id;
     accountStatus = byEmail.rows[0]?.status;
     const encryptedSubject = await encryptField(claims.sub, env.PII_ENCRYPTION_KEY_V1, 'v1');
@@ -298,13 +346,60 @@ async function googleAuthCallback(request: Request, env: Env): Promise<Response>
         userId = uuidv7();
         await client.query(`INSERT INTO identity.users (id, display_name) VALUES ($1, $2)`, [userId, claims.name?.trim().slice(0, 160) ?? '']);
       }
-      await client.query(`INSERT INTO identity.provider_links (user_id, provider, provider_subject_ciphertext, provider_subject_hmac) VALUES ($1, 'google', convert_to($2, 'utf8'), decode($3, 'base64')) ON CONFLICT (provider, provider_subject_hmac) DO NOTHING`, [userId, encryptedSubject.ciphertext, subjectHmac]);
-      await client.query(`INSERT INTO identity.account_events (user_id, event_type, metadata) VALUES ($1, 'google_login', '{}'::jsonb)`, [userId]);
+      await client.query(`INSERT INTO identity.provider_links (id, user_id, provider, provider_subject_ciphertext, provider_subject_hmac) VALUES ($1, $2, 'google', convert_to($3, 'utf8'), decode($4, 'base64')) ON CONFLICT (provider, provider_subject_hmac) DO NOTHING`, [uuidv7(), userId, encryptedSubject.ciphertext, subjectHmac]);
     });
   }
   if (!userId || accountStatus === 'suspended' || accountStatus === 'deleted') throw new Error('account_unavailable');
+  const encryptedEmail = await encryptField(email, env.PII_ENCRYPTION_KEY_V1, 'v1');
+  await transaction(env.DB_APP_FRESH, async (client) => {
+    await client.query(
+      `INSERT INTO identity.contact_emails (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, source_provider, verified_at)
+       VALUES ($1, convert_to($2, 'utf8'), decode($3, 'base64'), 'v1', 'google', now())
+       ON CONFLICT (user_id) DO UPDATE SET email_ciphertext = EXCLUDED.email_ciphertext,
+         email_lookup_hmac = EXCLUDED.email_lookup_hmac, encryption_key_version = EXCLUDED.encryption_key_version,
+         source_provider = EXCLUDED.source_provider, verified_at = EXCLUDED.verified_at, updated_at = now()`,
+      [userId, encryptedEmail.ciphertext, emailHmac]);
+    await client.query(`INSERT INTO identity.account_events (id, user_id, event_type, metadata) VALUES ($1, $2, 'google_login', '{}'::jsonb)`, [uuidv7(), userId]);
+  });
   const tokens = await issueSession(env, userId);
-  return privateResponse(request, env, { ...tokens, tokenType: 'Bearer' });
+  const authorizationCode = randomToken(32);
+  const exchange: OAuthExchangeRecord = {
+    accessToken: tokens.accessToken,
+    refreshToken: tokens.refreshToken,
+    expiresIn: tokens.expiresIn,
+    redirectUri: stateRecord.redirectUri,
+    codeChallenge: stateRecord.codeChallenge,
+    clientId: stateRecord.clientId,
+  };
+  await env.LYTHAUS_CONFIG.put(`oauth:exchange:${authorizationCode}`, JSON.stringify(exchange), { expirationTtl: 120 });
+  const appCallback = new URL(stateRecord.redirectUri);
+  appCallback.searchParams.set('code', authorizationCode);
+  appCallback.searchParams.set('state', stateRecord.appState);
+  return new Response(null, { status: 302, headers: { location: appCallback.toString(), 'cache-control': 'no-store' } });
+}
+
+async function exchangeOAuthCode(request: Request, env: Env): Promise<Response> {
+  if (!env.LYTHAUS_CONFIG) throw new Error('google_not_configured');
+  const form = new URLSearchParams(await request.text());
+  const code = form.get('code') ?? '';
+  const verifier = form.get('code_verifier') ?? '';
+  const redirectUri = form.get('redirect_uri') ?? '';
+  const clientId = form.get('client_id') ?? '';
+  if (form.get('grant_type') !== 'authorization_code' || !code || !verifier) throw new Error('oauth_exchange_invalid');
+  const stored = await env.LYTHAUS_CONFIG.get(`oauth:exchange:${code}`);
+  if (typeof stored !== 'string') throw new Error('oauth_code_invalid');
+  const exchange = JSON.parse(stored) as OAuthExchangeRecord;
+  if (exchange.redirectUri !== redirectUri || exchange.clientId !== clientId || !allowedOAuthRedirect(redirectUri, env)) {
+    throw new Error('oauth_exchange_invalid');
+  }
+  if (await pkceChallenge(verifier) !== exchange.codeChallenge) throw new Error('oauth_verifier_invalid');
+  await env.LYTHAUS_CONFIG.delete(`oauth:exchange:${code}`);
+  return privateResponse(request, env, {
+    access_token: exchange.accessToken,
+    refresh_token: exchange.refreshToken,
+    expires_in: exchange.expiresIn,
+    token_type: 'Bearer',
+  });
 }
 
 async function requestPasswordReset(request: Request, env: Env): Promise<Response> {
@@ -319,8 +414,8 @@ async function requestPasswordReset(request: Request, env: Env): Promise<Respons
   if (account.rows[0]) {
     const token = randomToken(32);
     await query(env.DB_APP_FRESH,
-      `INSERT INTO identity.password_reset_tokens (user_id, token_hash, expires_at) VALUES ($1, decode($2, 'base64'), now() + interval '30 minutes')`,
-      [account.rows[0].id, hashResetToken(token)]);
+      `INSERT INTO identity.password_reset_tokens (id, user_id, token_hash, expires_at) VALUES ($1, $2, decode($3, 'base64'), now() + interval '30 minutes')`,
+      [uuidv7(), account.rows[0].id, hashResetToken(token)]);
     await deliverAuthEmail(env, { type: 'password_reset', to: email, token });
   }
   return response(request, env, { state: 'reset_if_eligible' }, { status: 202 });
@@ -343,7 +438,7 @@ async function completePasswordReset(request: Request, env: Env): Promise<Respon
     await client.query(`UPDATE identity.auth_sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [found.rows[0].user_id]);
     await client.query(`UPDATE identity.refresh_token_families SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [found.rows[0].user_id]);
     await client.query(`UPDATE identity.users SET token_version = token_version + 1, updated_at = now() WHERE id = $1`, [found.rows[0].user_id]);
-    await client.query(`INSERT INTO identity.account_events (user_id, event_type, metadata) VALUES ($1, 'password_reset_completed', '{}'::jsonb)`, [found.rows[0].user_id]);
+    await client.query(`INSERT INTO identity.account_events (id, user_id, event_type, metadata) VALUES ($1, $2, 'password_reset_completed', '{}'::jsonb)`, [uuidv7(), found.rows[0].user_id]);
   });
   return response(request, env, { state: 'password_reset_completed' });
 }
@@ -571,26 +666,104 @@ async function rejectUploadReservation(env: Env, userId: string, sessionId: stri
 
 async function getUserProfile(request: Request, env: Env, userId: string, privateView = false): Promise<Response> {
   const result = await query(env.DB_APP_FRESH,
-    `SELECT u.id, u.display_name, u.created_at, u.status, h.handle, p.bio, p.avatar_object_id
+    `SELECT u.id, u.display_name, u.created_at, h.handle, p.bio, p.avatar_object_id,
+            COALESCE(p.trust_passport_visibility, 'public_minimal') AS trust_passport_visibility,
+            COALESCE(r.points, 0)::integer AS reputation_score
        FROM identity.users u
        LEFT JOIN identity.handles h ON h.user_id = u.id
        LEFT JOIN social.profiles p ON p.user_id = u.id
-      WHERE u.id = $1 AND u.status = 'active'`, [userId]);
-  if (!result.rows[0]) throw new Error('profile_not_found');
-  const output = privateView ? privateResponse(request, env, { profile: result.rows[0] }) : response(request, env, { profile: result.rows[0] });
+       LEFT JOIN trust.reputation_balances r ON r.user_id = u.id
+      WHERE u.id = $1 AND u.status = 'active'
+        AND ($2::boolean OR COALESCE(p.public_visibility, true))`, [userId, privateView]);
+  const profile = result.rows[0] as {
+    id: string;
+    display_name: string;
+    handle: string | null;
+    bio: string | null;
+    avatar_object_id: string | null;
+    trust_passport_visibility: string;
+    reputation_score: number;
+  } | undefined;
+  if (!profile) throw new Error('profile_not_found');
+  const body = {
+    user: {
+      id: profile.id,
+      displayName: profile.display_name,
+      handle: profile.handle,
+      avatarUrl: null,
+      bio: profile.bio,
+      tier: 'free',
+      trustPassportVisibility: profile.trust_passport_visibility,
+      reputationScore: Number(profile.reputation_score),
+      journalistVerified: false,
+      badges: [],
+    },
+  };
+  const output = privateView ? privateResponse(request, env, body) : response(request, env, body);
   if (!privateView) output.headers.set('cache-control', 'public, max-age=30, s-maxage=30');
   return output;
 }
 
+async function getUserInfo(request: Request, env: Env, userId: string): Promise<Response> {
+  if (!env.PII_ENCRYPTION_KEY_V1) throw new Error('authentication_not_configured');
+  const result = await query<{
+    id: string;
+    email_ciphertext: string | null;
+    encryption_key_version: string | null;
+    role: string | null;
+    reputation_score: number;
+    created_at: string;
+    last_login_at: string;
+  }>(env.DB_APP_FRESH,
+    `SELECT u.id,
+            convert_from(e.email_ciphertext, 'utf8') AS email_ciphertext,
+            e.encryption_key_version,
+            a.role,
+            COALESCE(r.points, 0)::integer AS reputation_score,
+            u.created_at,
+            COALESCE((SELECT max(created_at) FROM identity.account_events x WHERE x.user_id = u.id AND x.event_type = 'google_login'), u.created_at) AS last_login_at
+       FROM identity.users u
+       LEFT JOIN identity.contact_emails e ON e.user_id = u.id
+       LEFT JOIN identity.admin_memberships a ON a.user_id = u.id AND a.active = true
+       LEFT JOIN trust.reputation_balances r ON r.user_id = u.id
+      WHERE u.id = $1 AND u.status = 'active'`, [userId]);
+  const user = result.rows[0];
+  if (!user?.email_ciphertext || !user.encryption_key_version) throw new Error('userinfo_unavailable');
+  const email = await decryptField({
+    ciphertext: user.email_ciphertext,
+    encryptionKeyVersion: user.encryption_key_version,
+  }, env.PII_ENCRYPTION_KEY_V1);
+  const role = user.role === 'administrator' ? 'admin' : user.role === 'moderator' || user.role === 'privacy_operator' ? 'moderator' : 'user';
+  return privateResponse(request, env, {
+    id: user.id,
+    sub: user.id,
+    email,
+    role,
+    tier: 'bronze',
+    subscription_tier: 'free',
+    reputation_score: Number(user.reputation_score),
+    created_at: user.created_at,
+    last_login_at: user.last_login_at,
+  });
+}
+
 async function updateProfile(request: Request, env: Env, user: Principal): Promise<Response> {
-  const input = await readJson<{ displayName?: string; bio?: string }>(request, 16 * 1024);
+  const input = await readJson<{ displayName?: string; bio?: string; trustPassportVisibility?: string }>(request, 16 * 1024);
   const displayName = input.displayName?.trim();
   const bio = input.bio?.trim();
+  const visibility = input.trustPassportVisibility;
   if (displayName !== undefined && (displayName.length < 1 || displayName.length > 160)) throw new Error('invalid_display_name');
   if (bio !== undefined && bio.length > 2000) throw new Error('invalid_bio');
+  if (visibility !== undefined && !['public_expanded', 'public_minimal', 'private'].includes(visibility)) throw new Error('invalid_profile_visibility');
   await transaction(env.DB_APP_FRESH, async (client) => {
     if (displayName !== undefined) await client.query('UPDATE identity.users SET display_name = $1, updated_at = now() WHERE id = $2', [displayName, user.userId]);
     if (bio !== undefined) await client.query(`INSERT INTO social.profiles (user_id, bio) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET bio = EXCLUDED.bio, updated_at = now()`, [user.userId, bio]);
+    if (visibility !== undefined) await client.query(
+      `INSERT INTO social.profiles (user_id, public_visibility, trust_passport_visibility)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (user_id) DO UPDATE SET public_visibility = EXCLUDED.public_visibility,
+         trust_passport_visibility = EXCLUDED.trust_passport_visibility, updated_at = now()`,
+      [user.userId, visibility !== 'private', visibility]);
   });
   return getUserProfile(request, env, user.userId, true);
 }
@@ -692,10 +865,54 @@ async function createPrivacyRequest(request: Request, env: Env, user: Principal)
   const input = await readJson<{ requestType?: 'export' | 'delete' | 'rectify' }>(request, 8 * 1024);
   if (!input.requestType || !['export', 'delete', 'rectify'].includes(input.requestType)) throw new Error('invalid_privacy_request');
   const requestId = uuidv7();
-  await transaction(env.DB_APP_FRESH, async (client) => {
+  const acceptedAt = await transaction(env.DB_APP_FRESH, async (client) => {
+    const created = await client.query<{ created_at: string }>(
+      `INSERT INTO privacy.requests (id, subject_id, request_type)
+       VALUES ($1, $2, $3)
+       RETURNING created_at`,
+      [requestId, user.userId, input.requestType],
+    );
     await client.query(`INSERT INTO system.outbox_events (id, event_type, aggregate_type, aggregate_id, actor_id, payload) VALUES ($1, 'privacy.request.created', 'privacy_request', $2, $3, $4::jsonb)`, [uuidv7(), requestId, user.userId, JSON.stringify({ requestType: input.requestType })]);
+    return created.rows[0]?.created_at;
   });
-  return privateResponse(request, env, { requestId, state: 'received' }, { status: 202 });
+  return privateResponse(request, env, {
+    requestId,
+    requestType: input.requestType,
+    state: 'received',
+    acceptedAt,
+  }, { status: 202 });
+}
+
+async function getPrivacyRequestStatus(request: Request, env: Env, user: Principal): Promise<Response> {
+  const url = new URL(request.url);
+  const requestType = url.searchParams.get('requestType');
+  if (requestType && !['export', 'delete', 'rectify'].includes(requestType)) throw new Error('invalid_privacy_request');
+  const result = await query<{
+    id: string;
+    request_type: string;
+    state: string;
+    created_at: string;
+    completed_at: string | null;
+  }>(
+    env.DB_APP_FRESH,
+    `SELECT id, request_type, state, created_at, completed_at
+       FROM privacy.requests
+      WHERE subject_id = $1
+        AND ($2::text IS NULL OR request_type = $2)
+      ORDER BY created_at DESC
+      LIMIT 1`,
+    [user.userId, requestType],
+  );
+  const row = result.rows[0];
+  return privateResponse(request, env, {
+    request: row ? {
+      requestId: row.id,
+      requestType: row.request_type,
+      state: row.state,
+      acceptedAt: row.created_at,
+      completedAt: row.completed_at,
+    } : null,
+  });
 }
 
 async function getStorage(request: Request, env: Env, user: Principal): Promise<Response> {
@@ -729,8 +946,8 @@ async function updateRetentionRule(request: Request, env: Env, user: Principal):
     throw new Error('invalid_retention_period');
   }
   await query(env.DB_APP_FRESH,
-    `SELECT privacy.set_retention_rule($1, $2, make_interval(days => $3::integer), $4)`,
-    [user.userId, contentType, input.retentionDays, 'user-v1']);
+    `SELECT privacy.set_retention_rule($1, $2, $3, make_interval(days => $4::integer), $5)`,
+    [uuidv7(), user.userId, contentType, input.retentionDays, 'user-v1']);
   return privateResponse(request, env, { contentType, retentionDays: input.retentionDays });
 }
 
@@ -768,7 +985,7 @@ export default {
     try {
       assertExpectedHostname(request, env.EXPECTED_HOSTNAMES);
       const url = new URL(request.url);
-      if (request.method === 'OPTIONS') return response(request, env, null, { status: 204, headers: { 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'Authorization, Content-Type, X-Correlation-ID' } });
+      if (request.method === 'OPTIONS') return response(request, env, null, { status: 204, headers: { 'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS', 'access-control-allow-headers': 'Authorization, Content-Type, Idempotency-Key, X-Correlation-ID, X-Device-Rooted, X-Device-Emulator, X-Device-Debug, X-Live-Test-Mode' } });
       if (request.method === 'GET' && (url.pathname === '/health' || url.pathname === '/api/health')) return response(request, env, { status: 'ok', service: 'lythaus-public-api', environment: env.ENVIRONMENT ?? 'unknown' });
       if (request.method === 'GET' && (url.pathname === '/ready' || url.pathname === '/api/ready')) {
         await query(env.DB_APP_FRESH, 'SELECT 1 AS ready');
@@ -787,7 +1004,7 @@ export default {
       const comments = url.pathname.match(/^\/api\/posts\/([^/]+)\/comments$/);
       if (request.method === 'GET' && comments) return await getComments(request, env, comments[1]);
       if (request.method === 'GET' && url.pathname === '/api/users/me') return await getUserProfile(request, env, (await principal(request, env)).userId, true);
-      if (request.method === 'PUT' && url.pathname === '/api/users/me') {
+      if ((request.method === 'PUT' || request.method === 'PATCH') && url.pathname === '/api/users/me') {
         const user = await principal(request, env);
         return await idempotentMutation(request, env, user.userId, 'profile.update', () => updateProfile(request, env, user));
       }
@@ -855,6 +1072,9 @@ export default {
       }
       const appeal = url.pathname.match(/^\/api\/appeals\/([^/]+)$/);
       if (request.method === 'GET' && appeal) return await getAppeal(request, env, await principal(request, env), appeal[1]);
+      if (request.method === 'GET' && url.pathname === '/api/privacy/requests') {
+        return await getPrivacyRequestStatus(request, env, await principal(request, env));
+      }
       if (request.method === 'POST' && (url.pathname === '/api/privacy/requests' || url.pathname === '/api/privacy/request')) {
         const user = await principal(request, env);
         return await idempotentMutation(request, env, user.userId, 'privacy.request.create', () => createPrivacyRequest(request, env, user));
@@ -868,7 +1088,7 @@ export default {
         const user = await principal(request, env);
         return await idempotentMutation(request, env, user.userId, 'retention.update', () => updateRetentionRule(request, env, user));
       }
-      if (request.method === 'GET' && url.pathname === '/api/auth/userinfo') return await getUserProfile(request, env, (await principal(request, env)).userId, true);
+      if (request.method === 'GET' && url.pathname === '/api/auth/userinfo') return await getUserInfo(request, env, (await principal(request, env)).userId);
       if (url.pathname === '/api/auth/email' || url.pathname === '/api/authEmail' || url.pathname.startsWith('/api/auth/email/verify') || url.pathname.startsWith('/api/auth/password/reset') || url.pathname === '/api/auth/password-reset') {
         if (env.EMAIL_PROVIDER_MODE === 'disabled') return response(request, env, { error: 'provider_unavailable', provider: 'email', correlationId: id }, { status: 404 });
       }
@@ -878,8 +1098,9 @@ export default {
       if (request.method === 'POST' && url.pathname === '/api/auth/password/reset/complete') return await completePasswordReset(request, env);
       if (request.method === 'POST' && url.pathname === '/api/auth/refresh') return await refreshSession(request, env);
       if (request.method === 'POST' && url.pathname === '/api/auth/logout') return await logout(request, env);
-      if (request.method === 'GET' && url.pathname === '/api/auth/google') return await googleAuthStart(request, env);
+      if (request.method === 'GET' && (url.pathname === '/api/auth/authorize' || url.pathname === '/api/auth/google')) return await googleAuthStart(request, env);
       if (request.method === 'GET' && url.pathname === '/api/auth/google/callback') return await googleAuthCallback(request, env);
+      if (request.method === 'POST' && url.pathname === '/api/auth/token') return await exchangeOAuthCode(request, env);
       if (request.method === 'POST' && url.pathname === '/api/posts') {
         const user = await principal(request, env);
         return await idempotentMutation(request, env, user.userId, 'post.create', () => createPost(request, env, user));

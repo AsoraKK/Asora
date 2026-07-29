@@ -3,8 +3,8 @@
   "required": [
     {
       "name": "pgcrypto",
-      "purpose": "cryptographic helpers and UUID generation fallback",
-      "launchFeature": "identity and encrypted-field support"
+      "purpose": "provider-supported cryptographic helpers",
+      "launchFeature": "encrypted-field support"
     },
     {
       "name": "pg_trgm",
@@ -17,20 +17,12 @@
       "launchFeature": "public-search normalization"
     }
   ],
-  "optional": [
-    {
-      "name": "postgis",
-      "purpose": "deferred polygon and distance analysis",
-      "launchFeature": "advanced geography",
-      "availability": "blocked-by-provider",
-      "launchBlocking": false
-    }
-  ],
-  "failurePolicy": "Do not mark cryptographic, handle-search, or normalization capabilities ready until every required extension is installed and verified. PostGIS is explicitly deferred and is not a launch requirement.",
+  "optional": [],
+  "failurePolicy": "Do not mark cryptographic, handle-search, or normalization capabilities ready until every required extension is installed and verified. Advanced spatial support is outside the launch architecture.",
   "providerEvidence": {
     "checkedAt": "2026-07-28",
     "branch": "development",
     "status": "blocked",
-    "reason": "pgcrypto, pg_trgm, and unaccent are installed on development; PostGIS is temporarily disabled by PlanetScale and excluded from the immutable extension allowlist."
+    "reason": "pgcrypto, pg_trgm, and unaccent are installed on development. No spatial extension is required."
   }
 }

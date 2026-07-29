@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA OAUTH2 SIGN-IN SCREEN
+/// LYTHAUS OAUTH2 SIGN-IN SCREEN
 ///
 /// 🎯 Purpose: OAuth2 authentication UI with PKCE flow
 /// 🏗️ Architecture: Flutter UI with Riverpod state management
@@ -14,7 +14,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:asora/design_system/components/lyth_button.dart';
 import 'package:asora/design_system/components/lyth_snackbar.dart';
-import 'package:asora/design_system/components/lyth_text_field.dart';
 import 'package:asora/design_system/theme/theme_build_context_x.dart';
 import 'package:asora/features/auth/application/auth_providers.dart';
 import 'package:asora/features/auth/domain/auth_failure.dart';
@@ -43,10 +42,6 @@ class OAuth2SignInScreen extends ConsumerWidget {
 
               // OAuth2 sign-in button
               _buildOAuth2SignInButton(context, ref, isLoading),
-              SizedBox(height: spacing.lg),
-
-              // Alternative email sign-in
-              _buildEmailSignInSection(context, ref, isLoading),
               SizedBox(height: spacing.xxl),
 
               // Error handling
@@ -87,7 +82,7 @@ class OAuth2SignInScreen extends ConsumerWidget {
         ),
         SizedBox(height: context.spacing.sm),
         Text(
-          'Sign in securely with Microsoft Entra',
+          'Sign in securely with Google',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: Theme.of(
               context,
@@ -105,39 +100,10 @@ class OAuth2SignInScreen extends ConsumerWidget {
     bool isLoading,
   ) {
     return LythButton.primary(
-      label: 'Sign in with Microsoft',
+      label: 'Sign in with Google',
       icon: Icons.security,
       onPressed: isLoading ? null : () => _handleOAuth2SignIn(context, ref),
       isLoading: isLoading,
-    );
-  }
-
-  Widget _buildEmailSignInSection(
-    BuildContext context,
-    WidgetRef ref,
-    bool isLoading,
-  ) {
-    return Column(
-      children: [
-        Divider(color: Theme.of(context).dividerColor),
-        SizedBox(height: context.spacing.md),
-        Text(
-          'Or sign in with email',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(
-              context,
-            ).colorScheme.onSurface.withValues(alpha: 0.6),
-          ),
-        ),
-        SizedBox(height: context.spacing.md),
-        LythButton.secondary(
-          label: 'Email Sign In',
-          icon: Icons.email_outlined,
-          onPressed: isLoading
-              ? null
-              : () => _showEmailSignInDialog(context, ref),
-        ),
-      ],
     );
   }
 
@@ -192,53 +158,5 @@ class OAuth2SignInScreen extends ConsumerWidget {
       // Error will be handled by the error state in the UI
       debugPrint('OAuth2 sign-in error: $error');
     }
-  }
-
-  void _showEmailSignInDialog(BuildContext context, WidgetRef ref) {
-    final emailController = TextEditingController();
-    final passwordController = TextEditingController();
-
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Email Sign In'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            LythTextField.email(
-              controller: emailController,
-              label: 'Email',
-              onChanged: (_) {},
-            ),
-            SizedBox(height: context.spacing.md),
-            LythTextField.password(
-              controller: passwordController,
-              label: 'Password',
-              onChanged: (_) {},
-            ),
-          ],
-        ),
-        actions: [
-          LythButton.tertiary(
-            label: 'Cancel',
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-          LythButton.primary(
-            label: 'Sign In',
-            onPressed: () async {
-              final email = emailController.text.trim();
-              final password = passwordController.text.trim();
-
-              if (email.isNotEmpty && password.isNotEmpty) {
-                Navigator.of(context).pop();
-                await ref
-                    .read(authStateProvider.notifier)
-                    .signInWithEmail(email, password);
-              }
-            },
-          ),
-        ],
-      ),
-    );
   }
 }

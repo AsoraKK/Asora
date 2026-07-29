@@ -15,7 +15,10 @@ class TestPrivacyApi implements PrivacyApi {
 
   @override
   Future<ExportRequestResult> requestExport({required String authToken}) async {
-    return ExportRequestResult(acceptedAt: DateTime.now().toUtc());
+    return ExportRequestResult(
+      requestId: 'request-1',
+      acceptedAt: DateTime.now().toUtc(),
+    );
   }
 }
 

@@ -7,8 +7,12 @@ import 'dart:async';
 import 'package:built_value/serializer.dart';
 import 'package:dio/dio.dart';
 
+import 'package:asora_api_client/src/api_util.dart';
 import 'package:asora_api_client/src/model/account_delete_response.dart';
 import 'package:asora_api_client/src/model/dsr_export_response.dart';
+import 'package:asora_api_client/src/model/privacy_request_accepted.dart';
+import 'package:asora_api_client/src/model/privacy_request_create.dart';
+import 'package:asora_api_client/src/model/privacy_request_status_response.dart';
 import 'package:asora_api_client/src/model/rate_limit_error.dart';
 import 'package:asora_api_client/src/model/unauthorized_error.dart';
 import 'package:asora_api_client/src/model/validation_error_response.dart';
@@ -21,8 +25,8 @@ class PrivacyApi {
 
   const PrivacyApi(this._dio, this._serializers);
 
-  /// Delete own account (GDPR Article 17)
-  /// Permanently deletes the authenticated user&#39;s account and anonymises all authored content. Requires the &#x60;X-Confirm-Delete: true&#x60; header to guard against accidental invocations. This action is **irreversible**.
+  /// Legacy synchronous account deletion
+  /// Legacy Azure Functions compatibility route retained only while source migration evidence is collected. The Lythaus production runtime uses the asynchronous &#x60;/privacy/requests&#x60; contract.
   ///
   /// Parameters:
   /// * [xConfirmDelete] - Must be set to \"true\" to confirm deletion
@@ -35,6 +39,7 @@ class PrivacyApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AccountDeleteResponse] as data
   /// Throws [DioException] if API call or serialization fails
+  @Deprecated('This operation has been deprecated')
   Future<Response<AccountDeleteResponse>> deleteUserAccount({
     required String xConfirmDelete,
     CancelToken? cancelToken,
@@ -103,8 +108,8 @@ class PrivacyApi {
     );
   }
 
-  /// Export personal data (GDPR Article 20)
-  /// Returns a structured copy of all personal data held for the authenticated user. Export cooldown periods are tier-gated. The &#x60;X-Export-ID&#x60; response header contains the export identifier for tracking.
+  /// Legacy synchronous personal-data export
+  /// Legacy Azure Functions compatibility route retained only while source migration evidence is collected. The Lythaus production runtime uses the asynchronous &#x60;/privacy/requests&#x60; contract.
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -116,6 +121,7 @@ class PrivacyApi {
   ///
   /// Returns a [Future] containing a [Response] with a [DSRExportResponse] as data
   /// Throws [DioException] if API call or serialization fails
+  @Deprecated('This operation has been deprecated')
   Future<Response<DSRExportResponse>> exportUserData({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -171,6 +177,196 @@ class PrivacyApi {
     }
 
     return Response<DSRExportResponse>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Submit an asynchronous privacy request
+  /// Records an export, account deletion, or rectification request and queues it for durable processing. Acceptance does not mean processing is complete.
+  ///
+  /// Parameters:
+  /// * [privacyRequestCreate]
+  /// * [idempotencyKey]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [PrivacyRequestAccepted] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<PrivacyRequestAccepted>> privacyRequestCreate({
+    required PrivacyRequestCreate privacyRequestCreate,
+    String? idempotencyKey,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/privacy/requests';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        if (idempotencyKey != null) r'Idempotency-Key': idempotencyKey,
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'bearerAuth',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(PrivacyRequestCreate);
+      _bodyData = _serializers.serialize(privacyRequestCreate, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    PrivacyRequestAccepted? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(PrivacyRequestAccepted),
+      ) as PrivacyRequestAccepted;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<PrivacyRequestAccepted>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Get the latest privacy request status
+  /// Returns the authenticated user&#39;s latest matching asynchronous privacy request.
+  ///
+  /// Parameters:
+  /// * [requestType]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [PrivacyRequestStatusResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<PrivacyRequestStatusResponse>> privacyRequestStatus({
+    String? requestType,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/privacy/requests';
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'bearerAuth',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _queryParameters = <String, dynamic>{
+      if (requestType != null) r'requestType': encodeQueryParameter(_serializers, requestType, const FullType(String)),
+    };
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      queryParameters: _queryParameters,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    PrivacyRequestStatusResponse? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(PrivacyRequestStatusResponse),
+      ) as PrivacyRequestStatusResponse;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<PrivacyRequestStatusResponse>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

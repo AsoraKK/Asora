@@ -6,16 +6,13 @@
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": false,
   "preview_urls": false,
-  "routes": [{ "pattern": "admin-api.lythaus.co", "custom_domain": true }],
+  "keep_vars": true,
   "observability": { "enabled": true, "head_sampling_rate": 0.25 },
   "vars": {
     "ENVIRONMENT": "production",
     "EXPECTED_HOSTNAMES": "admin-api.lythaus.co",
     "CORS_ALLOWED_ORIGINS": "https://admin.lythaus.co",
-    "HYPERDRIVE_QUERY_CACHE_MODE": "disabled",
-    "ACCESS_TEAM_DOMAIN": "REPLACE_WITH_ACCESS_TEAM_DOMAIN",
-    "ACCESS_AUDIENCE": "REPLACE_WITH_ACCESS_AUDIENCE",
-    "ACCESS_JWKS_URL": "REPLACE_WITH_ACCESS_JWKS_URL"
+    "HYPERDRIVE_QUERY_CACHE_MODE": "disabled"
   },
   "hyperdrive": [
     { "binding": "DB_ADMIN_FRESH", "id": "6bfbb0eab42642e8ad294dbf59294ed3" },

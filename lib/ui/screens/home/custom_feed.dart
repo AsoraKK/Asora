@@ -85,10 +85,10 @@ class CustomFeedView extends ConsumerWidget {
                           )
                           .toList(),
                     ),
-                    ],
-                  ),
+                  ],
                 ),
               ),
+            ),
             if (items.isEmpty)
               const SliverFillRemaining(
                 hasScrollBody: false,

@@ -17,8 +17,7 @@ import 'package:asora/features/auth/domain/user.dart';
 class MockPostRepository extends Mock implements PostRepository {}
 
 class _SeededPostCreationNotifier extends PostCreationNotifier {
-  _SeededPostCreationNotifier(super.ref, PostCreationState initial)
-      : super() {
+  _SeededPostCreationNotifier(super.ref, PostCreationState initial) : super() {
     state = initial;
   }
 }
@@ -344,7 +343,9 @@ void main() {
         buildWithState(
           const PostCreationState(
             text: 'Hello world',
-            proofSignals: ProofSignals(captureMetadataHash: 'abc123def456ghi789'),
+            proofSignals: ProofSignals(
+              captureMetadataHash: 'abc123def456ghi789',
+            ),
           ),
           user: _testUser(),
         ),

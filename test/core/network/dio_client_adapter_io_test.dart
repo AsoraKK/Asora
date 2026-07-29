@@ -87,7 +87,11 @@ void main() {
     expect(adapter.validateCertificate, isNotNull);
     expect(adapter.validateCertificate!(null, 'api.example.com', 443), isFalse);
     expect(
-      adapter.validateCertificate!(_FakeCertificate(), 'other.example.com', 443),
+      adapter.validateCertificate!(
+        _FakeCertificate(),
+        'other.example.com',
+        443,
+      ),
       isTrue,
     );
   });

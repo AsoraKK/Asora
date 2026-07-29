@@ -2,6 +2,7 @@ import { query, transaction, type HyperdriveBinding } from '@lythaus/db';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { createPresignedGetUrl } from '@lythaus/media';
 import { json, logEvent } from '@lythaus/observability';
+import { uuidv7 } from '@lythaus/security';
 import { WorkflowEntrypoint } from 'cloudflare:workers';
 import type { WorkflowEvent, WorkflowStep } from 'cloudflare:workers';
 
@@ -55,7 +56,7 @@ function hasMagicBytes(bytes: Uint8Array, contentType: string): boolean {
 }
 
 async function moderateTextWithHive(text: string, userId: string, contentId: string, env: Env): Promise<HiveResult> {
-  if (!env.HIVE_API_KEY) throw new Error('hive_not_configured');
+  if (env.PAID_AI_DETECTION_ENABLED !== 'true' || !env.HIVE_API_KEY) throw new Error('hive_not_configured');
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15_000);
   try {
@@ -77,7 +78,7 @@ async function moderateTextWithHive(text: string, userId: string, contentId: str
 }
 
 async function moderateImageWithHive(imageUrl: string, userId: string, contentId: string, env: Env): Promise<HiveResult> {
-  if (!env.HIVE_API_KEY) throw new Error('hive_not_configured');
+  if (env.PAID_AI_DETECTION_ENABLED !== 'true' || !env.HIVE_API_KEY) throw new Error('hive_not_configured');
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 20_000);
   try {
@@ -111,6 +112,38 @@ async function processPostModeration(message: QueueMessage, env: Env): Promise<v
   const prior = await query(env.DB_JOBS_FRESH,
     `SELECT 1 FROM moderation.detector_runs WHERE content_type = 'post' AND content_id = $1 AND provider = 'hive' LIMIT 1`, [postId]);
   if (prior.rowCount !== 0) return;
+  if (env.PAID_AI_DETECTION_ENABLED !== 'true' || !env.HIVE_API_KEY) {
+    await transaction(env.DB_JOBS_FRESH, async (client) => {
+      await client.query(
+        `INSERT INTO content.content_declarations (post_id, declared_creation_mode, public_label, declaration_conflict, review_required)
+         VALUES ($1, $2, 'Under review', false, true)
+         ON CONFLICT (post_id) DO UPDATE SET public_label = 'Under review',
+           detector_provider = NULL, detector_model_version = NULL, detector_signal = NULL,
+           declaration_conflict = false, review_required = true, updated_at = now()`,
+        [postId, post.declared_creation_mode]
+      );
+      await client.query(
+        `INSERT INTO moderation.cases (id, content_type, content_id, state, policy_version)
+         SELECT $1, 'post', $2, 'open', 'manual-v1'
+          WHERE NOT EXISTS (
+            SELECT 1 FROM moderation.cases
+             WHERE content_type = 'post' AND content_id = $2 AND state = 'open'
+          )`,
+        [uuidv7(), postId]
+      );
+      await client.query(
+        `INSERT INTO trust.provenance_events
+           (id, content_id, author_id, declared_creation_mode, policy_version, final_decision)
+         SELECT $1, $2, $3, $4, 'manual-v1', 'queue'
+          WHERE NOT EXISTS (
+            SELECT 1 FROM trust.provenance_events
+             WHERE content_id = $2 AND policy_version = 'manual-v1'
+          )`,
+        [uuidv7(), postId, post.author_id, post.declared_creation_mode]
+      );
+    });
+    return;
+  }
   const result = await moderateTextWithHive(post.body, post.author_id, postId, env);
   const modelVersion = env.HIVE_MODEL_VERSION ?? HIVE_DEFAULT_MODELS.join('+');
   const detectedContentClass = result.classes[0]?.class ?? null;
@@ -125,8 +158,8 @@ async function processPostModeration(message: QueueMessage, env: Env): Promise<v
     const existing = await client.query(`SELECT 1 FROM moderation.detector_runs WHERE content_type = 'post' AND content_id = $1 AND provider = 'hive' LIMIT 1`, [postId]);
     if (existing.rowCount !== 0) return;
     await client.query(
-      `INSERT INTO moderation.detector_runs (content_type, content_id, provider, model_version, signal) VALUES ('post', $1, 'hive', $2, $3::jsonb)`,
-      [postId, modelVersion, signal]
+      `INSERT INTO moderation.detector_runs (id, content_type, content_id, provider, model_version, signal) VALUES ($1, 'post', $2, 'hive', $3, $4::jsonb)`,
+      [uuidv7(), postId, modelVersion, signal]
     );
     await client.query(
       `INSERT INTO content.content_declarations (post_id, declared_creation_mode, public_label, detector_provider, detector_model_version, detector_signal, declaration_conflict, review_required)
@@ -137,17 +170,17 @@ async function processPostModeration(message: QueueMessage, env: Env): Promise<v
       [postId, post.declared_creation_mode, publicLabel, modelVersion, signal, declarationConflict, effectiveAction !== 'allow']
     );
     const caseResult = await client.query<{ id: string }>(
-      `INSERT INTO moderation.cases (content_type, content_id, state, policy_version) VALUES ('post', $1, $2, 'hive-v1') RETURNING id`,
-      [postId, result.action === 'allow' ? 'resolved' : 'open']
+      `INSERT INTO moderation.cases (id, content_type, content_id, state, policy_version) VALUES ($1, 'post', $2, $3, 'hive-v1') RETURNING id`,
+      [uuidv7(), postId, result.action === 'allow' ? 'resolved' : 'open']
     );
     await client.query(
-      `INSERT INTO moderation.decisions (case_id, outcome, public_label, policy_version) VALUES ($1, $2, $3, 'hive-v1')`,
-      [caseResult.rows[0].id, result.action, publicLabel]
+      `INSERT INTO moderation.decisions (id, case_id, outcome, public_label, policy_version) VALUES ($1, $2, $3, $4, 'hive-v1')`,
+      [uuidv7(), caseResult.rows[0].id, result.action, publicLabel]
     );
     await client.query(
-      `INSERT INTO trust.provenance_events (content_id, author_id, declared_creation_mode, detected_content_class, detector_provider, detector_model_version, policy_version, final_decision)
-       VALUES ($1, $2, $3, $4, 'hive', $5, 'hive-v1', $6)`,
-      [postId, post.author_id, post.declared_creation_mode, detectedContentClass, modelVersion, effectiveAction]
+      `INSERT INTO trust.provenance_events (id, content_id, author_id, declared_creation_mode, detected_content_class, detector_provider, detector_model_version, policy_version, final_decision)
+       VALUES ($1, $2, $3, $4, $5, 'hive', $6, 'hive-v1', $7)`,
+      [uuidv7(), postId, post.author_id, post.declared_creation_mode, detectedContentClass, modelVersion, effectiveAction]
     );
     if (effectiveAction === 'allow') {
       await client.query(`UPDATE content.posts SET moderation_state = 'allowed', published_at = COALESCE(published_at, now()), updated_at = now() WHERE id = $1`, [postId]);
@@ -163,8 +196,8 @@ async function processPostModeration(message: QueueMessage, env: Env): Promise<v
       );
       if (post.declared_creation_mode !== 'ai_generated') {
         await client.query(
-          `INSERT INTO trust.human_contribution_events (subject_user_id, content_id, human_authorship_eligibility, policy_version, points_delta)
-           VALUES ($1, $2, true, 'hive-v1', 0)`, [post.author_id, postId]
+          `INSERT INTO trust.human_contribution_events (id, subject_user_id, content_id, human_authorship_eligibility, policy_version, points_delta)
+           VALUES ($1, $2, $3, true, 'hive-v1', 0)`, [uuidv7(), post.author_id, postId]
         );
       }
     } else if (effectiveAction === 'block') {
@@ -254,21 +287,21 @@ async function processMediaUpload(message: QueueMessage, env: Env): Promise<void
 
   await transaction(env.DB_JOBS_FRESH, async (client) => {
     const inserted = await client.query<{ id: string }>(
-      `INSERT INTO media.objects (owner_id, object_key, content_type, byte_size, sha256, state)
-       VALUES ($1, $2, 'image/webp', $3, $4, $5) ON CONFLICT (object_key) DO NOTHING RETURNING id`,
-      [row.user_id, approvedKey, approvedBytes.byteLength, sha256, moderationState]
+      `INSERT INTO media.objects (id, owner_id, object_key, content_type, byte_size, sha256, state)
+       VALUES ($1, $2, $3, 'image/webp', $4, $5, $6) ON CONFLICT (object_key) DO NOTHING RETURNING id`,
+      [uuidv7(), row.user_id, approvedKey, approvedBytes.byteLength, sha256, moderationState]
     );
     if (inserted.rowCount !== 0) {
       const objectId = inserted.rows[0].id;
       await client.query(`INSERT INTO media.ownership (object_id, owner_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [objectId, row.user_id]);
       await client.query(
-        `INSERT INTO media.variants (object_id, object_key, content_type, byte_size, width, height)
-         VALUES ($1, $2, 'image/webp', $3, $4, $5) ON CONFLICT (object_key) DO NOTHING`,
-        [objectId, approvedKey, approvedBytes.byteLength, sourceInfo.width, sourceInfo.height]
+        `INSERT INTO media.variants (id, object_id, object_key, content_type, byte_size, width, height)
+         VALUES ($1, $2, $3, 'image/webp', $4, $5, $6) ON CONFLICT (object_key) DO NOTHING`,
+        [uuidv7(), objectId, approvedKey, approvedBytes.byteLength, sourceInfo.width, sourceInfo.height]
       );
       await client.query(
-        `INSERT INTO media.moderation_results (object_id, provider, model_version, signal) VALUES ($1, 'hive', $2, $3::jsonb)`,
-        [objectId, env.HIVE_MODEL_VERSION ?? 'image_classification_v1', moderationSignal]
+        `INSERT INTO media.moderation_results (id, object_id, provider, model_version, signal) VALUES ($1, $2, 'hive', $3, $4::jsonb)`,
+        [uuidv7(), objectId, env.HIVE_MODEL_VERSION ?? 'image_classification_v1', moderationSignal]
       );
       await client.query(
         `INSERT INTO media.storage_ledger (user_id, bytes_uploaded, bytes_approved, object_count)
@@ -409,11 +442,11 @@ export default {
 
   async scheduled(_event: unknown, env: Env): Promise<void> {
     await relayOutbox(env);
-    if (env.RETENTION_CLEANUP) {
+    const now = new Date();
+    if (env.RETENTION_CLEANUP && now.getUTCHours() === 2 && now.getUTCMinutes() === 0) {
       const runId = new Date().toISOString().slice(0, 10);
       await env.RETENTION_CLEANUP.create({ id: `retention-${runId}`, params: { runId } });
     }
-    const now = new Date();
     if (env.BACKUP_VALIDATION && now.getUTCDate() === 1 && now.getUTCHours() === 3 && now.getUTCMinutes() === 0) {
       const runId = now.toISOString().slice(0, 10);
       await env.BACKUP_VALIDATION.create({ id: `backup-validation-${runId}`, params: { runId } });
@@ -431,10 +464,10 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
         `SELECT id FROM privacy.requests WHERE id = $1 AND subject_id = $2 AND request_type = 'delete'`, [requestedId, subjectId]);
       if (!result.rows[0]) throw new Error('privacy_delete_request_not_found');
       await query(this.env.DB_PRIVACY_FRESH,
-        `INSERT INTO privacy.request_events (request_id, event_type, metadata)
-         SELECT $1, 'workflow_started', $2::jsonb
-          WHERE NOT EXISTS (SELECT 1 FROM privacy.request_events WHERE request_id = $1 AND event_type = 'workflow_started')`,
-        [result.rows[0].id, JSON.stringify({ subjectId })]);
+        `INSERT INTO privacy.request_events (id, request_id, event_type, metadata)
+         SELECT $1, $2, 'workflow_started', $3::jsonb
+          WHERE NOT EXISTS (SELECT 1 FROM privacy.request_events WHERE request_id = $2 AND event_type = 'workflow_started')`,
+        [uuidv7(), result.rows[0].id, JSON.stringify({ subjectId })]);
       return result.rows[0].id;
     });
 
@@ -453,10 +486,10 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
         await query(this.env.DB_PRIVACY_FRESH,
           `UPDATE privacy.requests SET state = 'blocked' WHERE id = $1 AND state <> 'completed'`, [requestId]);
         await query(this.env.DB_PRIVACY_FRESH,
-          `INSERT INTO privacy.request_events (request_id, event_type, metadata)
-           SELECT $1, 'blocked_legal_hold', $2::jsonb
-            WHERE NOT EXISTS (SELECT 1 FROM privacy.request_events WHERE request_id = $1 AND event_type = 'blocked_legal_hold')`,
-          [requestId, JSON.stringify({ legalHoldId: result.rows[0].id })]);
+          `INSERT INTO privacy.request_events (id, request_id, event_type, metadata)
+           SELECT $1, $2, 'blocked_legal_hold', $3::jsonb
+            WHERE NOT EXISTS (SELECT 1 FROM privacy.request_events WHERE request_id = $2 AND event_type = 'blocked_legal_hold')`,
+          [uuidv7(), requestId, JSON.stringify({ legalHoldId: result.rows[0].id })]);
         return true;
       }
       return false;
@@ -474,6 +507,7 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
       await transaction(this.env.DB_PRIVACY_FRESH, async (client) => {
         await client.query(`DELETE FROM identity.provider_links WHERE user_id = $1`, [subjectId]);
         await client.query(`DELETE FROM identity.email_credentials WHERE user_id = $1`, [subjectId]);
+        await client.query(`DELETE FROM identity.contact_emails WHERE user_id = $1`, [subjectId]);
         await client.query(`DELETE FROM identity.email_verification_tokens WHERE user_id = $1`, [subjectId]);
         await client.query(`DELETE FROM identity.password_reset_tokens WHERE user_id = $1`, [subjectId]);
         await client.query(`DELETE FROM identity.handles WHERE user_id = $1`, [subjectId]);
@@ -505,9 +539,9 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
       await transaction(this.env.DB_PRIVACY_FRESH, async (client) => {
         await client.query(`INSERT INTO privacy.deletion_tombstones (subject_id, evidence_hash) VALUES ($1, $2) ON CONFLICT (subject_id) DO UPDATE SET completed_at = now(), evidence_hash = EXCLUDED.evidence_hash`, [subjectId, evidenceHash]);
         await client.query(`UPDATE privacy.requests SET state = 'completed', completed_at = now() WHERE id = $1`, [requestId]);
-        await client.query(`INSERT INTO privacy.request_events (request_id, event_type, metadata)
-          SELECT $1, 'completed', $2::jsonb
-           WHERE NOT EXISTS (SELECT 1 FROM privacy.request_events WHERE request_id = $1 AND event_type = 'completed')`, [requestId, JSON.stringify({ evidenceHash })]);
+        await client.query(`INSERT INTO privacy.request_events (id, request_id, event_type, metadata)
+          SELECT $1, $2, 'completed', $3::jsonb
+           WHERE NOT EXISTS (SELECT 1 FROM privacy.request_events WHERE request_id = $2 AND event_type = 'completed')`, [uuidv7(), requestId, JSON.stringify({ evidenceHash })]);
       });
       return evidenceHash;
     });
@@ -527,10 +561,10 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
         `SELECT id FROM privacy.requests WHERE id = $1 AND subject_id = $2 AND request_type = 'export'`, [requestedId, subjectId]);
       if (!result.rows[0]) throw new Error('privacy_export_request_not_found');
       await query(this.env.DB_PRIVACY_FRESH,
-        `INSERT INTO privacy.request_events (request_id, event_type, metadata)
-         SELECT $1, 'workflow_started', $2::jsonb
-          WHERE NOT EXISTS (SELECT 1 FROM privacy.request_events WHERE request_id = $1 AND event_type = 'workflow_started')`,
-        [result.rows[0].id, JSON.stringify({ subjectId })]);
+        `INSERT INTO privacy.request_events (id, request_id, event_type, metadata)
+         SELECT $1, $2, 'workflow_started', $3::jsonb
+          WHERE NOT EXISTS (SELECT 1 FROM privacy.request_events WHERE request_id = $2 AND event_type = 'workflow_started')`,
+        [uuidv7(), result.rows[0].id, JSON.stringify({ subjectId })]);
       return result.rows[0].id;
     });
 
@@ -571,11 +605,17 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
       const objectKey = `exports/${subjectId}/${requestId}.json`;
       await exportsBucket.put(objectKey, bytes, { httpMetadata: { contentType: 'application/json' } });
       await transaction(this.env.DB_PRIVACY_FRESH, async (client) => {
-        await client.query(`INSERT INTO privacy.export_manifests (request_id, object_key, package_hash, expires_at) VALUES ($1, $2, $3, now() + interval '7 days') ON CONFLICT DO NOTHING`, [requestId, objectKey, packageHash]);
+        await client.query(
+          `INSERT INTO privacy.export_manifests (id, request_id, object_key, package_hash, expires_at)
+           VALUES ($1, $2, $3, $4, now() + interval '7 days')
+           ON CONFLICT (request_id, object_key)
+           DO UPDATE SET package_hash = EXCLUDED.package_hash, expires_at = EXCLUDED.expires_at`,
+          [uuidv7(), requestId, objectKey, packageHash],
+        );
         await client.query(`UPDATE privacy.requests SET state = 'completed', completed_at = now() WHERE id = $1`, [requestId]);
-        await client.query(`INSERT INTO privacy.request_events (request_id, event_type, metadata)
-          SELECT $1, 'completed', $2::jsonb
-           WHERE NOT EXISTS (SELECT 1 FROM privacy.request_events WHERE request_id = $1 AND event_type = 'completed')`, [requestId, JSON.stringify({ objectKey, packageHash })]);
+        await client.query(`INSERT INTO privacy.request_events (id, request_id, event_type, metadata)
+          SELECT $1, $2, 'completed', $3::jsonb
+           WHERE NOT EXISTS (SELECT 1 FROM privacy.request_events WHERE request_id = $2 AND event_type = 'completed')`, [uuidv7(), requestId, JSON.stringify({ objectKey, packageHash })]);
       });
       return packageHash;
     });
@@ -602,8 +642,8 @@ export class RetentionCleanupWorkflow extends WorkflowEntrypoint<Env, { runId: s
               WHERE author_id = $1 AND created_at < now() - $2::interval AND body <> '[retention policy]' RETURNING id`,
             [candidate.user_id, candidate.retention_period]);
           if (updated.rowCount !== 0) await query(this.env.DB_JOBS_FRESH,
-            `INSERT INTO system.audit_events (action, target_type, reason_code, correlation_id, metadata) VALUES ('retention.posts_redacted', 'user', 'RETENTION_POLICY', $1, $2::jsonb)`,
-            [event.payload.runId, JSON.stringify({ subjectId: candidate.user_id, count: updated.rowCount })]);
+            `INSERT INTO system.audit_events (id, action, target_type, reason_code, correlation_id, metadata) VALUES ($1, 'retention.posts_redacted', 'user', 'RETENTION_POLICY', $2, $3::jsonb)`,
+            [uuidv7(), event.payload.runId, JSON.stringify({ subjectId: candidate.user_id, count: updated.rowCount })]);
           return { posts: updated.rowCount ?? 0, media: 0 };
         }
         if (candidate.content_type === 'media') {
@@ -617,8 +657,8 @@ export class RetentionCleanupWorkflow extends WorkflowEntrypoint<Env, { runId: s
             await query(this.env.DB_JOBS_FRESH, `UPDATE media.storage_ledger SET bytes_approved = greatest(bytes_approved - $1, 0), object_count = greatest(object_count - 1, 0), last_reconciled_at = now() WHERE user_id = $2`, [object.byte_size, candidate.user_id]);
           }
           if (objects.rowCount !== 0) await query(this.env.DB_JOBS_FRESH,
-            `INSERT INTO system.audit_events (action, target_type, reason_code, correlation_id, metadata) VALUES ('retention.media_deleted', 'user', 'RETENTION_POLICY', $1, $2::jsonb)`,
-            [event.payload.runId, JSON.stringify({ subjectId: candidate.user_id, count: objects.rowCount })]);
+            `INSERT INTO system.audit_events (id, action, target_type, reason_code, correlation_id, metadata) VALUES ($1, 'retention.media_deleted', 'user', 'RETENTION_POLICY', $2, $3::jsonb)`,
+            [uuidv7(), event.payload.runId, JSON.stringify({ subjectId: candidate.user_id, count: objects.rowCount })]);
           return { posts: 0, media: objects.rowCount ?? 0 };
         }
         return { posts: 0, media: 0 };
@@ -645,14 +685,14 @@ export class AppealLifecycleWorkflow extends WorkflowEntrypoint<Env, { appealId:
         if (row.state === 'open' && row.case_state === 'resolved') {
           await client.query(`UPDATE moderation.appeals SET state = 'resolved', resolved_at = COALESCE(resolved_at, now()) WHERE id = $1 AND state = 'open'`, [appealId]);
           await client.query(
-            `INSERT INTO system.audit_events (action, target_type, target_id, reason_code, correlation_id, metadata)
-             SELECT 'moderation.appeal.resolved', 'appeal', $1, 'CASE_RESOLVED', $1, $2::jsonb
+            `INSERT INTO system.audit_events (id, action, target_type, target_id, reason_code, correlation_id, metadata)
+             SELECT $1, 'moderation.appeal.resolved', 'appeal', $2, 'CASE_RESOLVED', $2, $3::jsonb
               WHERE NOT EXISTS (
                 SELECT 1 FROM system.audit_events
                  WHERE action = 'moderation.appeal.resolved' AND target_type = 'appeal'
-                   AND target_id = $1 AND reason_code = 'CASE_RESOLVED'
+                   AND target_id = $2 AND reason_code = 'CASE_RESOLVED'
               )`,
-            [appealId, JSON.stringify({ appealId })]
+            [uuidv7(), appealId, JSON.stringify({ appealId })]
           );
           return 'resolved';
         }
@@ -669,8 +709,8 @@ export class BackupValidationWorkflow extends WorkflowEntrypoint<Env, { runId: s
     const runId = event.payload.runId;
     const database = await step.do('verify-database-capabilities', async () => {
       const extensions = await query<{ extname: string }>(this.env.DB_PRIVACY_FRESH,
-        `SELECT extname FROM pg_extension WHERE extname IN ('postgis', 'pgcrypto', 'pg_trgm', 'unaccent') ORDER BY extname`);
-      const required = ['pgcrypto', 'pg_trgm', 'unaccent', 'postgis'];
+        `SELECT extname FROM pg_extension WHERE extname IN ('pgcrypto', 'pg_trgm', 'unaccent') ORDER BY extname`);
+      const required = ['pgcrypto', 'pg_trgm', 'unaccent'];
       const present = new Set(extensions.rows.map((row) => row.extname));
       const missing = required.filter((name) => !present.has(name));
       if (missing.length) throw new Error(`backup_capability_extensions_missing:${missing.join(',')}`);
@@ -679,29 +719,20 @@ export class BackupValidationWorkflow extends WorkflowEntrypoint<Env, { runId: s
            FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
           WHERE n.nspname IN ('identity', 'content', 'social', 'feed', 'moderation', 'privacy', 'trust', 'media', 'editorial', 'system')
             AND c.relkind IN ('r', 'p', 'v', 'm')`);
-      if (Number(schemaObjects.rows[0]?.count ?? 0) < 74) throw new Error('backup_schema_objects_missing');
+      if (Number(schemaObjects.rows[0]?.count ?? 0) < 76) throw new Error('backup_schema_objects_missing');
       return { extensions: required, schemaObjectCount: Number(schemaObjects.rows[0]?.count ?? 0) };
-    });
-
-    await step.do('verify-independent-backup-health', async () => {
-      const endpoint = this.env.EXTERNAL_BACKUP_HEALTHCHECK_URL;
-      if (!endpoint) throw new Error('independent_backup_healthcheck_not_configured');
-      const response = await fetch(endpoint, {
-        headers: this.env.EXTERNAL_BACKUP_HEALTHCHECK_TOKEN
-          ? { authorization: `Bearer ${this.env.EXTERNAL_BACKUP_HEALTHCHECK_TOKEN}` }
-          : undefined,
-      });
-      if (!response.ok) throw new Error(`independent_backup_healthcheck_failed:${response.status}`);
-      await response.body?.cancel();
-      return true;
     });
 
     await step.do('record-backup-validation', async () => {
       await query(this.env.DB_PRIVACY_FRESH,
-        `INSERT INTO system.audit_events (action, target_type, target_id, reason_code, correlation_id, metadata)
-         VALUES ('backup.validation.completed', 'backup', $1, 'BACKUP_RESTORE_DRILL', $1, $2::jsonb)
-         ON CONFLICT DO NOTHING`,
-        [runId, JSON.stringify({ runId, ...database })]);
+        `INSERT INTO system.audit_events (id, action, target_type, target_id, reason_code, correlation_id, metadata)
+         SELECT $1, 'backup.schema_validation.completed', 'backup', NULL, 'SCHEMA_RECONSTRUCTION_CHECK', $2, $3::jsonb
+          WHERE NOT EXISTS (
+            SELECT 1 FROM system.audit_events
+             WHERE action = 'backup.schema_validation.completed'
+               AND correlation_id = $2
+          )`,
+        [uuidv7(), runId, JSON.stringify({ runId, ...database })]);
       return true;
     });
     return { runId, state: 'completed' };

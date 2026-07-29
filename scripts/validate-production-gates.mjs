@@ -11,10 +11,11 @@ const requiredGates = Object.keys(manifest.gates ?? {});
 const failures = [];
 
 if (manifest.schemaVersion !== 'lythaus-production-gates-v1') failures.push('unsupported production gate manifest schema');
-if (typeof manifest.releaseSha !== 'string' || !/^[0-9a-f]{40}$/.test(manifest.releaseSha)) failures.push('releaseSha must be a full 40-character commit SHA');
-if (expectedSha && manifest.releaseSha !== expectedSha) failures.push(`manifest releaseSha ${manifest.releaseSha} does not match requested release ${expectedSha}`);
+if (manifest.releaseSha !== null && (typeof manifest.releaseSha !== 'string' || !/^[0-9a-f]{40}$/.test(manifest.releaseSha))) failures.push('releaseSha must be null before merge or a full 40-character commit SHA');
+if (manifest.releaseShaPolicy !== 'workflow input must equal the checked-out merged main SHA') failures.push('releaseShaPolicy must require the merged main checkout');
 if (manifest.azureDeletionAuthorized !== false) failures.push('Azure deletion authorization must remain false in the production gate manifest');
-if (manifest.migrationUsageAuthorized === true && !(typeof manifest.migrationUsageMaxUsd === 'number' && manifest.migrationUsageMaxUsd > 0)) failures.push('migrationUsageMaxUsd must be a positive number when migration usage is authorized');
+if (typeof manifest.estimatedIncrementalCostUsd !== 'number' || manifest.estimatedIncrementalCostUsd < 0) failures.push('estimatedIncrementalCostUsd must be a non-negative number');
+if (manifest.migrationUsageAuthorized === true && !(typeof manifest.migrationUsageMaxUsd === 'number' && manifest.migrationUsageMaxUsd > 0)) failures.push('migrationUsageMaxUsd must be a positive number when paid migration usage is authorized');
 for (const gate of requiredGates) {
   const record = manifest.gates?.[gate];
   if (!record) {
@@ -26,7 +27,9 @@ for (const gate of requiredGates) {
 }
 if (requirePass) {
   if (manifest.cutoverAuthorized !== true) failures.push('cutoverAuthorized must be true for production deployment');
-  if (manifest.migrationUsageAuthorized !== true) failures.push('migrationUsageAuthorized must be true for production deployment');
+  if (!/^[0-9a-f]{40}$/.test(expectedSha)) failures.push('RELEASE_SHA must be the full merged main SHA');
+  if (manifest.releaseSha !== null && manifest.releaseSha !== expectedSha) failures.push(`manifest releaseSha ${manifest.releaseSha} does not match requested release ${expectedSha}`);
+  if (manifest.estimatedIncrementalCostUsd > 0 && manifest.migrationUsageAuthorized !== true) failures.push('paid migration usage is not authorized');
   for (const gate of requiredGates) {
     if (manifest.gates?.[gate]?.status !== 'COMPLETED') failures.push(`${gate} is not COMPLETED`);
   }

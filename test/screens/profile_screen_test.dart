@@ -89,8 +89,10 @@ void main() {
 
     expect(find.text('Ada Lovelace'), findsWidgets);
     expect(find.text('@ada'), findsOneWidget);
-    expect(find.text('120 points'), findsOneWidget);
-    expect(find.text('Founding member'), findsOneWidget);
+    expect(find.text('gold'), findsOneWidget);
+    expect(find.text('120 points'), findsNothing);
+    expect(find.text('Founding member'), findsNothing);
+    expect(find.text('Reputation'), findsNothing);
     expect(find.text('Moderation hub'), findsNothing);
     expect(find.text('Settings'), findsOneWidget);
   });

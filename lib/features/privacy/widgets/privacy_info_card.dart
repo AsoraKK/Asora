@@ -23,7 +23,7 @@ class PrivacyInfoCard extends StatelessWidget {
     (
       icon: Icons.mail_outline,
       title: 'Need help?',
-      body: 'Contact privacy@asora.com for data-subject questions.',
+      body: 'Contact privacy@lythaus.co for data-subject questions.',
     ),
   ];
 

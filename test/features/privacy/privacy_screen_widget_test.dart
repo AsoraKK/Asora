@@ -1,7 +1,6 @@
 import 'package:asora/core/analytics/analytics_client.dart';
 import 'package:asora/core/logging/app_logger.dart';
 import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/auth/presentation/auth_gate.dart';
 import 'package:asora/features/privacy/privacy_settings_screen.dart';
 import 'package:asora/features/privacy/services/privacy_repository.dart';
 import 'package:asora/features/privacy/state/privacy_controller.dart';
@@ -46,13 +45,13 @@ void main() {
 
       // Scroll to find the delete button (it's now below AnalyticsSettingsCard)
       await tester.dragUntilVisible(
-        find.text('Delete account'),
+        find.text('Request account deletion'),
         find.byType(ListView),
         const Offset(0, -100),
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Delete account'));
+      await tester.tap(find.text('Request account deletion'));
       await tester.pumpAndSettle();
 
       final confirmButton = find.byWidgetPredicate(
@@ -132,9 +131,7 @@ void main() {
       expect(find.byType(PrivacyBlockingOverlay), findsOneWidget);
     });
 
-    testWidgets('shows export success snackbar on email sent state', (
-      tester,
-    ) async {
+    testWidgets('shows export request submitted snackbar', (tester) async {
       final harness = _buildHarness(state: const PrivacyState());
       await tester.pumpWidget(harness.widget);
       await tester.pumpAndSettle();
@@ -145,14 +142,19 @@ void main() {
       final controller = container.read(privacyControllerProvider.notifier);
 
       controller.state = controller.state.copyWith(
-        exportStatus: ExportStatus.emailSent,
+        exportStatus: ExportStatus.accepted,
       );
       await tester.pump();
 
-      expect(find.text('Export requested. Check your email.'), findsOneWidget);
+      expect(
+        find.text(
+          'Export request submitted. Refresh this page to track processing.',
+        ),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('navigates to auth gate when account deletion completes', (
+    testWidgets('keeps the session active when deletion is submitted', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(1200, 2400);
@@ -170,11 +172,17 @@ void main() {
       final controller = container.read(privacyControllerProvider.notifier);
 
       controller.state = controller.state.copyWith(
-        deleteStatus: DeleteStatus.deleted,
+        deleteStatus: DeleteStatus.requested,
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(AuthGate), findsOneWidget);
+      expect(
+        find.text(
+          'Deletion request submitted. Your account remains available while the request is processed.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.byType(PrivacySettingsScreen), findsOneWidget);
     });
   });
 }

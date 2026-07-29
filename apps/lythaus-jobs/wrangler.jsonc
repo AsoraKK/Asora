@@ -6,17 +6,19 @@
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": false,
   "preview_urls": false,
+  "keep_vars": true,
   "observability": { "enabled": true, "head_sampling_rate": 0.25 },
   "vars": {
     "ENVIRONMENT": "production",
     "HYPERDRIVE_QUERY_CACHE_MODE": "disabled",
-    "HIVE_API_URL": "https://api.thehive.ai/api/v2/task/sync",
-    "HIVE_MODEL_VERSION": "general_text_classification+hate_speech_detection_text+violence_text_detection",
+    "PAID_AI_DETECTION_ENABLED": "false",
+    "HIVE_API_URL": "",
+    "HIVE_MODEL_VERSION": "",
+    "EXTERNAL_BACKUP_HEALTHCHECK_URL": "",
     "R2_ACCOUNT_ID": "e5b7ae46e04698f507b7e4b3d4ef1af0",
     "MEDIA_PROCESSING_ENABLED": "false",
     "MEDIA_QUARANTINE_BUCKET": "lythaus-media-quarantine-dev",
-    "MEDIA_APPROVED_BUCKET": "lythaus-media-approved-dev",
-    "EXTERNAL_BACKUP_HEALTHCHECK_URL": ""
+    "MEDIA_APPROVED_BUCKET": "lythaus-media-approved-dev"
   },
   "hyperdrive": [
     { "binding": "DB_JOBS_FRESH", "id": "442bb04b99004cb38c6974ec031d65ee" },
@@ -35,8 +37,6 @@
     "producers": [
       { "binding": "MODERATION_QUEUE", "queue": "lythaus-moderation-dev" },
       { "binding": "FEED_QUEUE", "queue": "lythaus-feed-dev" },
-      { "binding": "NOTIFICATIONS_QUEUE", "queue": "lythaus-notifications-dev" },
-      { "binding": "MEDIA_QUEUE", "queue": "lythaus-media-dev" },
       { "binding": "PRIVACY_QUEUE", "queue": "lythaus-privacy-dev" },
       { "binding": "AUDIT_QUEUE", "queue": "lythaus-audit-dev" }
     ],
@@ -44,8 +44,6 @@
       { "queue": "lythaus-moderation-dev", "max_batch_size": 10, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-moderation-dlq-dev" },
       { "queue": "lythaus-feed-dev", "max_batch_size": 25, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-feed-dlq-dev" },
       { "queue": "lythaus-privacy-dev", "max_batch_size": 10, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-privacy-dlq-dev" },
-      { "queue": "lythaus-notifications-dev", "max_batch_size": 25, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-notifications-dlq-dev" },
-      { "queue": "lythaus-media-dev", "max_batch_size": 10, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-media-dlq-dev" },
       { "queue": "lythaus-audit-dev", "max_batch_size": 25, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-audit-dlq-dev" }
     ]
   },
@@ -70,8 +68,9 @@
       "vars": {
         "ENVIRONMENT": "development",
         "HYPERDRIVE_QUERY_CACHE_MODE": "disabled",
-        "HIVE_API_URL": "https://api.thehive.ai/api/v2/task/sync",
-        "HIVE_MODEL_VERSION": "general_text_classification+hate_speech_detection_text+violence_text_detection",
+        "PAID_AI_DETECTION_ENABLED": "false",
+        "HIVE_API_URL": "",
+        "HIVE_MODEL_VERSION": "",
         "R2_ACCOUNT_ID": "e5b7ae46e04698f507b7e4b3d4ef1af0",
         "MEDIA_PROCESSING_ENABLED": "false",
         "MEDIA_QUARANTINE_BUCKET": "lythaus-media-quarantine-dev",

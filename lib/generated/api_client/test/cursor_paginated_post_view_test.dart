@@ -3,7 +3,7 @@ import 'package:asora_api_client/asora_api_client.dart';
 
 // tests for CursorPaginatedPostView
 void main() {
-  final instance = CursorPaginatedPostViewBuilder();
+  //final instance = CursorPaginatedPostViewBuilder();
   // TODO add properties to the builder and call build()
 
   group(CursorPaginatedPostView, () {
@@ -16,5 +16,6 @@ void main() {
     test('to test the property `nextCursor`', () async {
       // TODO
     });
+
   });
 }

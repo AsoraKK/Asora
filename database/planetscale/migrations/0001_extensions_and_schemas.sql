@@ -1,12 +1,3 @@
--- PostGIS is deliberately optional. Location launch behavior uses validated
--- country, region, municipality, community, and GeoJSON fields only.
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'postgis') THEN
-    RAISE NOTICE 'PostGIS is not installed; geography features remain blocked and content.places uses the JSON boundary fallback';
-  END IF;
-END
-$$;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE EXTENSION IF NOT EXISTS unaccent;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;

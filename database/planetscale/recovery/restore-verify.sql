@@ -24,8 +24,8 @@ BEGIN
     JOIN pg_namespace n ON n.oid = c.relnamespace
    WHERE n.nspname IN ('identity', 'content', 'social', 'feed', 'moderation', 'privacy', 'trust', 'media', 'editorial', 'system')
      AND c.relkind IN ('r', 'p', 'v', 'm');
-  IF object_count < 74 THEN
-    RAISE EXCEPTION 'restore has only % Lythaus schema objects; expected at least 74', object_count;
+  IF object_count < 75 THEN
+    RAISE EXCEPTION 'restore has only % Lythaus schema objects; expected at least 75', object_count;
   END IF;
 
   IF to_regprocedure('privacy.reconcile_subject_data_locations(uuid)') IS NULL THEN

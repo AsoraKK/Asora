@@ -51,7 +51,7 @@ class PrivacyExportSection extends StatelessWidget {
           ),
           SizedBox(height: spacing.md),
           Text(
-            'Request a copy of your account data. We email a download link.',
+            'Request a copy of your account data. Track processing here; a secure download is provided when ready.',
             style: textTheme.bodyMedium,
           ),
           SizedBox(height: spacing.lg),

@@ -30,6 +30,8 @@ CREATE TABLE social.profiles (
   bio text NOT NULL DEFAULT '' CHECK (length(bio) <= 2000),
   avatar_object_id uuid,
   public_visibility boolean NOT NULL DEFAULT true,
+  trust_passport_visibility text NOT NULL DEFAULT 'public_minimal'
+    CHECK (trust_passport_visibility IN ('public_expanded', 'public_minimal', 'private')),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
@@ -299,6 +301,10 @@ BEGIN
     (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
   SELECT p_subject_id, 'planetscale', 'identity.email_credentials', 'email_credential', e.user_id, 'authoritative', 'account'
     FROM identity.email_credentials e WHERE e.user_id = p_subject_id;
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'identity.contact_emails', 'contact_email', e.user_id, 'authoritative', 'account'
+    FROM identity.contact_emails e WHERE e.user_id = p_subject_id;
   INSERT INTO privacy.subject_data_locations
     (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
   SELECT p_subject_id, 'planetscale', 'identity.auth_sessions', 'auth_session', s.id, 'authoritative', 'security'

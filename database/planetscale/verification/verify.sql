@@ -1,11 +1,12 @@
 SELECT current_setting('server_version') AS postgres_version;
-SELECT extname FROM pg_extension WHERE extname IN ('postgis', 'pg_trgm', 'unaccent', 'pgcrypto') ORDER BY extname;
+SELECT extname FROM pg_extension WHERE extname IN ('pg_trgm', 'unaccent', 'pgcrypto') ORDER BY extname;
 SELECT nspname FROM pg_namespace WHERE nspname IN ('identity', 'content', 'social', 'feed', 'moderation', 'privacy', 'trust', 'media', 'editorial', 'system') ORDER BY nspname;
 SELECT to_regclass('system.outbox_events') AS outbox_table;
 SELECT to_regclass('privacy.subject_data_locations') AS subject_locator;
 SELECT to_regclass('media.upload_sessions') AS upload_sessions;
 SELECT to_regclass('identity.email_verification_tokens') AS email_verification_tokens;
 SELECT to_regclass('identity.password_reset_tokens') AS password_reset_tokens;
+SELECT to_regclass('identity.contact_emails') AS contact_emails;
 SELECT to_regclass('identity.users') AS users;
 SELECT to_regclass('social.profiles') AS profiles;
 SELECT to_regclass('content.content_declarations') AS content_declarations;

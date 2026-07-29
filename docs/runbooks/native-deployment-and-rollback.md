@@ -2,24 +2,26 @@
 
 ## Preconditions
 
-1. The immutable GitHub `main` artifact has green native validation,
+1. PR #474 is merged and the resulting immutable GitHub `main` SHA has green native validation,
    migration-contract, and secret-scan checks.
 2. The five acceptance gates are recorded as passed in
    `infrastructure/cloudflare/production-gates.json`.
-3. Production Cloudflare account, zone, Worker, Hyperdrive, R2, Queue,
-   Workflow, Access, Turnstile, and email identifiers are protected CI values.
+3. Existing production-promoted Cloudflare account, zone, Worker, Hyperdrive,
+   R2, Queue, Workflow, KV, and Access identifiers match the resource registry.
 4. `PLANETSCALE_ADMIN_DATABASE_URL` is a direct administrative connection with
    `sslmode=verify-full`; Workers never run migrations through Hyperdrive.
 
 ## Deployment order
 
-1. Apply reviewed migrations and grants to PlanetScale `main`.
-2. Verify extensions, roles, schema checksums, and representative queries.
-3. Deploy `lythaus-jobs`, then `lythaus-admin-api`, then `lythaus-public-api`.
-4. Run health, readiness, authentication, content, media, privacy, queue,
+1. Record and check out the exact merge SHA from `main`.
+2. Apply reviewed migrations and grants to PlanetScale `main`.
+3. Verify extensions, roles, schema checksums, and representative queries.
+4. Deploy the physical Workers `lythaus-jobs-development`,
+   `lythaus-admin-api-development`, and `lythaus-public-api-development`.
+5. Run health, readiness, authentication, content, privacy, queue,
    Workflow, Access, and no-Azure-call smoke tests.
-5. Verify custom domains and cache headers before DNS changes.
-6. Switch `api.lythaus.co` only after the rollback snapshot is recorded.
+6. Verify custom domains and cache headers before DNS changes.
+7. Switch `api.lythaus.co` only after the rollback snapshot is recorded.
 
 ## Rollback
 

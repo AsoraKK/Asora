@@ -27,7 +27,7 @@ void main() {
       // TODO
     });
 
-    // AdminAppealStatus status
+    // AdminAppealStatusDetail status
     test('to test the property `status`', () async {
       // TODO
     });
@@ -56,5 +56,36 @@ void main() {
     test('to test the property `internalNote`', () async {
       // TODO
     });
+
+    // int votesFor
+    test('to test the property `votesFor`', () async {
+      // TODO
+    });
+
+    // int votesAgainst
+    test('to test the property `votesAgainst`', () async {
+      // TODO
+    });
+
+    // int totalVotes
+    test('to test the property `totalVotes`', () async {
+      // TODO
+    });
+
+    // String votingStatus
+    test('to test the property `votingStatus`', () async {
+      // TODO
+    });
+
+    // DateTime expiresAt
+    test('to test the property `expiresAt`', () async {
+      // TODO
+    });
+
+    // int timeRemainingSeconds
+    test('to test the property `timeRemainingSeconds`', () async {
+      // TODO
+    });
+
   });
 }

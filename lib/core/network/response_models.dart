@@ -2,7 +2,7 @@
 
 /// ASORA API RESPONSE MODELS
 ///
-/// 🎯 Purpose: Response models for Azure Functions API integration
+/// 🎯 Purpose: Response models for native Lythaus API integration
 /// 🏗️ Architecture: Domain layer models for API responses
 /// 🔐 Data: Post creation, feed pagination, user profile responses
 /// 📱 Platform: Flutter with JSON serialization

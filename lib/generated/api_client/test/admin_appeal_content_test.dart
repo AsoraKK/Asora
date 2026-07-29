@@ -12,7 +12,7 @@ void main() {
       // TODO
     });
 
-    // AdminContentType type
+    // AdminAppealTargetType type
     test('to test the property `type`', () async {
       // TODO
     });
@@ -26,5 +26,6 @@ void main() {
     test('to test the property `preview`', () async {
       // TODO
     });
+
   });
 }

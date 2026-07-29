@@ -1,6 +1,7 @@
 import 'package:test/test.dart';
 import 'package:asora_api_client/asora_api_client.dart';
 
+
 /// tests for NotificationsApi
 void main() {
   final instance = AsoraApiClient().getNotificationsApi();
@@ -75,5 +76,6 @@ void main() {
     test('test notificationsUnreadCount', () async {
       // TODO
     });
+
   });
 }

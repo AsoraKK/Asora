@@ -8,8 +8,13 @@ void main() {
 
   group(FlagContentRequest, () {
     // Identifier of the content being flagged
-    // String targetId
-    test('to test the property `targetId`', () async {
+    // String contentId
+    test('to test the property `contentId`', () async {
+      // TODO
+    });
+
+    // String contentType
+    test('to test the property `contentType`', () async {
       // TODO
     });
 
@@ -20,9 +25,15 @@ void main() {
     });
 
     // Additional details supporting the flag
-    // String notes
-    test('to test the property `notes`', () async {
+    // String additionalDetails
+    test('to test the property `additionalDetails`', () async {
       // TODO
     });
+
+    // String urgency (default value: 'medium')
+    test('to test the property `urgency`', () async {
+      // TODO
+    });
+
   });
 }

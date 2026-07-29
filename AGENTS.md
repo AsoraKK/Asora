@@ -17,12 +17,13 @@ Authoritative, concise instructions for agents working in this repository via Co
 - Production branch: `main`
 - Development branch: `development`
 - AI development branch: `ai-development` (Git convention only; not a permanent database branch)
-- Ephemeral validation branches: `ci-*`
 - Default PostgreSQL database: `postgres`
 
 Use PlanetScale MCP for schema inspection and approved database operations.
 Do not execute write queries against `main` without explicit human approval.
-Prefer `development` with synthetic data or an ephemeral `ci-*` branch for experimental migrations and test data.
+Use `development` with synthetic data and a disposable local PostgreSQL 17
+container for migration validation. Never create another PlanetScale branch;
+do not create automatic `ci-*` branches.
 Initial verification prompt: use PlanetScale MCP to confirm access to
 `lythaus/lythaus-core`, list all branches, and inspect the schema. Do not
 execute writes or DDL.
@@ -60,8 +61,10 @@ registry, inspect live provider state, search for an equivalent, prefer reuse
 or rebinding, check possible cost, and stop if a duplicate or new cost may be
 required. No automatic create-if-missing behavior is permitted.
 
-Azure extraction is read-only until the owner supplies the approved Cosmos
-Built-in Data Reader, Storage Blob Data Reader, and PostgreSQL export access.
+Azure extraction is read-only. The approved Cosmos Built-in Data Reader and
+container-scoped Storage Blob Data Reader assignments are active. PostgreSQL
+remains `BLOCKED — ACCESS REQUIRED` unless Cosmos classification proves that
+recovering it is required.
 Never import access tokens, refresh tokens, secrets, or reversible passwords.
 Import password hashes only when their algorithm, parameters, association, and
 security policy are verified compatible; otherwise mark password login
@@ -69,7 +72,8 @@ reset-required.
 
 Before any Azure data write to PlanetScale `main` or R2, produce the measured
 record/object/byte, operation, included-usage, and worst-case incremental-cost
-report and stop for the exact approval phrase:
+report. Proceed only when existing capacity and included allowances cover the
+operation with no indicated incremental charge. Otherwise stop for:
 `AUTHORISE MIGRATION USAGE: maximum additional cost US$___`.
 
 Do not delete PlanetScale `development`, Azure resources, or any other

@@ -37,10 +37,7 @@ Map<String, dynamic> _entryJson({
   };
 }
 
-Widget _buildApp({
-  required Dio dio,
-  required Future<String?> Function() jwt,
-}) {
+Widget _buildApp({required Dio dio, required Future<String?> Function() jwt}) {
   return ProviderScope(
     overrides: [
       secureDioProvider.overrideWithValue(dio),
@@ -58,13 +55,16 @@ void main() {
   testWidgets('shows empty state when user has no token', (tester) async {
     final dio = _MockDio();
 
-    await tester.pumpWidget(
-      _buildApp(dio: dio, jwt: () async => null),
-    );
+    await tester.pumpWidget(_buildApp(dio: dio, jwt: () async => null));
     await tester.pumpAndSettle();
 
     expect(find.text('No entries yet.'), findsWidgets);
-    verifyNever(() => dio.get<Map<String, dynamic>>(any(), queryParameters: any(named: 'queryParameters')));
+    verifyNever(
+      () => dio.get<Map<String, dynamic>>(
+        any(),
+        queryParameters: any(named: 'queryParameters'),
+      ),
+    );
   });
 
   testWidgets('falls back to empty state when ledger request fails', (
@@ -83,9 +83,7 @@ void main() {
       ),
     );
 
-    await tester.pumpWidget(
-      _buildApp(dio: dio, jwt: () async => 'token'),
-    );
+    await tester.pumpWidget(_buildApp(dio: dio, jwt: () async => 'token'));
     await tester.pumpAndSettle();
 
     expect(find.text('No entries yet.'), findsWidgets);
@@ -137,9 +135,7 @@ void main() {
       ),
     );
 
-    await tester.pumpWidget(
-      _buildApp(dio: dio, jwt: () async => 'token'),
-    );
+    await tester.pumpWidget(_buildApp(dio: dio, jwt: () async => 'token'));
     await tester.pumpAndSettle();
 
     expect(find.text('Human contribution'), findsOneWidget);
@@ -151,9 +147,7 @@ void main() {
     await tester.tap(find.text('Appeal').first);
     await tester.pumpAndSettle();
 
-    verify(
-      () => dio.post<void>('/moderation/ledger/e1/appeal'),
-    ).called(1);
+    verify(() => dio.post<void>('/moderation/ledger/e1/appeal')).called(1);
     expect(find.text('Appeal submitted.'), findsOneWidget);
   });
 }

@@ -1,7 +1,7 @@
 import { query, transaction, type HyperdriveBinding } from '@lythaus/db';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { assertExpectedHostname, correlationId, json, logEvent } from '@lythaus/observability';
-import { hmacLookup } from '@lythaus/security';
+import { hmacLookup, uuidv7 } from '@lythaus/security';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 
 interface Env extends EnvBindings {
@@ -54,8 +54,8 @@ async function decideModeration(request: Request, env: Env, actor: { userId: str
     : input.outcome === 'allow' ? undefined : 'Under review';
   await transaction(env.DB_ADMIN_FRESH, async (client) => {
     await client.query(
-      `INSERT INTO moderation.decisions (case_id, outcome, public_label, policy_version, decided_by) VALUES ($1, $2, $3, $4, $5)`,
-      [caseId, input.outcome, publicLabel ?? null, moderationCase.policy_version, actor.userId]
+      `INSERT INTO moderation.decisions (id, case_id, outcome, public_label, policy_version, decided_by) VALUES ($1, $2, $3, $4, $5, $6)`,
+      [uuidv7(), caseId, input.outcome, publicLabel ?? null, moderationCase.policy_version, actor.userId]
     );
     await client.query(`UPDATE moderation.cases SET state = $1, resolved_at = CASE WHEN $1 = 'open' THEN NULL ELSE now() END WHERE id = $2`, [input.outcome === 'queue' ? 'open' : 'resolved', caseId]);
     await client.query(`UPDATE moderation.appeals SET state = $1, resolved_at = CASE WHEN $1 = 'resolved' THEN now() ELSE NULL END WHERE case_id = $2 AND state = 'open'`, [input.outcome === 'queue' ? 'open' : 'resolved', caseId]);
@@ -66,13 +66,13 @@ async function decideModeration(request: Request, env: Env, actor: { userId: str
       await client.query(`UPDATE content.comments SET moderation_state = $1 WHERE id = $2`, [input.outcome === 'allow' ? 'allowed' : input.outcome === 'block' ? 'blocked' : 'under_review', moderationCase.content_id]);
     }
     await client.query(
-      `INSERT INTO moderation.enforcement_events (case_id, action, reason_code, policy_version, actor_id) VALUES ($1, $2, $3, $4, $5)`,
-      [caseId, input.outcome, input.reasonCode, moderationCase.policy_version, actor.userId]
+      `INSERT INTO moderation.enforcement_events (id, case_id, action, reason_code, policy_version, actor_id) VALUES ($1, $2, $3, $4, $5, $6)`,
+      [uuidv7(), caseId, input.outcome, input.reasonCode, moderationCase.policy_version, actor.userId]
     );
     await client.query(
-      `INSERT INTO system.audit_events (actor_id, action, target_type, target_id, reason_code, correlation_id, metadata)
-       VALUES ($1, 'moderation.decision', 'moderation_case', $2, $3, $4, $5::jsonb)`,
-      [actor.userId, caseId, input.reasonCode, correlation, JSON.stringify({ outcome: input.outcome, role: actor.role })]
+      `INSERT INTO system.audit_events (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata)
+       VALUES ($1, $2, 'moderation.decision', 'moderation_case', $3, $4, $5, $6::jsonb)`,
+      [uuidv7(), actor.userId, caseId, input.reasonCode, correlation, JSON.stringify({ outcome: input.outcome, role: actor.role })]
     );
   });
   return json({ caseId, outcome: input.outcome, publicLabel: publicLabel ?? null }, { headers: { 'x-correlation-id': correlation, 'cache-control': 'private, no-store' } });
@@ -91,11 +91,11 @@ async function updateAccountStatus(request: Request, env: Env, actor: { userId: 
     if (updated.rowCount !== 1) throw new Error('user_not_found');
     await client.query(`UPDATE identity.auth_sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [targetUserId]);
     await client.query(`UPDATE identity.refresh_token_families SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [targetUserId]);
-    await client.query(`INSERT INTO identity.account_events (user_id, actor_id, event_type, metadata) VALUES ($1, $2, 'account_status_changed', $3::jsonb)`, [targetUserId, actor.userId, JSON.stringify({ status: input.status, reasonCode: input.reasonCode })]);
+    await client.query(`INSERT INTO identity.account_events (id, user_id, actor_id, event_type, metadata) VALUES ($1, $2, $3, 'account_status_changed', $4::jsonb)`, [uuidv7(), targetUserId, actor.userId, JSON.stringify({ status: input.status, reasonCode: input.reasonCode })]);
     await client.query(
-      `INSERT INTO system.audit_events (actor_id, action, target_type, target_id, reason_code, correlation_id, metadata)
-       VALUES ($1, 'account.status_changed', 'user', $2, $3, $4, $5::jsonb)`,
-      [actor.userId, targetUserId, input.reasonCode, correlation, JSON.stringify({ status: input.status })]
+      `INSERT INTO system.audit_events (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata)
+       VALUES ($1, $2, 'account.status_changed', 'user', $3, $4, $5, $6::jsonb)`,
+      [uuidv7(), actor.userId, targetUserId, input.reasonCode, correlation, JSON.stringify({ status: input.status })]
     );
     return updated.rows[0].id;
   });

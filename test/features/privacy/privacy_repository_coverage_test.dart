@@ -198,12 +198,13 @@ void main() {
     test('requestExport stores result and returns snapshot', () async {
       final repo = createRepo();
       api.exportResult = ExportRequestResult(
+        requestId: 'request-1',
         acceptedAt: fakeNow,
         retryAfter: const Duration(hours: 24),
       );
 
       final snap = await repo.requestExport(authToken: 'tok');
-      expect(snap.serverState, 'email_sent');
+      expect(snap.serverState, 'accepted');
       expect(snap.remainingCooldown, const Duration(hours: 24));
       expect(logger.messages, contains('privacy_repository.request_export'));
     });
@@ -265,19 +266,22 @@ void main() {
       );
     });
 
-    test('deleteAccount calls api and clears storage', () async {
-      final repo = createRepo();
-      await storage.write(
-        key: 'privacy.lastExportAt',
-        value: DateTime.now().toIso8601String(),
-      );
+    test(
+      'deleteAccount calls api and preserves export status history',
+      () async {
+        final repo = createRepo();
+        await storage.write(
+          key: 'privacy.lastExportAt',
+          value: DateTime.now().toIso8601String(),
+        );
 
-      await repo.deleteAccount(authToken: 'tok', hardDelete: true);
-      expect(api.deleteCalled, isTrue);
+        await repo.deleteAccount(authToken: 'tok', hardDelete: true);
+        expect(api.deleteCalled, isTrue);
 
-      final snap = await repo.loadPersistedSnapshot();
-      expect(snap.lastExportAt, isNull);
-    });
+        final snap = await repo.loadPersistedSnapshot();
+        expect(snap.lastExportAt, isNotNull);
+      },
+    );
 
     test('deleteAccount maps API exceptions', () async {
       final repo = createRepo();
@@ -317,6 +321,7 @@ void main() {
     test('snapshot clamps oversized remaining to cooldown window', () async {
       final repo = createRepo();
       api.exportResult = ExportRequestResult(
+        requestId: 'request-2',
         acceptedAt: fakeNow,
         retryAfter: const Duration(hours: 48), // exceeds 24h cooldown
       );

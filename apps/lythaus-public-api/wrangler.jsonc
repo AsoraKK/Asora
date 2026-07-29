@@ -6,7 +6,7 @@
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": false,
   "preview_urls": false,
-  "routes": [{ "pattern": "api.lythaus.co", "custom_domain": true }],
+  "keep_vars": true,
   "observability": { "enabled": true, "head_sampling_rate": 0.1 },
   "vars": {
     "ENVIRONMENT": "production",
@@ -23,10 +23,9 @@
     "EMAIL_FROM": "",
     "EMAIL_VERIFICATION_BASE_URL": "https://api.lythaus.co/api/auth/email/verify?token=",
     "EMAIL_PASSWORD_RESET_BASE_URL": "https://api.lythaus.co/api/auth/password/reset/complete?token=",
-    "GOOGLE_CLIENT_ID": "REPLACE_WITH_GOOGLE_CLIENT_ID",
     "GOOGLE_REDIRECT_URI": "https://api.lythaus.co/api/auth/google/callback",
     "GOOGLE_JWKS_URL": "https://www.googleapis.com/oauth2/v3/certs",
-    "TURNSTILE_REQUIRED": "true",
+    "TURNSTILE_REQUIRED": "false",
     "PASSWORD_HASH_ALLOW_SCRYPT_FALLBACK": "false"
   },
   "hyperdrive": [

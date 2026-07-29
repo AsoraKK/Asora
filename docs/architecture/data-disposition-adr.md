@@ -12,18 +12,10 @@ and valid records replicated into the canonical PlanetScale model. This does
 not authorise Azure deletion, unresolved data loss, or migration writes before
 the access and measured-usage gates pass.
 
-### Clean-state authorised
-
-Azure contains only development/test data. There are no active production users,
-unresolved privacy requests, legal holds, or contractual retention obligations
-requiring migration. No Azure application records will be imported.
-
-### Selective-preservation authorised
-
-Azure contains records that must be retained. The required data classes must be
-enumerated, exported, reconciled, and retained with identity continuity where
-necessary. Azure deletion remains prohibited until the reconciliation evidence
-is accepted.
+Azure is not presumed clean. Every record must be classified before import or
+discard. The only accepted classifications are `MIGRATE`,
+`PRESERVE AS EVIDENCE`, `DISCARD TEST/DERIVED`, and
+`BLOCKED — ACCESS REQUIRED`.
 
 ## Current state
 
@@ -31,24 +23,24 @@ The native platform may be developed with synthetic data, but Azure deletion
 and production cutover remain gated. The approved operation is selective
 preservation, with source authority proven per data class.
 
-### Read-only evidence reviewed 2026-07-28
+### Read-only evidence reviewed 2026-07-29
 
-- The Azure Cosmos account contains live containers for users, authentication,
-  posts, comments, moderation, notifications, privacy requests, privacy audit,
-  and legal holds.
-- Metadata-only enumeration found no DSR export blobs in the observed export
-  container, but this does not prove that the corresponding Cosmos records are
-  absent.
-- Read-only count queries for `privacy_requests`, `privacy_audit`, and
-  `legal_holds` returned HTTP 403 with the available Entra data-plane identity.
-- Consequently, active-user, outstanding-privacy-request, and legal-hold
-  counts remain **unknown**. A clean-state decision cannot be evidenced from
-  the current permissions; selective preservation remains the operating
-  default until the owner signs a disposition and the required data-plane
-  review is completed.
+- OIDC authentication and the three temporary data-reader assignments are
+  active.
+- All 32 Cosmos containers under database `asora` are readable.
+- Bounded verification found records in `counters`, `privacy_requests`,
+  `users`, `posts`, `privacy_audit`, `receipt_events`, `audit_logs`,
+  `legal_holds`, `profiles`, `custom_feeds`, and `moderation_decisions`.
+- The `stasoradsrdev/dsr-exports` container contains one readable object.
+- The `asoramediadev/user-media` container was empty at verification time.
+- Azure PostgreSQL is network reachable, but the documented credential was
+  rejected. It remains `BLOCKED — ACCESS REQUIRED / CANDIDATE FOR
+  PRE-PRODUCTION ABANDONMENT` until the Cosmos classification proves whether
+  identity continuity requires it.
 
-Evidence references: `docs/evidence/azure-exit/2026-07-26/dsr-reconciliation.md`,
-`cosmos-export-validation.md`, and `azure-exit-readiness-report.md`.
+Bounded access proves readability, not disposition. Complete counts, hashes,
+relationships, privacy state, legal state, and synthetic markers are still
+required before migration or deletion approval.
 
 ## Controls
 
@@ -58,6 +50,31 @@ Evidence references: `docs/evidence/azure-exit/2026-07-26/dsr-reconciliation.md`
 - Any imported record must have a source locator, destination identifier,
   reconciliation result, retention class, and audit event.
 - Evidence must not contain raw personal data or credentials.
+- Raw and transformed datasets use canonical JSON with stable key ordering,
+  stable source-identifier ordering, UTF-8 encoding, explicit null/missing/empty
+  distinctions, and separate SHA-256 hashes.
+
+## PostgreSQL disposition gate
+
+Azure PostgreSQL may be classified as discarded pre-production state only when
+the Cosmos review proves all of the following:
+
+- no genuine external account requires continuity;
+- no unresolved privacy request or legal hold depends on PostgreSQL;
+- no authorship relationship requires a missing provider mapping;
+- no paid entitlement or account-recovery obligation exists;
+- all remaining identities are founder, team, test, or synthetic; and
+- clean Google reauthentication cannot create ownership ambiguity.
+
+If every condition is proved, record exactly:
+
+`Azure PostgreSQL disposition: DISCARD — PRE-PRODUCTION LEGACY IDENTITY STORE`
+
+`Reason: No authoritative production identity, legal, privacy, payment or
+account-continuity obligation was identified that requires recovery of the
+inaccessible PostgreSQL records.`
+
+If any condition is unproved, retain `BLOCKED — ACCESS REQUIRED`.
 
 ## Owner decision record
 

@@ -12,19 +12,10 @@ void main() {
       // TODO
     });
 
-    // BuiltList<String> reasonCodes
-    test('to test the property `reasonCodes`', () async {
-      // TODO
-    });
-
-    // int configVersionUsed
-    test('to test the property `configVersionUsed`', () async {
-      // TODO
-    });
-
     // DateTime decidedAt
     test('to test the property `decidedAt`', () async {
       // TODO
     });
+
   });
 }

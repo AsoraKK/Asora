@@ -79,6 +79,8 @@ jobs:
       - run: npm run openapi:gen:dart
       - name: Fail if generated Dart client drifted
         run: npm run openapi:check:dart
+      - name: Compile and test generated Dart client
+        run: npm run openapi:test:dart
       - name: Generate OpenAPI docs pre-release bundle
         run: npm run openapi:docs
       - name: Contract tests

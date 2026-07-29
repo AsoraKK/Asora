@@ -53,7 +53,9 @@ final moderationServiceProvider = Provider<ModerationClient>((ref) {
 });
 
 /// Push notification service provider (singleton).
-final pushNotificationServiceProvider = Provider<PushNotificationService>((ref) {
+final pushNotificationServiceProvider = Provider<PushNotificationService>((
+  ref,
+) {
   return PushNotificationService();
 });
 

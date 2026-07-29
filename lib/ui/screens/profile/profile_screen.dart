@@ -5,7 +5,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/features/admin/ui/control_panel_shell.dart';
 import 'package:asora/features/auth/application/auth_providers.dart';
 import 'package:asora/features/auth/domain/user.dart';
 import 'package:asora/core/analytics/analytics_events.dart';
@@ -14,13 +13,11 @@ import 'package:asora/features/profile/application/profile_providers.dart';
 import 'package:asora/features/profile/application/follow_providers.dart';
 import 'package:asora/features/profile/application/follow_service.dart';
 import 'package:asora/features/profile/domain/public_user.dart';
-import 'package:asora/features/profile/domain/trust_passport.dart';
 import 'package:asora/features/moderation/presentation/moderation_console/moderation_console_screen.dart';
 import 'package:asora/design_system/components/lyth_button.dart';
 import 'package:asora/design_system/components/lyth_snackbar.dart';
 import 'package:asora/ui/components/tier_badge.dart';
 import 'package:asora/ui/theme/spacing.dart';
-import 'package:asora/ui/screens/profile/reputation_ledger_screen.dart';
 import 'package:asora/ui/screens/profile/settings_screen.dart';
 import 'package:asora/ui/screens/profile/edit_profile_screen.dart';
 
@@ -75,7 +72,6 @@ class ProfileScreen extends ConsumerWidget {
         isOwner &&
         (currentUser.role == UserRole.moderator ||
             currentUser.role == UserRole.admin);
-    final canUseControlPanel = isOwner && currentUser.role == UserRole.admin;
     if (isOwner) {
       _logProfileComplete(ref, profile, currentUser.id);
     }
@@ -133,28 +129,6 @@ class ProfileScreen extends ConsumerWidget {
               ),
             ],
           ),
-          if (profile.journalistVerified) ...[
-            const SizedBox(height: Spacing.sm),
-            const Row(
-              children: [
-                Icon(Icons.verified, size: 18),
-                SizedBox(width: Spacing.xs),
-                Text('Editorial Contributor'),
-              ],
-            ),
-          ],
-          if (profile.badges.isNotEmpty) ...[
-            const SizedBox(height: Spacing.lg),
-            Text('Badges', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: Spacing.xs),
-            Wrap(
-              spacing: Spacing.xs,
-              runSpacing: Spacing.xs,
-              children: profile.badges
-                  .map((badge) => Chip(label: Text(badge)))
-                  .toList(),
-            ),
-          ],
           if (!isOwner && currentUser != null) ...[
             const SizedBox(height: Spacing.lg),
             _FollowSection(
@@ -163,19 +137,6 @@ class ProfileScreen extends ConsumerWidget {
             ),
           ],
           const SizedBox(height: Spacing.lg),
-          ListTile(
-            leading: const Icon(Icons.emoji_events_outlined),
-            title: const Text('Reputation'),
-            subtitle: Text('${profile.reputationScore} points'),
-            trailing: TierBadge(label: profile.tier),
-            onTap: isOwner
-                ? () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const ReputationLedgerScreen(),
-                    ),
-                  )
-                : null,
-          ),
           if (isOwner) ...[
             const Divider(),
             ListTile(
@@ -199,19 +160,6 @@ class ProfileScreen extends ConsumerWidget {
                   );
                 },
               ),
-            if (canUseControlPanel)
-              ListTile(
-                leading: const Icon(Icons.admin_panel_settings_outlined),
-                title: const Text('Control Panel'),
-                subtitle: const Text('Admin tools & app preview'),
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const ControlPanelShell(),
-                    ),
-                  );
-                },
-              ),
             ListTile(
               leading: const Icon(Icons.settings_outlined),
               title: const Text('Settings'),
@@ -225,11 +173,6 @@ class ProfileScreen extends ConsumerWidget {
             ),
           ],
           const SizedBox(height: Spacing.lg),
-          _TrustPassportCard(
-            userId: profile.id,
-            visibility: profile.trustPassportVisibility,
-            isOwner: isOwner,
-          ),
         ],
       ),
     );
@@ -252,153 +195,6 @@ class ProfileScreen extends ConsumerWidget {
 
   bool _isProfileComplete(PublicUser profile) {
     return profile.displayName.trim().isNotEmpty;
-  }
-}
-
-class _TrustPassportCard extends ConsumerWidget {
-  const _TrustPassportCard({
-    required this.userId,
-    required this.visibility,
-    required this.isOwner,
-  });
-
-  final String userId;
-  final String visibility;
-  final bool isOwner;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    if (!isOwner && visibility == 'private') {
-      return Card(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Trust Passport',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: Spacing.xs),
-              Text(
-                'This user keeps trust passport details private.',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    final passportState = ref.watch(trustPassportProvider(userId));
-    final titleStyle = Theme.of(
-      context,
-    ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700);
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: passportState.when(
-          data: (passport) => Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Trust Passport', style: titleStyle),
-              const SizedBox(height: Spacing.sm),
-              _PassportRow(
-                label: 'Transparency streak',
-                value: passport.transparencyStreakCategory,
-              ),
-              _PassportRow(
-                label: 'Appeals outcomes',
-                value: passport.appealsResolvedFairlyLabel,
-                onTap: isOwner || visibility == 'public_expanded'
-                    ? () => _showCounts(context, passport)
-                    : null,
-              ),
-              _PassportRow(
-                label: 'Juror reliability tier',
-                value: passport.jurorReliabilityTier,
-              ),
-            ],
-          ),
-          loading: () => const SizedBox(
-            height: 52,
-            child: Center(child: Text('Loading trust passport...')),
-          ),
-          error: (_, __) => Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Trust Passport', style: titleStyle),
-              const SizedBox(height: Spacing.xs),
-              Text(
-                'Unavailable right now.',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              TextButton(
-                onPressed: () => ref.invalidate(trustPassportProvider(userId)),
-                child: const Text('Retry'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showCounts(BuildContext context, TrustPassport passport) {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (_) => Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Trust Passport details',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Posts with signals: ${passport.counts.postsWithSignals}/${passport.counts.totalPosts}',
-            ),
-            Text(
-              'Appeals resolved: ${passport.counts.appealsResolved} '
-              '(approved ${passport.counts.appealsApproved}, rejected ${passport.counts.appealsRejected})',
-            ),
-            Text(
-              'Juror alignment: ${passport.counts.alignedVotes}/${passport.counts.votesCast}',
-            ),
-            const SizedBox(height: 12),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PassportRow extends StatelessWidget {
-  const _PassportRow({required this.label, required this.value, this.onTap});
-
-  final String label;
-  final String value;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      dense: true,
-      contentPadding: EdgeInsets.zero,
-      title: Text(label),
-      subtitle: Text(value),
-      trailing: onTap != null ? const Icon(Icons.chevron_right) : null,
-      onTap: onTap,
-    );
   }
 }
 

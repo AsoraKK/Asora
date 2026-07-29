@@ -38,8 +38,8 @@ test('native public and admin APIs enforce configured hostnames', () => {
   assert.match(observability, /hostname_not_allowed/);
   assert.match(publicApi, /assertExpectedHostname\(request, env\.EXPECTED_HOSTNAMES\)/);
   assert.match(adminApi, /assertExpectedHostname\(request, env\.EXPECTED_HOSTNAMES\)/);
-  assert.match(fs.readFileSync(path.join(root, 'apps/lythaus-public-api/wrangler.jsonc'), 'utf8'), /lythaus-public-api-development\.asora\.workers\.dev/);
-  assert.match(fs.readFileSync(path.join(root, 'apps/lythaus-admin-api/wrangler.jsonc'), 'utf8'), /lythaus-admin-api-development\.asora\.workers\.dev/);
+  assert.doesNotMatch(fs.readFileSync(path.join(root, 'apps/lythaus-public-api/wrangler.jsonc'), 'utf8').slice(0, fs.readFileSync(path.join(root, 'apps/lythaus-public-api/wrangler.jsonc'), 'utf8').indexOf('"env"')), /asora\.workers\.dev/);
+  assert.doesNotMatch(fs.readFileSync(path.join(root, 'apps/lythaus-admin-api/wrangler.jsonc'), 'utf8').slice(0, fs.readFileSync(path.join(root, 'apps/lythaus-admin-api/wrangler.jsonc'), 'utf8').indexOf('"env"')), /asora\.workers\.dev/);
 });
 
 test('public API dispatch awaits rejection-prone async handlers', () => {
@@ -150,11 +150,11 @@ test('admin verifies Access JWTs independently', () => {
   assert.match(source, /admin_memberships/);
 });
 
-test('branch policy keeps ai-development as Git-only', () => {
+test('branch policy forbids automatic provider branch creation', () => {
   const guide = fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8');
   assert.match(guide, /Git convention only/);
-  assert.match(guide, /ci-\*/);
-  assert.match(guide, /Do not execute write queries against `main`/);
+  assert.match(guide, /Never create another PlanetScale branch/);
+  assert.match(guide, /PostgreSQL 17/);
 });
 
 test('resource registry is complete and discover-before-create guarded', () => {
@@ -211,17 +211,14 @@ test('jobs Worker exposes durable privacy and appeal workflows', () => {
   assert.match(source, /ON CONFLICT DO NOTHING/);
   assert.match(config, /BACKUP_VALIDATION/);
   assert.match(source, /class BackupValidationWorkflow/);
-  assert.match(source, /independent_backup_healthcheck_not_configured/);
+  assert.match(source, /backup\.schema_validation\.completed/);
 });
 
-test('temporary PlanetScale CI is branch-scoped and cleans up safely', () => {
+test('PlanetScale CI uses a disposable local PostgreSQL 17 service', () => {
   const workflow = fs.readFileSync(path.join(root, '.github/workflows/native-planetscale-ci.yml'), 'utf8');
-  const script = fs.readFileSync(path.join(root, 'scripts/ci/apply-planetscale-migrations.mjs'), 'utf8');
-  assert.match(workflow, /PSCALE_BRANCH_NAME: ci-\$\{\{ github\.run_id \}\}/);
-  assert.match(workflow, /--from main --major-version 18/);
-  assert.match(workflow, /branch delete/);
-  assert.match(script, /refusing to run outside a ci-\* PlanetScale branch/);
-  assert.doesNotMatch(workflow, /branch delete.*main/s);
+  assert.match(workflow, /image: postgres:17/);
+  assert.match(workflow, /PLANETSCALE_PG17_TEST_DATABASE_URL/);
+  assert.doesNotMatch(workflow, /pscale branch create|PSCALE_SERVICE_TOKEN|ci-\$\{\{/);
 });
 
 test('production migrations are explicit, TLS-verified, and approval-gated', () => {
@@ -237,15 +234,32 @@ test('production migrations are explicit, TLS-verified, and approval-gated', () 
   assert.doesNotMatch(script, /0001_feature_flags/);
 });
 
-test('production deployment is fail-closed on the five acceptance gates', () => {
+test('production deployment is fail-closed on all acceptance gates', () => {
   const workflow = fs.readFileSync(path.join(root, '.github/workflows/native-workers-deploy.yml'), 'utf8');
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'infrastructure/cloudflare/production-gates.json'), 'utf8'));
   const validator = fs.readFileSync(path.join(root, 'scripts/validate-production-gates.mjs'), 'utf8');
   assert.match(workflow, /Validate all production acceptance gates/);
-  assert.equal(Object.keys(manifest.gates).length, 5);
+  assert.ok(Object.keys(manifest.gates).length >= 8);
   assert.equal(manifest.cutoverAuthorized, false);
   assert.equal(manifest.azureDeletionAuthorized, false);
   assert.match(validator, /--require-pass/);
+});
+
+test('production deployment accepts only the exact merged main SHA', () => {
+  const workflow = fs.readFileSync(path.join(root, '.github/workflows/native-workers-deploy.yml'), 'utf8');
+  assert.match(workflow, /ref: main/);
+  assert.match(workflow, /git rev-parse origin\/main/);
+  assert.match(workflow, /Refusing deployment: release_sha is not the checked-out origin\/main SHA/);
+});
+
+test('Azure transformation evidence uses deterministic canonical hashes', () => {
+  const canonical = fs.readFileSync(path.join(root, 'scripts/azure-exit/canonical-hash.mjs'), 'utf8');
+  const transform = fs.readFileSync(path.join(root, 'scripts/azure-exit/transform-records.mjs'), 'utf8');
+  assert.match(canonical, /Object\.keys\(value\).*sort\(\)/s);
+  assert.match(canonical, /sha256/);
+  assert.match(transform, /rawSourceSha256/);
+  assert.match(transform, /transformedSha256/);
+  assert.match(transform, /aes-256-gcm/);
 });
 
 test('jobs role can read trust ledgers required by Data Passport exports', () => {

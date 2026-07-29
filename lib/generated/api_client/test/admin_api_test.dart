@@ -1,6 +1,7 @@
 import 'package:test/test.dart';
 import 'package:asora_api_client/asora_api_client.dart';
 
+
 /// tests for AdminApi
 void main() {
   final instance = AsoraApiClient().getAdminApi();
@@ -8,7 +9,7 @@ void main() {
   group(AdminApi, () {
     // Approve an appeal
     //
-    // Approves an appeal and restores content to PUBLISHED.
+    // Approves an appeal and restores content to PUBLISHED. Overrides existing outcomes.
     //
     //Future<AdminAppealDecisionResponse> adminAppealsApprove(String appealId, AdminAppealDecisionRequest adminAppealDecisionRequest) async
     test('test adminAppealsApprove', () async {
@@ -33,12 +34,72 @@ void main() {
       // TODO
     });
 
+    // Override an appeal
+    //
+    // Moderator override for appeal outcomes. Idempotent per appeal.
+    //
+    //Future<AdminAppealOverrideResponse> adminAppealsOverride(String appealId, AdminAppealOverrideRequest adminAppealOverrideRequest, { String idempotencyKey }) async
+    test('test adminAppealsOverride', () async {
+      // TODO
+    });
+
     // Reject an appeal
     //
-    // Rejects an appeal and keeps content BLOCKED.
+    // Rejects an appeal and keeps content BLOCKED. Overrides existing outcomes.
     //
     //Future<AdminAppealDecisionResponse> adminAppealsReject(String appealId, AdminAppealDecisionRequest adminAppealDecisionRequest) async
     test('test adminAppealsReject', () async {
+      // TODO
+    });
+
+    // List admin audit log entries
+    //
+    // Returns recent admin audit entries.
+    //
+    //Future<AdminAuditListResponse> adminAuditList({ int limit }) async
+    test('test adminAuditList', () async {
+      // TODO
+    });
+
+    // Get budget configuration
+    //
+    //Future<JsonObject> adminBudgetGet() async
+    test('test adminBudgetGet', () async {
+      // TODO
+    });
+
+    // Update budget configuration
+    //
+    //Future<JsonObject> adminBudgetUpdate(JsonObject body) async
+    test('test adminBudgetUpdate', () async {
+      // TODO
+    });
+
+    // Get admin runtime configuration
+    //
+    //Future<JsonObject> adminConfigGet() async
+    test('test adminConfigGet', () async {
+      // TODO
+    });
+
+    // Get public admin configuration
+    //
+    //Future<JsonObject> adminConfigPublicGet() async
+    test('test adminConfigPublicGet', () async {
+      // TODO
+    });
+
+    // Update public admin configuration
+    //
+    //Future<JsonObject> adminConfigPublicUpdate(JsonObject body) async
+    test('test adminConfigPublicUpdate', () async {
+      // TODO
+    });
+
+    // Update admin runtime configuration
+    //
+    //Future<JsonObject> adminConfigUpdate(JsonObject body) async
+    test('test adminConfigUpdate', () async {
       // TODO
     });
 
@@ -57,6 +118,76 @@ void main() {
     //
     //Future<AdminContentActionResponse> adminContentPublish(String contentId, AdminContentActionRequest adminContentActionRequest) async
     test('test adminContentPublish', () async {
+      // TODO
+    });
+
+    // Cancel a data subject request
+    //
+    //Future<JsonObject> adminDsrCancel(String id, JsonObject body) async
+    test('test adminDsrCancel', () async {
+      // TODO
+    });
+
+    // Download data subject request export
+    //
+    //Future<JsonObject> adminDsrDownload(String id) async
+    test('test adminDsrDownload', () async {
+      // TODO
+    });
+
+    // Get data subject request detail
+    //
+    //Future<JsonObject> adminDsrGet(String id) async
+    test('test adminDsrGet', () async {
+      // TODO
+    });
+
+    // Clear a legal hold
+    //
+    //Future<JsonObject> adminDsrLegalHoldClear(String id, JsonObject body) async
+    test('test adminDsrLegalHoldClear', () async {
+      // TODO
+    });
+
+    // Place a legal hold
+    //
+    //Future<JsonObject> adminDsrLegalHoldPlace(JsonObject body) async
+    test('test adminDsrLegalHoldPlace', () async {
+      // TODO
+    });
+
+    // List data subject requests
+    //
+    //Future<JsonObject> adminDsrList() async
+    test('test adminDsrList', () async {
+      // TODO
+    });
+
+    // Release a data subject request
+    //
+    //Future<JsonObject> adminDsrRelease(String id, JsonObject body) async
+    test('test adminDsrRelease', () async {
+      // TODO
+    });
+
+    // Retry a failed data subject request
+    //
+    //Future<JsonObject> adminDsrRetry(String id, JsonObject body) async
+    test('test adminDsrRetry', () async {
+      // TODO
+    });
+
+    // First-reviewer decision on DSR
+    //
+    //Future<JsonObject> adminDsrReviewA(String id, JsonObject body) async
+    test('test adminDsrReviewA', () async {
+      // TODO
+    });
+
+    // Second-reviewer decision on DSR
+    //
+    //Future<JsonObject> adminDsrReviewB(String id, JsonObject body) async
+    test('test adminDsrReviewB', () async {
       // TODO
     });
 
@@ -100,23 +231,32 @@ void main() {
     //
     // Creates a single admin invite code.
     //
-    //Future<AdminInviteResponse> adminInvitesCreate(AdminInviteCreateRequest adminInviteCreateRequest) async
+    //Future<AdminCreatedInvite> adminInvitesCreate(AdminInviteCreateRequest adminInviteCreateRequest) async
     test('test adminInvitesCreate', () async {
       // TODO
     });
 
-    // Get an invite code
+    // Revoke an Alpha invite
     //
-    // Fetch a single invite by code.
+    // Revokes the invite without deleting its audit record.
     //
-    //Future<AdminInviteResponse> adminInvitesGet(String code) async
+    //Future<AdminInviteRevokeResponse> adminInvitesDelete(String inviteId) async
+    test('test adminInvitesDelete', () async {
+      // TODO
+    });
+
+    // Get an Alpha invite
+    //
+    // Fetch a single invite by opaque administrative identifier.
+    //
+    //Future<AdminInviteResponse> adminInvitesGet(String inviteId) async
     test('test adminInvitesGet', () async {
       // TODO
     });
 
-    // List invite codes
+    // List Alpha invites
     //
-    // Returns admin invite codes with usage metadata.
+    // Returns opaque invite identifiers and usage metadata. Plaintext codes are never listed.
     //
     //Future<AdminInviteListResponse> adminInvitesList({ String createdBy, bool unused, String cursor, int limit }) async
     test('test adminInvitesList', () async {
@@ -127,8 +267,108 @@ void main() {
     //
     // Revokes an invite code immediately.
     //
-    //Future<AdminInviteRevokeResponse> adminInvitesRevoke(String code, { AdminInviteRevokeRequest adminInviteRevokeRequest }) async
+    //Future<AdminInviteRevokeResponse> adminInvitesRevoke(String inviteId, { AdminInviteRevokeRequest adminInviteRevokeRequest }) async
     test('test adminInvitesRevoke', () async {
+      // TODO
+    });
+
+    // Reset a moderation class to defaults
+    //
+    //Future<JsonObject> adminModerationClassReset(String className, JsonObject body) async
+    test('test adminModerationClassReset', () async {
+      // TODO
+    });
+
+    // List moderation label classes
+    //
+    //Future<JsonObject> adminModerationClassesList() async
+    test('test adminModerationClassesList', () async {
+      // TODO
+    });
+
+    // Proxy DELETE to Hive AI test endpoint
+    //
+    //Future<JsonObject> adminModerationTestDelete(String path) async
+    test('test adminModerationTestDelete', () async {
+      // TODO
+    });
+
+    // Proxy GET to Hive AI test endpoint
+    //
+    //Future<JsonObject> adminModerationTestGet(String path) async
+    test('test adminModerationTestGet', () async {
+      // TODO
+    });
+
+    // Proxy PATCH to Hive AI test endpoint
+    //
+    //Future<JsonObject> adminModerationTestPatch(String path, JsonObject body) async
+    test('test adminModerationTestPatch', () async {
+      // TODO
+    });
+
+    // Proxy POST to Hive AI test endpoint
+    //
+    //Future<JsonObject> adminModerationTestPost(String path, JsonObject body) async
+    test('test adminModerationTestPost', () async {
+      // TODO
+    });
+
+    // Proxy PUT to Hive AI test endpoint
+    //
+    //Future<JsonObject> adminModerationTestPut(String path, JsonObject body) async
+    test('test adminModerationTestPut', () async {
+      // TODO
+    });
+
+    // Bulk-update moderation class weights
+    //
+    //Future<JsonObject> adminModerationWeightsUpdate(JsonObject body) async
+    test('test adminModerationWeightsUpdate', () async {
+      // TODO
+    });
+
+    // Ingest news items into the news board
+    //
+    //Future<JsonObject> adminNewsIngest(JsonObject body) async
+    test('test adminNewsIngest', () async {
+      // TODO
+    });
+
+    // Get operational metrics
+    //
+    //Future<JsonObject> adminOpsMetrics() async
+    test('test adminOpsMetrics', () async {
+      // TODO
+    });
+
+    // Get operational state flags
+    //
+    //Future<JsonObject> adminOpsStateGet() async
+    test('test adminOpsStateGet', () async {
+      // TODO
+    });
+
+    // Update operational state flags
+    //
+    //Future<JsonObject> adminOpsStateUpdate(JsonObject body) async
+    test('test adminOpsStateUpdate', () async {
+      // TODO
+    });
+
+    // Set user subscription tier
+    //
+    // Update the subscription tier of a specific user. Requires active admin privileges.
+    //
+    //Future<AdminUserActionResponse> adminSetUserTier(String userId, AdminSetUserTierRequest adminSetUserTierRequest) async
+    test('test adminSetUserTier', () async {
+      // TODO
+    });
+
+    // Purge test data outside production
+    //
+    //Future<AdminTestDataPurge200Response> adminTestDataPurge(AdminTestDataPurgeRequest adminTestDataPurgeRequest) async
+    test('test adminTestDataPurge', () async {
       // TODO
     });
 
@@ -158,5 +398,6 @@ void main() {
     test('test adminUsersSearch', () async {
       // TODO
     });
+
   });
 }

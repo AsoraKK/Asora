@@ -7,7 +7,9 @@ Execution rules:
 
 - Apply migrations through the direct PlanetScale administrative connection.
 - Never run migrations through Hyperdrive.
-- Use `development` or an ephemeral `ci-*` branch for validation.
+- Use the existing synthetic-only `development` branch for provider validation.
+- Use a disposable local PostgreSQL 17 container for complete compatibility
+  tests. Never create an ephemeral PlanetScale branch from CI.
 - Do not execute writes or DDL against `main` without explicit human approval.
 - Reinstall required extensions after every backup restore because restored
   branches do not automatically restore extensions. PostGIS is optional and

@@ -94,16 +94,6 @@ CREATE TABLE content.places (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
-DO $$
-BEGIN
-  IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'postgis') THEN
-    EXECUTE 'ALTER TABLE content.places ADD COLUMN IF NOT EXISTS boundary geography(MultiPolygon, 4326)';
-  ELSE
-    RAISE NOTICE 'PostGIS unavailable; content.places.boundary remains disabled';
-  END IF;
-END
-$$;
-
 CREATE TABLE content.posts (
   id uuid PRIMARY KEY,
   author_id uuid NOT NULL REFERENCES identity.users(id),
@@ -254,18 +244,18 @@ CREATE TABLE privacy.legal_holds (
 );
 
 CREATE TABLE privacy.subject_data_locations (
-  id uuid PRIMARY KEY,
   subject_id uuid NOT NULL REFERENCES identity.users(id),
   store_type text NOT NULL,
   resource_reference text NOT NULL,
   entity_type text NOT NULL,
   entity_id uuid,
+  entity_key text GENERATED ALWAYS AS (COALESCE(entity_id::text, 'aggregate')) STORED,
   authoritative_or_derived text NOT NULL CHECK (authoritative_or_derived IN ('authoritative', 'derived')),
   retention_class text NOT NULL,
   legal_hold_state text NOT NULL DEFAULT 'none',
   deletion_state text NOT NULL DEFAULT 'present',
   last_verified_at timestamptz,
-  UNIQUE (subject_id, store_type, resource_reference, entity_type, entity_id)
+  PRIMARY KEY (subject_id, store_type, resource_reference, entity_type, entity_key)
 );
 
 CREATE TABLE privacy.deletion_tombstones (
@@ -280,7 +270,8 @@ CREATE TABLE privacy.export_manifests (
   object_key text NOT NULL,
   package_hash text NOT NULL,
   expires_at timestamptz NOT NULL,
-  created_at timestamptz NOT NULL DEFAULT now()
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (request_id, object_key)
 );
 
 CREATE TABLE trust.provenance_events (

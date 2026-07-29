@@ -7,8 +7,8 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(AdminInvite, () {
-    // String inviteCode
-    test('to test the property `inviteCode`', () async {
+    // String inviteId
+    test('to test the property `inviteId`', () async {
       // TODO
     });
 
@@ -61,5 +61,6 @@ void main() {
     test('to test the property `usedByUserId`', () async {
       // TODO
     });
+
   });
 }

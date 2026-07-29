@@ -7,7 +7,7 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(AdminInviteListResponse, () {
-    // BuiltList<AdminInvite> invites
+    // BuiltList<AdminCreatedInvite> invites
     test('to test the property `invites`', () async {
       // TODO
     });
@@ -21,5 +21,6 @@ void main() {
     test('to test the property `nextCursor`', () async {
       // TODO
     });
+
   });
 }

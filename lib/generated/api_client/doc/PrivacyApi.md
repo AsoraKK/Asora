@@ -9,16 +9,18 @@ All URIs are relative to *https://api.lythaus.co/api*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
-[**deleteUserAccount**](PrivacyApi.md#deleteuseraccount) | **DELETE** /user/delete | Delete own account (GDPR Article 17)
-[**exportUserData**](PrivacyApi.md#exportuserdata) | **GET** /user/export | Export personal data (GDPR Article 20)
+[**deleteUserAccount**](PrivacyApi.md#deleteuseraccount) | **DELETE** /user/delete | Legacy synchronous account deletion
+[**exportUserData**](PrivacyApi.md#exportuserdata) | **GET** /user/export | Legacy synchronous personal-data export
+[**privacyRequestCreate**](PrivacyApi.md#privacyrequestcreate) | **POST** /privacy/requests | Submit an asynchronous privacy request
+[**privacyRequestStatus**](PrivacyApi.md#privacyrequeststatus) | **GET** /privacy/requests | Get the latest privacy request status
 
 
 # **deleteUserAccount**
 > AccountDeleteResponse deleteUserAccount(xConfirmDelete)
 
-Delete own account (GDPR Article 17)
+Legacy synchronous account deletion
 
-Permanently deletes the authenticated user's account and anonymises all authored content. Requires the `X-Confirm-Delete: true` header to guard against accidental invocations. This action is **irreversible**.
+Legacy Azure Functions compatibility route retained only while source migration evidence is collected. The Lythaus production runtime uses the asynchronous `/privacy/requests` contract.
 
 ### Example
 ```dart
@@ -59,9 +61,9 @@ Name | Type | Description  | Notes
 # **exportUserData**
 > DSRExportResponse exportUserData()
 
-Export personal data (GDPR Article 20)
+Legacy synchronous personal-data export
 
-Returns a structured copy of all personal data held for the authenticated user. Export cooldown periods are tier-gated. The `X-Export-ID` response header contains the export identifier for tracking.
+Legacy Azure Functions compatibility route retained only while source migration evidence is collected. The Lythaus production runtime uses the asynchronous `/privacy/requests` contract.
 
 ### Example
 ```dart
@@ -83,6 +85,94 @@ This endpoint does not need any parameter.
 ### Return type
 
 [**DSRExportResponse**](DSRExportResponse.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **privacyRequestCreate**
+> PrivacyRequestAccepted privacyRequestCreate(privacyRequestCreate, idempotencyKey)
+
+Submit an asynchronous privacy request
+
+Records an export, account deletion, or rectification request and queues it for durable processing. Acceptance does not mean processing is complete.
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getPrivacyApi();
+final PrivacyRequestCreate privacyRequestCreate = ; // PrivacyRequestCreate |
+final String idempotencyKey = idempotencyKey_example; // String |
+
+try {
+    final response = api.privacyRequestCreate(privacyRequestCreate, idempotencyKey);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling PrivacyApi->privacyRequestCreate: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **privacyRequestCreate** | [**PrivacyRequestCreate**](PrivacyRequestCreate.md)|  |
+ **idempotencyKey** | **String**|  | [optional]
+
+### Return type
+
+[**PrivacyRequestAccepted**](PrivacyRequestAccepted.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **privacyRequestStatus**
+> PrivacyRequestStatusResponse privacyRequestStatus(requestType)
+
+Get the latest privacy request status
+
+Returns the authenticated user's latest matching asynchronous privacy request.
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getPrivacyApi();
+final String requestType = requestType_example; // String |
+
+try {
+    final response = api.privacyRequestStatus(requestType);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling PrivacyApi->privacyRequestStatus: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **requestType** | **String**|  | [optional]
+
+### Return type
+
+[**PrivacyRequestStatusResponse**](PrivacyRequestStatusResponse.md)
 
 ### Authorization
 

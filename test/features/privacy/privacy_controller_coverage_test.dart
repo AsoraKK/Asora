@@ -128,7 +128,7 @@ void main() {
       addTearDown(harness.dispose);
       harness.repository.exportSnapshot = const ExportSnapshot(
         remainingCooldown: Duration(hours: 24),
-        serverState: 'email_sent',
+        serverState: 'accepted',
       );
 
       final c = await harness.controller();

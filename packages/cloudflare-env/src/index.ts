@@ -24,6 +24,7 @@ export interface EnvBindings {
   HIVE_API_KEY?: string;
   HIVE_API_URL?: string;
   HIVE_MODEL_VERSION?: string;
+  PAID_AI_DETECTION_ENABLED?: string;
   R2_ACCESS_KEY_ID?: string;
   R2_SECRET_ACCESS_KEY?: string;
   R2_ACCOUNT_ID?: string;

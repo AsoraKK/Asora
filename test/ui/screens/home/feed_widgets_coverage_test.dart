@@ -76,9 +76,7 @@ void main() {
     });
 
     testWidgets('renders empty state when there are no items', (tester) async {
-      await tester.pumpWidget(
-        wrap(const DiscoverFeed(feed: feed, items: [])),
-      );
+      await tester.pumpWidget(wrap(const DiscoverFeed(feed: feed, items: [])));
       await tester.pump();
 
       expect(find.text('No posts yet'), findsOneWidget);

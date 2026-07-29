@@ -11,13 +11,13 @@ class FeedControlPanel extends ConsumerWidget {
   const FeedControlPanel({
     super.key,
     this.onSelect,
-    required this.onCreateCustom,
+    this.onCreateCustom,
     this.onOpenModerationHub,
     this.onOpenAppeals,
   });
 
   final ValueChanged<FeedModel>? onSelect;
-  final VoidCallback onCreateCustom;
+  final VoidCallback? onCreateCustom;
   final VoidCallback? onOpenModerationHub;
   final VoidCallback? onOpenAppeals;
 
@@ -61,11 +61,12 @@ class FeedControlPanel extends ConsumerWidget {
               style: Theme.of(context).textTheme.bodyMedium,
             ),
           const SizedBox(height: Spacing.sm),
-          FilledButton.icon(
-            onPressed: onCreateCustom,
-            icon: const Icon(Icons.tune_rounded),
-            label: const Text('Build custom feed'),
-          ),
+          if (onCreateCustom != null)
+            FilledButton.icon(
+              onPressed: onCreateCustom,
+              icon: const Icon(Icons.tune_rounded),
+              label: const Text('Build custom feed'),
+            ),
           const Divider(height: Spacing.xl),
           if (onOpenModerationHub != null)
             ListTile(

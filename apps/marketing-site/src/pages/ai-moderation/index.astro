@@ -2,30 +2,30 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 ---
 <BaseLayout
-  title="AI Moderation"
-  description="How Lythaus uses AI to keep the platform safe and human-first."
+  title="Content Transparency"
+  description="How Lythaus combines creator declarations, flags, and staff review."
   canonicalPath="/ai-moderation"
 >
   <section class="section">
-    <h1>AI-Powered Moderation</h1>
+    <h1>Content Transparency and Review</h1>
     <p>
-      Lythaus uses a layered moderation pipeline to protect the community while
-      keeping humans in the loop.
+      Lythaus launches with creator declarations, community flags, and staff
+      review. Paid automated detection is not active.
     </p>
 
     <h2>How it works</h2>
     <ol>
       <li>
-        <strong>Hive AI (primary)</strong> — every post is scored for toxicity,
-        spam, and policy violations in real time.
+        <strong>Creator declaration</strong> — each post is labelled
+        Human-authored, AI-assisted, or AI-generated.
       </li>
       <li>
-        <strong>Azure Content Safety (fallback)</strong> — a second layer catches
-        anything Hive misses and provides category-level severity scores.
+        <strong>Community flags</strong> — members can report content that may
+        violate policy.
       </li>
       <li>
-        <strong>Human review</strong> — flagged content is queued for moderators.
-        No post is removed by AI alone.
+        <strong>Staff review</strong> — flagged or uncertain content can be
+        marked Under review and assessed by an administrator.
       </li>
     </ol>
 
@@ -38,8 +38,8 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
     <h2>Appeals</h2>
     <p>
-      Every moderation decision can be appealed. Appeals are reviewed by a
-      human moderator — never by the same AI that flagged the content.
+      Appeals are enabled for submission and staff review. Community-vote
+      adjudication remains disabled until the governance feature is ready.
     </p>
   </section>
 </BaseLayout>

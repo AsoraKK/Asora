@@ -1,13 +1,12 @@
 # Geospatial provider fallback ADR
 
-Status: `development-only fallback; geography capability blocked`
+Status: `accepted launch baseline; advanced geography deferred`
 
 ## Decision
 
-PostGIS remains a required Lythaus launch capability for geometry-backed place
-queries. PlanetScale currently exposes PostGIS in the catalog but excludes it
-from the immutable extension allowlist, so the development baseline must not
-pretend that the extension is installed.
+PostGIS is not a Lythaus launch requirement. The startup architecture uses
+ordinary PostgreSQL 17 types and indexes for country, region, municipality,
+community, numeric coordinates, and validated GeoJSON where needed.
 
 The core migration therefore stores an optional `content.places.boundary_geojson`
 value and adds the PostGIS `boundary geography(MultiPolygon, 4326)` column only
@@ -27,6 +26,6 @@ When PlanetScale allows PostGIS:
 4. Update the extension evidence and only then enable geography-dependent
    product behaviour.
 
-This fallback does not change the production architecture or remove the
-required capability; it keeps independent development work moving while Gate 3
-and the geography portion of Gate 4 remain blocked.
+This enhancement is optional. Polygon containment, distance search, advanced
+spatial analysis, and location-based recommendations remain feature-flagged off
+until the provider capability and product need are both proven.

@@ -76,7 +76,7 @@ class PrivacyRepository {
       return _snapshotFrom(
         utcTimestamp: acceptedAtUtc,
         overrideRemaining: result.retryAfter,
-        serverState: 'email_sent',
+        serverState: 'accepted',
       );
     } on PrivacyApiException catch (error) {
       throw _mapApiException(error);
@@ -116,7 +116,6 @@ class PrivacyRepository {
     try {
       _logger.info('privacy_repository.delete_account');
       await _api.deleteAccount(authToken: authToken, hardDelete: hardDelete);
-      await clearPersistedExport();
     } on PrivacyApiException catch (error) {
       throw _mapApiException(error);
     }

@@ -54,7 +54,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.privacy_tip_outlined),
             title: const Text('Privacy and your data'),
-            subtitle: const Text('Visibility, data export, and account deletion'),
+            subtitle: const Text(
+              'Visibility, data export, and account deletion',
+            ),
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
                 builder: (_) => const PrivacySettingsScreen(),
@@ -171,9 +173,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ? 'Too many profile updates. Please wait before trying again.'
           : 'Unable to update trust visibility.';
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
       }
     } catch (_) {
       if (mounted) {

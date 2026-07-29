@@ -22,8 +22,8 @@ Note: Live file uploads are not supported yet; use URL inputs or mock mode.
 - Same-origin requests are always allowed
 
 **Deployment requirement:**
-- Cloudflare/ingress must route `/api/*` to the Azure Functions App
-- Functions App must have env vars: `CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET` set
+- Cloudflare routes `admin-api.lythaus.co` to the existing native admin Worker.
+- Existing Cloudflare Access applications protect both admin hosts.
 
 To bypass proxy and call admin API directly:
 ```bash

@@ -1,6 +1,7 @@
 import 'package:test/test.dart';
 import 'package:asora_api_client/asora_api_client.dart';
 
+
 /// tests for AppealsApi
 void main() {
   final instance = AsoraApiClient().getAppealsApi();
@@ -26,5 +27,6 @@ void main() {
     test('test appealsVote', () async {
       // TODO
     });
+
   });
 }

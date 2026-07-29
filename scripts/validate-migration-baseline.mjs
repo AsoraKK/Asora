@@ -3,14 +3,14 @@ import path from 'node:path';
 
 const root = process.cwd();
 const migrationDir = path.join(root, 'database', 'planetscale', 'migrations');
-const requiredMigrations = ['0000_preflight.sql', '0001_extensions_and_schemas.sql', '0002_core_tables.sql', '0003_domain_extensions.sql', '0004_launch_contract.sql', '0005_auth_revocation.sql', '0006_admin_role_expansion.sql'];
+const requiredMigrations = ['0000_preflight.sql', '0001_extensions_and_schemas.sql', '0002_core_tables.sql', '0003_domain_extensions.sql', '0004_launch_contract.sql', '0005_auth_revocation.sql', '0006_admin_role_expansion.sql', '0007_contact_emails.sql'];
 const requiredSeeds = ['0001_feature_flags.sql'];
 const requiredRecoveryFiles = ['restore-verify.sql'];
 const requiredSchemas = ['identity', 'content', 'social', 'feed', 'moderation', 'privacy', 'trust', 'media', 'editorial', 'system'];
 const requiredTables = [
   'identity.users', 'identity.provider_links', 'identity.handles', 'identity.email_credentials', 'identity.refresh_token_families',
   'identity.auth_sessions', 'identity.consent_records', 'identity.user_region_preferences', 'identity.admin_memberships',
-  'identity.email_verification_tokens', 'identity.password_reset_tokens', 'identity.account_events',
+  'identity.email_verification_tokens', 'identity.password_reset_tokens', 'identity.account_events', 'identity.contact_emails',
   'content.places', 'content.posts', 'content.post_locations', 'content.comments', 'content.content_declarations',
   'social.follows', 'social.reactions', 'social.profiles', 'social.profile_private_fields', 'social.blocks', 'social.mutes',
   'social.bookmarks', 'social.custom_feeds', 'social.custom_feed_rules',

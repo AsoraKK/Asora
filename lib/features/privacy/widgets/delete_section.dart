@@ -45,7 +45,7 @@ class PrivacyDeleteSection extends StatelessWidget {
           ),
           SizedBox(height: spacing.md),
           Text(
-            'This removes your profile and content. This action cannot be undone.',
+            'Submit a request to remove your profile and associated data. Legal holds and required retention are reviewed before processing.',
             style: textTheme.bodyMedium?.copyWith(
               color: colors.onErrorContainer,
             ),
@@ -54,7 +54,9 @@ class PrivacyDeleteSection extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: LythButton.destructive(
-              label: isProcessing ? 'Deleting account…' : 'Delete account',
+              label: isProcessing
+                  ? 'Submitting request…'
+                  : 'Request account deletion',
               onPressed: isProcessing ? null : onDelete,
               isLoading: isProcessing,
             ),

@@ -11,7 +11,7 @@ import 'package:built_value/serializer.dart';
 
 part 'dsr_export_response.g.dart';
 
-/// GDPR Article 20 data portability export payload.
+/// Legacy GDPR Article 20 data portability export payload.
 ///
 /// Properties:
 /// * [metadata]

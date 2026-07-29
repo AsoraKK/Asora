@@ -2,6 +2,7 @@
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 
 import 'package:asora/core/logging/app_logger.dart';
 import 'package:asora/core/network/api_endpoints.dart';
@@ -27,8 +28,13 @@ class PrivacyApiException implements Exception {
 
 /// Successful export request payload.
 class ExportRequestResult {
-  const ExportRequestResult({required this.acceptedAt, this.retryAfter});
+  const ExportRequestResult({
+    required this.requestId,
+    required this.acceptedAt,
+    this.retryAfter,
+  });
 
+  final String requestId;
   final DateTime acceptedAt;
   final Duration? retryAfter;
 }
@@ -69,20 +75,30 @@ class DioPrivacyApi implements PrivacyApi {
   final Dio _dio;
   final AppLogger _logger;
   final DateTime Function() _now;
+  static const Uuid _uuid = Uuid();
 
   @override
   Future<ExportRequestResult> requestExport({required String authToken}) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
         ApiEndpoints.exportUser,
+        data: const {'requestType': 'export'},
         options: Options(headers: _headers(authToken)),
       );
 
-      final data = response.data;
+      final data = response.data ?? const <String, dynamic>{};
+      final requestId = data['requestId'] as String?;
+      if (requestId == null || requestId.isEmpty) {
+        throw const PrivacyApiException(
+          PrivacyErrorType.server,
+          message: 'privacy_request_id_missing',
+        );
+      }
       final acceptedAt = _parseAcceptedAt(data) ?? _now().toUtc();
       final retryAfter = _retryAfterFromResponse(response);
 
       return ExportRequestResult(
+        requestId: requestId,
         acceptedAt: acceptedAt,
         retryAfter: retryAfter,
       );
@@ -101,10 +117,13 @@ class DioPrivacyApi implements PrivacyApi {
       );
 
       final data = response.data ?? const <String, dynamic>{};
+      final request = data['request'] is Map<String, dynamic>
+          ? data['request'] as Map<String, dynamic>
+          : data;
       return ExportStatusDTO(
-        state: (data['state'] as String?)?.toLowerCase() ?? 'idle',
-        acceptedAt: _parseAcceptedAt(data),
-        retryAfterSeconds: data['retryAfterSeconds'] as int?,
+        state: (request['state'] as String?)?.toLowerCase() ?? 'idle',
+        acceptedAt: _parseAcceptedAt(request),
+        retryAfterSeconds: request['retryAfterSeconds'] as int?,
       );
     } on DioException catch (error, stackTrace) {
       // Treat 404 as "status endpoint not available" rather than fatal.
@@ -123,15 +142,10 @@ class DioPrivacyApi implements PrivacyApi {
     required bool hardDelete,
   }) async {
     try {
-      await _dio.delete<void>(
+      await _dio.post<Map<String, dynamic>>(
         ApiEndpoints.deleteUser,
-        options: Options(
-          headers: {
-            ..._headers(authToken),
-            'X-Confirm-Delete': 'true',
-            if (hardDelete) 'X-Hard-Delete': 'true',
-          },
-        ),
+        data: const {'requestType': 'delete'},
+        options: Options(headers: _headers(authToken)),
       );
     } on DioException catch (error, stackTrace) {
       _logger.error('privacy_delete_request_failed', error, stackTrace);
@@ -142,6 +156,7 @@ class DioPrivacyApi implements PrivacyApi {
   Map<String, String> _headers(String token) => {
     'Authorization': 'Bearer $token',
     'Content-Type': 'application/json',
+    'Idempotency-Key': 'privacy-${_uuid.v4()}',
   };
 
   PrivacyApiException _mapException(DioException error) {

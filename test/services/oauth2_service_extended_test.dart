@@ -90,9 +90,9 @@ void main() {
     });
 
     test('uses cached token when present and not expired', () async {
-      when(() => mockStorage.read(key: 'access_token')).thenAnswer(
-        (_) async => 'cached-token',
-      );
+      when(
+        () => mockStorage.read(key: 'access_token'),
+      ).thenAnswer((_) async => 'cached-token');
       when(() => mockStorage.read(key: 'expires_on')).thenAnswer(
         (_) async =>
             DateTime.now().add(const Duration(hours: 1)).toIso8601String(),
@@ -147,18 +147,21 @@ void main() {
 
       await service.cacheToken(result);
 
-      verify(() => mockStorage.write(key: 'access_token', value: 'access'))
-          .called(1);
-      verify(() => mockStorage.write(key: 'id_token', value: 'id-token'))
-          .called(1);
+      verify(
+        () => mockStorage.write(key: 'access_token', value: 'access'),
+      ).called(1);
+      verify(
+        () => mockStorage.write(key: 'id_token', value: 'id-token'),
+      ).called(1);
       verify(
         () => mockStorage.write(
           key: 'expires_on',
           value: expiry.toIso8601String(),
         ),
       ).called(1);
-      verify(() => mockStorage.write(key: 'account_id', value: 'account-1'))
-          .called(1);
+      verify(
+        () => mockStorage.write(key: 'account_id', value: 'account-1'),
+      ).called(1);
       service.dispose();
     });
   });

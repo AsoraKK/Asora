@@ -1,27 +1,47 @@
 import 'package:test/test.dart';
 import 'package:asora_api_client/asora_api_client.dart';
 
+
 /// tests for PrivacyApi
 void main() {
   final instance = AsoraApiClient().getPrivacyApi();
 
   group(PrivacyApi, () {
-    // Delete own account (GDPR Article 17)
+    // Legacy synchronous account deletion
     //
-    // Permanently deletes the authenticated user's account and anonymises all authored content. Requires the `X-Confirm-Delete: true` header to guard against accidental invocations. This action is **irreversible**.
+    // Legacy Azure Functions compatibility route retained only while source migration evidence is collected. The Lythaus production runtime uses the asynchronous `/privacy/requests` contract.
     //
     //Future<AccountDeleteResponse> deleteUserAccount(String xConfirmDelete) async
     test('test deleteUserAccount', () async {
       // TODO
     });
 
-    // Export personal data (GDPR Article 20)
+    // Legacy synchronous personal-data export
     //
-    // Returns a structured copy of all personal data held for the authenticated user. Export cooldown periods are tier-gated. The `X-Export-ID` response header contains the export identifier for tracking.
+    // Legacy Azure Functions compatibility route retained only while source migration evidence is collected. The Lythaus production runtime uses the asynchronous `/privacy/requests` contract.
     //
     //Future<DSRExportResponse> exportUserData() async
     test('test exportUserData', () async {
       // TODO
     });
+
+    // Submit an asynchronous privacy request
+    //
+    // Records an export, account deletion, or rectification request and queues it for durable processing. Acceptance does not mean processing is complete.
+    //
+    //Future<PrivacyRequestAccepted> privacyRequestCreate(PrivacyRequestCreate privacyRequestCreate, { String idempotencyKey }) async
+    test('test privacyRequestCreate', () async {
+      // TODO
+    });
+
+    // Get the latest privacy request status
+    //
+    // Returns the authenticated user's latest matching asynchronous privacy request.
+    //
+    //Future<PrivacyRequestStatusResponse> privacyRequestStatus({ String requestType }) async
+    test('test privacyRequestStatus', () async {
+      // TODO
+    });
+
   });
 }

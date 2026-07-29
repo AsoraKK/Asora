@@ -1,36 +1,53 @@
 {
   "schemaVersion": "lythaus-production-gates-v1",
-  "releaseSha": "d1e76d01b6b4db99e3e3d915c9fcbfff8c3bacf2",
+  "releaseSha": null,
+  "releaseShaPolicy": "workflow input must equal the checked-out merged main SHA",
   "cutoverAuthorized": false,
   "migrationUsageAuthorized": false,
-  "migrationUsageMaxUsd": null,
+  "migrationUsageMaxUsd": 0,
+  "estimatedIncrementalCostUsd": 0,
   "azureDeletionAuthorized": false,
   "requiredOwnerActions": [
-    "Grant Cosmos DB Built-in Data Reader at account or narrower database scope",
-    "Grant Storage Blob Data Reader at each required account or container scope",
-    "Provide PostgreSQL export host, database, approved read credentials or Entra access, firewall allowance, and compatible client tools",
-    "Authorize measured one-time migration usage after the cost report is complete"
+    "Complete Cosmos and Blob extraction using the active temporary reader assignments",
+    "Classify Azure PostgreSQL as discardable or restore read access if authoritative obligations require it",
+    "Approve migration usage only if the measured estimate indicates an incremental charge"
   ],
   "gates": {
+    "repositoryExactHead": {
+      "status": "IN PROGRESS",
+      "evidence": [".github/workflows/native-workers-deploy.yml", "docs/runbooks/native-deployment-and-rollback.md"]
+    },
     "architectureSkeleton": {
       "status": "COMPLETED",
       "evidence": ["infrastructure/lythaus-resource-registry.json", "infrastructure/cloudflare/native-scope.json"]
     },
     "azureDataAccess": {
-      "status": "BLOCKED",
+      "status": "IN PROGRESS",
       "evidence": ["docs/runbooks/lythaus-azure-exit.md", "docs/evidence/azure-exit/2026-07-26/cosmos-inventory.json"]
     },
     "postgres17Compatibility": {
-      "status": "BLOCKED",
+      "status": "IN PROGRESS",
       "evidence": ["scripts/ci/validate-planetscale-postgres17.mjs", "docs/evidence/2026-07-28-planetscale-provisioning.md"]
     },
     "migrationReconciliation": {
       "status": "BLOCKED",
       "evidence": ["infrastructure/azure-exit/migration-mappings.json", "scripts/azure-exit/calculate-migration-usage.mjs"]
     },
+    "cloudflarePromotion": {
+      "status": "IN PROGRESS",
+      "evidence": ["infrastructure/lythaus-resource-registry.json", "docs/runbooks/native-deployment-and-rollback.md"]
+    },
+    "domainAndOAuthCutover": {
+      "status": "IN PROGRESS",
+      "evidence": ["docs/architecture/lythaus-domain-architecture.md", "apps/lythaus-public-api/src/index.ts"]
+    },
     "runtimeCutover": {
       "status": "IN PROGRESS",
       "evidence": ["scripts/tests/native-architecture-invariants.test.js", "docs/evidence/2026-07-28-planetscale-provisioning.md"]
+    },
+    "rollbackAndDeletionEvidence": {
+      "status": "BLOCKED",
+      "evidence": ["docs/runbooks/lythaus-azure-exit.md", "docs/runbooks/native-deployment-and-rollback.md"]
     }
   }
 }
