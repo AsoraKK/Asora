@@ -11,5 +11,23 @@ void main() {
     test('to test the property `tier`', () async {
       // TODO
     });
+
+    // String reason
+    test('to test the property `reason`', () async {
+      // TODO
+    });
+
+    // Required for Premium and Black Alpha grants; no more than 90 days ahead.
+    // DateTime expiresAt
+    test('to test the property `expiresAt`', () async {
+      // TODO
+    });
+
+    // Required for Premium and Black Alpha grants; on or before expiresAt.
+    // DateTime reviewAt
+    test('to test the property `reviewAt`', () async {
+      // TODO
+    });
+
   });
 }

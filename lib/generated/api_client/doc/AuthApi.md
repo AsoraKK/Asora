@@ -81,7 +81,7 @@ No authorization required
 
 Sign in with a verified email identity
 
-Verifies email/password credentials with Google Identity Platform, requires a verified provider email and an existing invited Lythaus account, then returns short-lived Lythaus access and rotating refresh tokens. The endpoint never creates an uninvited account.
+Legacy email/password login contract retained for compatibility during the Cloudflare-native migration. New clients should use the native authentication flow.
 
 ### Example
 ```dart

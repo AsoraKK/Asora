@@ -14,11 +14,11 @@ Azure dependencies span `functions/`, `infra/`, `infrastructure/`, `database/`, 
 
 ## 4. Azure Resources Discovered
 
-The generic resource query returned 29 records in five resource groups. The primary group contains the application estate. Provider-specific storage discovery additionally returned `stasoradsrdev`, creating a reconciliation blocker.
+The generic resource query returned 29 records in five resource groups. Provider-specific discovery additionally verified `stasoradsrdev` and `lythaus-mvp-communication`; the generic/provider inventory discrepancy is documented but remains a reconciliation item.
 
 ## 5. Azure Resources Not Found or Unverified
 
-Queue message counts, Key Vault keys/certificates, RBAC assignments, private DNS zones, cost records, backup resources, policies, locks, budgets, support/reservation charges, database schemas, and Cosmos item counts are unverified.
+Queue approximate counts are now verified as zero. Key Vault keys/certificates, database schemas, cost records, budgets, backup resources, policies, support/reservation charges, and Cosmos item counts remain unverified. Locks and private DNS queries returned no matching resources. RBAC metadata is verified: 40 assignments across 14 distinct scopes.
 
 ## 6. Current Cost Evidence
 
@@ -38,11 +38,11 @@ The running Function App is the central API and deployment target. Cosmos and Po
 
 ## 10. Functions and Queue Status
 
-Three Function Apps were found: one Running and two Stopped. The running app reports 131 deployed functions. DSR queues and poison equivalents were listed, but queue depth could not be read.
+Three Function Apps were found: one Running and two Stopped. The running app reports 131 deployed functions. DSR queues and poison equivalents were listed and each reports approximate depth zero. Cosmos privacy-state counts remain blocked by data-plane 403 responses.
 
 ## 11. Privacy and DSR Status
 
-DSR processing depends on HTTP entrypoints, Cosmos state/audit, PostgreSQL, `stasoradsrdev`, queue triggers, export storage, Key Vault, and telemetry. Queue safety and outstanding-request state are unverified, so DSR is a shutdown blocker.
+DSR processing depends on HTTP entrypoints, Cosmos state/audit, PostgreSQL, `stasoradsrdev`, queue triggers, export storage, Key Vault, and telemetry. Queue depth is zero, but outstanding-request and legal-hold state are unverified because Cosmos data-plane reads returned 403; DSR remains a shutdown blocker.
 
 ## 12. Key Vault and Secret Dependencies
 
@@ -66,12 +66,13 @@ PostgreSQL and Cosmos backup procedures are documented, but no exports or restor
 
 ## 17. Shutdown Blockers
 
-- DSR queue depth, poison state, and outstanding requests unverified.
+- Outstanding DSR records, legal holds, and privacy-state counts unverified; queue approximate counts are zero.
 - PostgreSQL and Cosmos exports absent.
 - PostgreSQL restore test absent.
 - Cosmos count reconciliation absent.
 - Billing and residual-cost evidence absent.
 - `stasoradsrdev` resource-list discrepancy unresolved.
+- `lythaus-mvp-communication` provider/generic inventory discrepancy unresolved.
 - Key Vault key/certificate inventory incomplete.
 - RBAC assignments and database access incomplete.
 - DNS, ingress, OAuth, webhook, and monitoring cutover proof absent.
@@ -92,10 +93,10 @@ Unknown. Cost Management data was unavailable; no estimate is presented as fact.
 
 ## 21. Evidence Manifest
 
-See `evidence-manifest.sha256` after final validation.
+The committed packet contains 39 files. The SHA-256 manifest contains 38 entries because it intentionally excludes the manifest file itself. The manifest was recomputed and verified. The sanitized packet was also copied and byte-for-byte hash-verified into `C:\Users\kylee\.codex\azure-exit-primary` and `C:\Users\kylee\.codex\azure-exit-secondary`. These are both on the same `C:` disk and are temporary execution copies, not independent disaster-recovery copies. No raw production data was placed in either destination.
 
 ## 22. Final Recommendation
 
 **NOT READY FOR AZURE SHUTDOWN**
 
-The estate is not eligible for `READY FOR CONTROLLED DATA EXPORT` until queue state, billing scope, exports, and permissions are resolved. It is not eligible for human-approved decommissioning because backups, restore tests, Cosmos reconciliation, DSR safety, operational retention, and unknown dependencies remain open.
+The estate is not eligible for `READY FOR CONTROLLED DATA EXPORT` until PostgreSQL/Cosmos data destinations are explicitly approved for their actual production-data classification, data-plane permissions are available, and export operators are ready. It is not eligible for human-approved decommissioning because PostgreSQL and Cosmos exports, restore tests, privacy-state reconciliation, sensitive storage classification, operational migration, and unknown dependencies remain open. See `operational-migration-readiness.md` for the separate Azure-runtime replacement gate.

@@ -1,0 +1,90 @@
+{
+  "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
+  "name": "lythaus-public-api-development",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-27",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "preview_urls": false,
+  "keep_vars": true,
+  "observability": { "enabled": true, "head_sampling_rate": 0.1 },
+  "vars": {
+    "ENVIRONMENT": "production",
+    "EXPECTED_HOSTNAMES": "api.lythaus.co",
+    "CORS_ALLOWED_ORIGINS": "https://app.lythaus.co",
+    "HYPERDRIVE_QUERY_CACHE_MODE": "disabled",
+    "R2_ACCOUNT_ID": "e5b7ae46e04698f507b7e4b3d4ef1af0",
+    "MEDIA_QUOTA_BYTES": "1073741824",
+    "MEDIA_UPLOADS_ENABLED": "false",
+    "MEDIA_QUARANTINE_BUCKET": "lythaus-media-quarantine-dev",
+    "MEDIA_APPROVED_BUCKET": "lythaus-media-approved-dev",
+    "EMAIL_PROVIDER_MODE": "disabled",
+    "EMAIL_PROVIDER_URL": "",
+    "EMAIL_FROM": "",
+    "EMAIL_VERIFICATION_BASE_URL": "https://api.lythaus.co/api/auth/email/verify?token=",
+    "EMAIL_PASSWORD_RESET_BASE_URL": "https://api.lythaus.co/api/auth/password/reset/complete?token=",
+    "GOOGLE_REDIRECT_URI": "https://api.lythaus.co/api/auth/google/callback",
+    "GOOGLE_JWKS_URL": "https://www.googleapis.com/oauth2/v3/certs",
+    "TURNSTILE_REQUIRED": "false",
+    "PASSWORD_HASH_ALLOW_SCRYPT_FALLBACK": "false"
+  },
+  "hyperdrive": [
+    { "binding": "DB_APP_FRESH", "id": "3e59f07db51345aa896333ca861d1adf" }
+  ],
+  "kv_namespaces": [
+    { "binding": "LYTHAUS_CONFIG", "id": "b02289a521bd40bd9112335a3e763b11" }
+  ],
+  "r2_buckets": [
+    { "binding": "MEDIA_QUARANTINE", "bucket_name": "lythaus-media-quarantine-dev" },
+    { "binding": "MEDIA_APPROVED", "bucket_name": "lythaus-media-approved-dev" }
+  ],
+  "queues": {
+    "producers": [
+      { "binding": "MODERATION_QUEUE", "queue": "lythaus-moderation-dev" },
+      { "binding": "FEED_QUEUE", "queue": "lythaus-feed-dev" },
+      { "binding": "PRIVACY_QUEUE", "queue": "lythaus-privacy-dev" }
+    ]
+  },
+  "env": {
+    "development": {
+      "name": "lythaus-public-api-development",
+      "workers_dev": true,
+      "preview_urls": true,
+      "routes": [],
+      "hyperdrive": [{ "binding": "DB_APP_FRESH", "id": "3e59f07db51345aa896333ca861d1adf" }],
+      "vars": {
+        "ENVIRONMENT": "development",
+        "EXPECTED_HOSTNAMES": "lythaus-public-api-development.asora.workers.dev",
+        "R2_ACCOUNT_ID": "e5b7ae46e04698f507b7e4b3d4ef1af0",
+        "MEDIA_QUOTA_BYTES": "1073741824",
+        "MEDIA_QUARANTINE_BUCKET": "lythaus-media-quarantine-dev",
+        "MEDIA_APPROVED_BUCKET": "lythaus-media-approved-dev",
+        "MEDIA_UPLOADS_ENABLED": "false",
+        "EMAIL_PROVIDER_URL": "http://localhost:8788/email",
+        "EMAIL_PROVIDER_MODE": "fallback",
+        "EMAIL_FROM": "no-reply@localhost",
+        "EMAIL_VERIFICATION_BASE_URL": "http://localhost:8787/api/auth/email/verify?token=",
+        "EMAIL_PASSWORD_RESET_BASE_URL": "http://localhost:8787/api/auth/password/reset/complete?token=",
+        "GOOGLE_CLIENT_ID": "REPLACE_WITH_GOOGLE_CLIENT_ID",
+        "GOOGLE_REDIRECT_URI": "http://localhost:8787/api/auth/google/callback",
+        "GOOGLE_JWKS_URL": "https://www.googleapis.com/oauth2/v3/certs",
+        "TURNSTILE_REQUIRED": "false",
+        "PASSWORD_HASH_ALLOW_SCRYPT_FALLBACK": "true",
+        "CORS_ALLOWED_ORIGINS": "http://localhost:3000",
+        "HYPERDRIVE_QUERY_CACHE_MODE": "disabled"
+      },
+      "kv_namespaces": [{ "binding": "LYTHAUS_CONFIG", "id": "b02289a521bd40bd9112335a3e763b11" }],
+      "r2_buckets": [
+        { "binding": "MEDIA_QUARANTINE", "bucket_name": "lythaus-media-quarantine-dev" },
+        { "binding": "MEDIA_APPROVED", "bucket_name": "lythaus-media-approved-dev" }
+      ],
+      "queues": {
+        "producers": [
+          { "binding": "MODERATION_QUEUE", "queue": "lythaus-moderation-dev" },
+          { "binding": "FEED_QUEUE", "queue": "lythaus-feed-dev" },
+          { "binding": "PRIVACY_QUEUE", "queue": "lythaus-privacy-dev" }
+        ]
+      }
+    }
+  }
+}

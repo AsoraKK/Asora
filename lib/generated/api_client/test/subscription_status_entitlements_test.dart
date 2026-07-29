@@ -12,6 +12,26 @@ void main() {
       // TODO
     });
 
+    // int dailyComments
+    test('to test the property `dailyComments`', () async {
+      // TODO
+    });
+
+    // int dailyReactions
+    test('to test the property `dailyReactions`', () async {
+      // TODO
+    });
+
+    // int dailyAppeals
+    test('to test the property `dailyAppeals`', () async {
+      // TODO
+    });
+
+    // int exportCooldownDays
+    test('to test the property `exportCooldownDays`', () async {
+      // TODO
+    });
+
     // int maxMediaSizeMB
     test('to test the property `maxMediaSizeMB`', () async {
       // TODO
@@ -28,9 +48,15 @@ void main() {
       // TODO
     });
 
-    // Whether this tier can read the News Board.
-    // bool newsBoardAccess
-    test('to test the property `newsBoardAccess`', () async {
+    // Free receives preview; Premium and Black receive full access.
+    // String newsBoardAccessLevel
+    test('to test the property `newsBoardAccessLevel`', () async {
+      // TODO
+    });
+
+    // Whether the tier can read the safe News Board preview.
+    // bool newsBoardPreview
+    test('to test the property `newsBoardPreview`', () async {
       // TODO
     });
 
@@ -51,5 +77,11 @@ void main() {
     test('to test the property `rewardOptionsPerLevel`', () async {
       // TODO
     });
+
+    // String rewardChoiceBreadth
+    test('to test the property `rewardChoiceBreadth`', () async {
+      // TODO
+    });
+
   });
 }

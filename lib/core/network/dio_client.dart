@@ -4,7 +4,7 @@
 ///
 /// 🎯 Purpose: Secure HTTP client with certificate pinning and integrity checks
 /// 🔐 Security: SPKI pinning, device integrity validation, secure headers
-/// 📡 Network: Azure Functions integration with proper error handling
+/// 📡 Network: Native Lythaus API integration with proper error handling
 /// 🧪 Testing: Live Test Mode header injection for data isolation
 /// 📱 Platform: Flutter with Riverpod dependency injection
 library;

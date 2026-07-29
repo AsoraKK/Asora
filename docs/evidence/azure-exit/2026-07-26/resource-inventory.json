@@ -2,6 +2,10 @@
   "subscriptionId": "99df7ef7-776a-4235-84a4-c77899b2bb04",
   "resourceGroups": ["asora-psql-flex", "NetworkWatcherRG", "DefaultResourceGroup-NEU", "tfstate-rg", "DefaultResourceGroup-WEU"],
   "resourceCountFromAzResourceList": 29,
+  "providerSpecificResourcesNotReturnedByGenericList": [
+    {"name":"stasoradsrdev","type":"Microsoft.Storage/storageAccounts","resourceGroup":"asora-psql-flex","region":"eastus","state":"Succeeded","verification":"Verified by storage provider query; generic resource query discrepancy"},
+    {"name":"lythaus-mvp-communication","type":"Microsoft.Communication/communicationServices","resourceGroup":"asora-psql-flex","region":"global","state":"Succeeded","dataLocation":"Europe","verification":"Verified by communication provider query; generic resource query discrepancy"}
+  ],
   "resources": [
     {"name":"asora-pg-dev-ne","type":"Microsoft.DBforPostgreSQL/flexibleServers","resourceGroup":"asora-psql-flex","region":"northeurope","state":"Succeeded"},
     {"name":"vnet-asora-dev","type":"Microsoft.Network/virtualNetworks","resourceGroup":"asora-psql-flex","region":"northeurope","state":"Succeeded"},
@@ -33,5 +37,5 @@
     {"name":"appi-asora-function-dev-dsr","type":"Microsoft.Insights/components","resourceGroup":"asora-psql-flex","region":"northeurope","state":"Succeeded"},
     {"name":"law-asora-dsr-dev-neu","type":"Microsoft.OperationalInsights/workspaces","resourceGroup":"asora-psql-flex","region":"northeurope","state":"Succeeded"}
   ],
-  "providerDiscrepancy": {"resourceListOmitted":"stasoradsrdev","storageAccountListFound":"stasoradsrdev","status":"UNRECONCILED"}
+  "providerDiscrepancy": {"resourceListOmitted":["stasoradsrdev","lythaus-mvp-communication"],"providerQueriesFound":true,"status":"PARTIALLY_RECONCILED","remaining":"Generic resource query and provider-specific inventory differ"}
 }

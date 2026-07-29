@@ -163,7 +163,7 @@ void main() {
     expect(analytics.loggedEvents, contains(AnalyticsEvents.authCompleted));
   });
 
-  testWidgets('cancelling provider picker does not start auth flow', (
+  testWidgets('cancelling Google-only provider picker does not start auth', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(400, 800));
@@ -192,7 +192,7 @@ void main() {
     await tester.tap(find.text('Sign in'));
     await tester.pumpAndSettle();
     expect(find.text('Google'), findsOneWidget);
-    expect(find.text('Email'), findsOneWidget);
+    expect(find.text('Email'), findsNothing);
     expect(find.text('Apple'), findsNothing);
     expect(find.text('World ID'), findsNothing);
 

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/features/auth/domain/user.dart';
 import 'package:asora/features/auth/presentation/auth_callback_screen.dart';
 import 'package:asora/features/auth/presentation/auth_choice_screen.dart';
 import 'package:asora/features/auth/presentation/invite_redeem_screen.dart';
@@ -13,7 +14,6 @@ import 'package:asora/features/moderation/presentation/screens/appeal_history_sc
 import 'package:asora/features/notifications/presentation/notifications_settings_screen.dart';
 import 'package:asora/ui/screens/adaptive_shell.dart';
 import 'package:asora/ui/screens/profile/profile_screen.dart';
-import 'package:asora/ui/screens/profile/reputation_ledger_screen.dart';
 
 /// Route name constants.
 abstract final class AppRoutes {
@@ -26,7 +26,32 @@ abstract final class AppRoutes {
   static const String moderation = 'moderation';
   static const String moderationAppeal = 'moderation-appeal';
   static const String notificationSettings = 'notification-settings';
-  static const String reputationLedger = 'reputation-ledger';
+}
+
+String? resolveAppRedirect({
+  required String matchedLocation,
+  required User? user,
+  required bool isGuest,
+  String? pendingCode,
+}) {
+  final isLoggedIn = user != null || isGuest;
+  final isOnLogin = matchedLocation == '/login';
+  final isOnAuthCallback = matchedLocation == '/auth/callback';
+  final isOnInvite = matchedLocation.startsWith('/invite/');
+  final isOnStaffModeration = matchedLocation == '/moderation';
+  final canReviewModeration =
+      user?.role == UserRole.moderator || user?.role == UserRole.admin;
+
+  if (isOnAuthCallback || isOnInvite) {
+    return null;
+  }
+  if (isLoggedIn && pendingCode != null && pendingCode.isNotEmpty) {
+    return '/invite/$pendingCode';
+  }
+  if (!isLoggedIn && !isOnLogin) return '/login';
+  if (isLoggedIn && isOnLogin) return '/';
+  if (isOnStaffModeration && !canReviewModeration) return '/';
+  return null;
 }
 
 /// Provides the application [GoRouter] that is refreshed when auth state
@@ -40,24 +65,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     debugLogDiagnostics: false,
     initialLocation: '/',
     redirect: (context, state) {
-      final isLoggedIn = authState.valueOrNull != null || isGuest;
-      final isOnLogin = state.matchedLocation == '/login';
-      final isOnAuthCallback = state.matchedLocation == '/auth/callback';
-      final isOnInvite = state.matchedLocation.startsWith('/invite/');
-
-      // Auth callback and invite routes are always publicly accessible.
-      if (isOnAuthCallback || isOnInvite) {
-        return null;
-      }
-
-      // After login, send the user to redeem their saved invite code.
-      if (isLoggedIn && pendingCode != null && pendingCode.isNotEmpty) {
-        return '/invite/$pendingCode';
-      }
-
-      if (!isLoggedIn && !isOnLogin) return '/login';
-      if (isLoggedIn && isOnLogin) return '/';
-      return null;
+      return resolveAppRedirect(
+        matchedLocation: state.matchedLocation,
+        user: authState.valueOrNull,
+        isGuest: isGuest,
+        pendingCode: pendingCode,
+      );
     },
     routes: [
       // Login / auth choice
@@ -83,7 +96,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             InviteRedeemScreen(inviteCode: state.pathParameters['code']),
       ),
 
-      // Main app shell (tabs: Discover, My Feeds, Create, News Board, Profile)
+      // Alpha app shell (tabs: Discover, Create, Profile)
       GoRoute(
         name: AppRoutes.shell,
         path: '/',
@@ -126,13 +139,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             name: AppRoutes.notificationSettings,
             path: 'settings/notifications',
             builder: (context, state) => const NotificationsSettingsScreen(),
-          ),
-
-          // Reputation ledger
-          GoRoute(
-            name: AppRoutes.reputationLedger,
-            path: 'reputation/ledger',
-            builder: (context, state) => const ReputationLedgerScreen(),
           ),
         ],
       ),

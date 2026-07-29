@@ -1,0 +1,42 @@
+name: Native PlanetScale migrations
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'database/planetscale/**'
+      - 'scripts/validate-migration-baseline.mjs'
+      - 'scripts/validate-planetscale-extensions.mjs'
+      - 'scripts/ci/apply-planetscale-production-migrations.mjs'
+      - 'scripts/validate-production-gates.mjs'
+      - 'infrastructure/cloudflare/production-gates.json'
+      - 'database/planetscale/extensions/**'
+      - 'package.json'
+      - 'package-lock.json'
+  push:
+    branches: [main, development]
+    paths:
+      - 'database/planetscale/**'
+      - 'scripts/validate-migration-baseline.mjs'
+      - 'scripts/validate-planetscale-extensions.mjs'
+      - 'scripts/ci/apply-planetscale-production-migrations.mjs'
+      - 'scripts/validate-production-gates.mjs'
+      - 'infrastructure/cloudflare/production-gates.json'
+      - 'database/planetscale/extensions/**'
+
+permissions:
+  contents: read
+
+jobs:
+  migration-baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run validate:planetscale-migrations
+      - run: npm run validate:planetscale-extensions
+      - run: npm run test:native-architecture

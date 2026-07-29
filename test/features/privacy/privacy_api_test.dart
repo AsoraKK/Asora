@@ -31,7 +31,10 @@ void main() {
 
     test('requestExport parses acceptedAt and retry-after header', () async {
       final response = Response<Map<String, dynamic>>(
-        data: {'acceptedAt': '2024-01-01T12:00:00.000Z'},
+        data: {
+          'requestId': 'request-1',
+          'acceptedAt': '2024-01-01T12:00:00.000Z',
+        },
         headers: Headers.fromMap({
           'retry-after': ['3600'],
         }),
@@ -42,12 +45,14 @@ void main() {
       when(
         () => dio.post<Map<String, dynamic>>(
           any(),
+          data: any(named: 'data'),
           options: any(named: 'options'),
         ),
       ).thenAnswer((_) async => response);
 
       final result = await api.requestExport(authToken: 'token');
       expect(result.acceptedAt, DateTime.utc(2024, 1, 1, 12));
+      expect(result.requestId, 'request-1');
       expect(result.retryAfter, const Duration(hours: 1));
     });
 
@@ -55,6 +60,7 @@ void main() {
       when(
         () => dio.post<Map<String, dynamic>>(
           any(),
+          data: any(named: 'data'),
           options: any(named: 'options'),
         ),
       ).thenThrow(
@@ -138,9 +144,11 @@ void main() {
         return Response<Map<String, dynamic>>(
           requestOptions: RequestOptions(path: ''),
           data: {
-            'state': 'Queued',
-            'acceptedAt': '2024-01-01T12:00:00.000Z',
-            'retryAfterSeconds': 90,
+            'request': {
+              'state': 'Queued',
+              'acceptedAt': '2024-01-01T12:00:00.000Z',
+              'retryAfterSeconds': 90,
+            },
           },
           statusCode: 200,
         );
@@ -154,7 +162,11 @@ void main() {
 
     test('deleteAccount maps network errors to network type', () async {
       when(
-        () => dio.delete<void>(any(), options: any(named: 'options')),
+        () => dio.post<Map<String, dynamic>>(
+          any(),
+          data: any(named: 'data'),
+          options: any(named: 'options'),
+        ),
       ).thenThrow(
         DioException.connectionError(
           requestOptions: RequestOptions(path: ''),
@@ -174,28 +186,40 @@ void main() {
       );
     });
 
-    test('deleteAccount attaches confirmation headers', () async {
+    test('deleteAccount submits a native privacy request', () async {
       late Options capturedOptions;
+      late Object? capturedData;
       when(
-        () => dio.delete<void>(any(), options: any(named: 'options')),
+        () => dio.post<Map<String, dynamic>>(
+          any(),
+          data: any(named: 'data'),
+          options: any(named: 'options'),
+        ),
       ).thenAnswer((invocation) async {
         capturedOptions = invocation.namedArguments[#options] as Options;
-        return Response<void>(
+        capturedData = invocation.namedArguments[#data];
+        return Response<Map<String, dynamic>>(
           requestOptions: RequestOptions(path: ''),
-          statusCode: 204,
+          statusCode: 202,
+          data: const {'requestId': 'request-2', 'state': 'received'},
         );
       });
 
       await api.deleteAccount(authToken: 'secret', hardDelete: true);
 
-      expect(capturedOptions.headers?['X-Confirm-Delete'], 'true');
-      expect(capturedOptions.headers?['X-Hard-Delete'], 'true');
+      expect(capturedData, const {'requestType': 'delete'});
+      expect(capturedOptions.headers?['Authorization'], 'Bearer secret');
+      expect(
+        capturedOptions.headers?['Idempotency-Key'],
+        startsWith('privacy-'),
+      );
     });
 
     test('requestExport maps retry-after date header on rate limit', () async {
       when(
         () => dio.post<Map<String, dynamic>>(
           any(),
+          data: any(named: 'data'),
           options: any(named: 'options'),
         ),
       ).thenThrow(
@@ -228,6 +252,7 @@ void main() {
       when(
         () => dio.post<Map<String, dynamic>>(
           any(),
+          data: any(named: 'data'),
           options: any(named: 'options'),
         ),
       ).thenThrow(

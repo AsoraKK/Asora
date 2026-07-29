@@ -125,8 +125,7 @@ class SubscriptionEntitlements {
       postingRestricted: json['postingRestricted'] as bool? ?? false,
       rewardLevelCap: json['rewardLevelCap'] as int? ?? 3,
       rewardOptionsPerLevel: json['rewardOptionsPerLevel'] as int?,
-      rewardChoiceBreadth:
-          json['rewardChoiceBreadth'] as String? ?? 'limited',
+      rewardChoiceBreadth: json['rewardChoiceBreadth'] as String? ?? 'limited',
     );
   }
 }

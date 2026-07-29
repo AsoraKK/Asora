@@ -62,7 +62,7 @@ const QUICK_ACTIONS = [
   {
     title: 'Appeals queue',
     description:
-      'Review community voting outcomes and execute moderator overrides when needed.',
+      'Review staff appeal outcomes and execute documented moderator overrides when needed.',
     to: '/appeals'
   },
   {

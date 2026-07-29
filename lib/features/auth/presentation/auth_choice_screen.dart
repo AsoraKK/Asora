@@ -53,7 +53,7 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
   );
   static const _emailAuthEnabled = bool.fromEnvironment(
     'ALPHA_ENABLE_EMAIL_AUTH',
-    defaultValue: true,
+    defaultValue: false,
   );
 
   late final AnalyticsClient _analyticsClient;

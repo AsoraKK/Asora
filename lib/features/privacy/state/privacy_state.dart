@@ -8,10 +8,10 @@ library;
 import 'package:meta/meta.dart';
 
 /// Export workflow statuses.
-enum ExportStatus { idle, requesting, queued, emailSent, coolingDown, failed }
+enum ExportStatus { idle, requesting, queued, accepted, coolingDown, failed }
 
 /// Account deletion workflow statuses.
-enum DeleteStatus { idle, confirming, deleting, deleted, failed }
+enum DeleteStatus { idle, confirming, deleting, requested, failed }
 
 /// Immutable privacy state consumed by the UI.
 @immutable

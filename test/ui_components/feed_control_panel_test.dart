@@ -152,14 +152,15 @@ void main() {
           feedListProvider.overrideWithValue(feeds),
           currentFeedProvider.overrideWithValue(feeds.first),
         ],
-        child: MaterialApp(
-          home: Scaffold(body: FeedControlPanel(onCreateCustom: () {})),
-        ),
+        child: const MaterialApp(home: Scaffold(body: FeedControlPanel())),
       ),
     );
 
     expect(find.text('Feed tools'), findsOneWidget);
     expect(find.text('Home Feed'), findsNothing);
+    expect(find.text('Build custom feed'), findsNothing);
+    expect(find.text('Moderation hub'), findsNothing);
+    expect(find.text('Appeals queue'), findsNothing);
     expect(
       find.text(
         'Switch feeds from the Discover rail at the top of the home screen.',

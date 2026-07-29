@@ -61,17 +61,12 @@ For providers without a usable CLI command, use read-only REST calls through `az
 Use queue metadata/list operations only. Do not retrieve messages, dequeue, update, or process them.
 
 ```powershell
-$DsrStorageAccount = 'stasoradsrdev'
-$QueueNames = @('dsr-requests','dsr-requests-poison','dsr-diagnostic-ping','dsr-diagnostic-ping-poison')
-
-foreach ($queue in $QueueNames) {
-  az storage queue show `
-    --account-name $DsrStorageAccount `
-    --name $queue `
-    --auth-mode login `
-    --output json > "$primary\queue-$queue-metadata.json"
-}
+Push-Location '<LYTHAUS_REPOSITORY_ROOT>\functions'
+node -e "const {DefaultAzureCredential}=require('@azure/identity'); const {QueueServiceClient}=require('@azure/storage-queue'); (async()=>{const c=new QueueServiceClient('https://stasoradsrdev.queue.core.windows.net',new DefaultAzureCredential()); for(const n of ['dsr-requests','dsr-requests-poison','dsr-diagnostic-ping','dsr-diagnostic-ping-poison']){const p=await c.getQueueClient(n).getProperties(); console.log(JSON.stringify({name:n,approximateMessagesCount:p.approximateMessagesCount}));}})().catch(e=>{console.error('metadata read failed');process.exit(1)})"
+Pop-Location
 ```
+
+This reads queue metadata only. The installed Azure CLI does not provide `az storage queue show`; do not substitute a dequeue or message-retrieval command.
 
 If queue approximate counts are unavailable, record the permission/API failure and do not classify DSR as safe.
 

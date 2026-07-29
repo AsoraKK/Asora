@@ -175,7 +175,20 @@ describe('critical response examples', () => {
       status: '200',
       exampleKey: 'recorded',
     },
-    { label: 'privacy export', pathKey: '/user/export', method: 'get', status: '200', exampleKey: 'exportReady' },
+    {
+      label: 'privacy request accepted',
+      pathKey: '/privacy/requests',
+      method: 'post',
+      status: '202',
+      exampleKey: 'accepted',
+    },
+    {
+      label: 'privacy request status',
+      pathKey: '/privacy/requests',
+      method: 'get',
+      status: '200',
+      exampleKey: 'processing',
+    },
     {
       label: 'privacy admin export',
       pathKey: '/_admin/dsr/export',

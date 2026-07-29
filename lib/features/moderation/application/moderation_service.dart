@@ -89,7 +89,10 @@ class ModerationService implements ModerationRepository {
     return null;
   }
 
-  Duration? _retryAfter(Response<dynamic>? response, Map<String, dynamic>? payload) {
+  Duration? _retryAfter(
+    Response<dynamic>? response,
+    Map<String, dynamic>? payload,
+  ) {
     final header = response?.headers.value('retry-after');
     if (header != null) {
       final seconds = int.tryParse(header);
@@ -128,9 +131,9 @@ class ModerationService implements ModerationRepository {
       final normalizedCode = code ?? 'RATE_LIMITED';
       final fallbackMessage =
           normalizedCode == 'DAILY_APPEAL_LIMIT_EXCEEDED' ||
-                  normalizedCode == 'daily_appeal_limit_exceeded'
-              ? 'You have reached your daily appeals limit. Please try again tomorrow.'
-              : 'Too many moderation requests. Please wait before trying again.';
+              normalizedCode == 'daily_appeal_limit_exceeded'
+          ? 'You have reached your daily appeals limit. Please try again tomorrow.'
+          : 'Too many moderation requests. Please wait before trying again.';
       return ModerationException(
         message ?? fallbackMessage,
         code: normalizedCode,

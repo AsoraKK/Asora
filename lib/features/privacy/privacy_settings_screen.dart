@@ -7,7 +7,6 @@ import 'package:asora/core/security/device_integrity_guard.dart';
 import 'package:asora/core/analytics/analytics_providers.dart';
 import 'package:asora/core/analytics/analytics_events.dart';
 
-import 'package:asora/features/auth/presentation/auth_gate.dart';
 import 'package:asora/features/privacy/state/privacy_controller.dart';
 import 'package:asora/features/privacy/state/privacy_state.dart';
 import 'package:asora/features/privacy/utils/privacy_formatters.dart';
@@ -143,10 +142,14 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
     if (!mounted) return;
     final messenger = ScaffoldMessenger.of(context);
 
-    if (previous?.exportStatus != ExportStatus.emailSent &&
-        next.exportStatus == ExportStatus.emailSent) {
+    if (previous?.exportStatus != ExportStatus.accepted &&
+        next.exportStatus == ExportStatus.accepted) {
       messenger.showSnackBar(
-        const SnackBar(content: Text('Export requested. Check your email.')),
+        const SnackBar(
+          content: Text(
+            'Export request submitted. Refresh this page to track processing.',
+          ),
+        ),
       );
     }
 
@@ -162,12 +165,14 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
       messenger.showSnackBar(SnackBar(content: Text(next.error!)));
     }
 
-    if (previous?.deleteStatus != DeleteStatus.deleted &&
-        next.deleteStatus == DeleteStatus.deleted) {
-      messenger.showSnackBar(const SnackBar(content: Text('Account deleted.')));
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute<void>(builder: (_) => const AuthGate()),
-        (route) => false,
+    if (previous?.deleteStatus != DeleteStatus.requested &&
+        next.deleteStatus == DeleteStatus.requested) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Deletion request submitted. Your account remains available while the request is processed.',
+          ),
+        ),
       );
     }
   }

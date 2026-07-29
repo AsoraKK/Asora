@@ -1,12 +1,8 @@
 // ignore_for_file: public_member_api_docs
 
-import 'dart:async';
-
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/services/service_providers.dart';
 import 'package:asora/state/providers/settings_providers.dart';
 import 'package:asora/features/auth/application/auth_providers.dart';
 import 'package:asora/ui/components/asora_bottom_nav.dart';
@@ -23,40 +19,6 @@ class AsoraAppShell extends ConsumerStatefulWidget {
 
 class _AsoraAppShellState extends ConsumerState<AsoraAppShell> {
   int _currentIndex = 0;
-  StreamSubscription<String>? _tokenRefreshSubscription;
-
-  @override
-  void initState() {
-    super.initState();
-    Future<void>.microtask(_initializeNotifications);
-  }
-
-  Future<void> _initializeNotifications() async {
-    // Push notifications via FCM are not supported on web yet.
-    if (kIsWeb) return;
-
-    try {
-      final pushService = ref.read(pushNotificationServiceProvider);
-      await pushService.initialize();
-      final deviceTokenService = ref.read(deviceTokenServiceProvider);
-      await deviceTokenService.registerDeviceToken();
-      _tokenRefreshSubscription = pushService.onTokenRefresh.listen((_) async {
-        try {
-          await deviceTokenService.registerDeviceToken();
-        } catch (_) {
-          // Best-effort refresh registration; keep shell responsive.
-        }
-      });
-    } catch (_) {
-      // Notification initialization is best-effort.
-    }
-  }
-
-  @override
-  void dispose() {
-    _tokenRefreshSubscription?.cancel();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -66,9 +28,7 @@ class _AsoraAppShellState extends ConsumerState<AsoraAppShell> {
     final isGuest = ref.watch(guestModeProvider);
     const tabs = <Widget>[
       HomeFeedNavigator(section: AlphaFeedSection.discover),
-      HomeFeedNavigator(section: AlphaFeedSection.myFeeds),
       CreateScreen(),
-      HomeFeedNavigator(section: AlphaFeedSection.newsBoard),
       ProfileScreen(),
     ];
 
@@ -83,9 +43,11 @@ class _AsoraAppShellState extends ConsumerState<AsoraAppShell> {
       bottomNavigationBar: AsoraBottomNav(
         currentIndex: _currentIndex,
         onTap: (index) {
-          if (isGuest && (index == 1 || index == 2 || index == 3)) {
+          if (isGuest && index == 1) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Sign in to use this Alpha feature.')),
+              const SnackBar(
+                content: Text('Sign in to use this Alpha feature.'),
+              ),
             );
             return;
           }

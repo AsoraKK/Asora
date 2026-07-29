@@ -1,6 +1,7 @@
 import 'package:test/test.dart';
 import 'package:asora_api_client/asora_api_client.dart';
 
+
 /// tests for CustomFeedsApi
 void main() {
   final instance = AsoraApiClient().getCustomFeedsApi();
@@ -8,44 +9,57 @@ void main() {
   group(CustomFeedsApi, () {
     // Create a new custom feed
     //
-    //Future<JsonObject> customFeedsCreate(JsonObject body) async
+    // Create a custom feed definition. The service enforces tier limits: Free users may create 1 custom feed, Premium users 2, Black users 3, and Admin users 20.
+    //
+    //Future<CustomFeedDefinition> customFeedsCreate(CreateCustomFeedRequest createCustomFeedRequest) async
     test('test customFeedsCreate', () async {
       // TODO
     });
 
     // Delete a custom feed
     //
-    //Future<JsonObject> customFeedsDelete(String id) async
+    // Delete an owned custom feed definition.
+    //
+    //Future customFeedsDelete(String id) async
     test('test customFeedsDelete', () async {
       // TODO
     });
 
     // Get a custom feed
     //
-    //Future<JsonObject> customFeedsGet(String id) async
+    // Fetch a custom feed definition owned by the authenticated user.
+    //
+    //Future<CustomFeedDefinition> customFeedsGet(String id) async
     test('test customFeedsGet', () async {
       // TODO
     });
 
     // List items in a custom feed
     //
-    //Future<JsonObject> customFeedsItemsList(String id) async
+    // Return posts matching a custom feed's filters.
+    //
+    //Future<CursorPaginatedPostView> customFeedsItemsList(String id, { String cursor, int limit }) async
     test('test customFeedsItemsList', () async {
       // TODO
     });
 
     // List custom feeds for the current user
     //
-    //Future<JsonObject> customFeedsList() async
+    // List custom feed definitions owned by the authenticated user.
+    //
+    //Future<CustomFeedListResponse> customFeedsList({ String cursor, int limit }) async
     test('test customFeedsList', () async {
       // TODO
     });
 
     // Update a custom feed
     //
-    //Future<JsonObject> customFeedsUpdate(String id, JsonObject body) async
+    // Update an owned custom feed's name, filters, sorting, or home flag.
+    //
+    //Future<CustomFeedDefinition> customFeedsUpdate(String id, UpdateCustomFeedRequest updateCustomFeedRequest) async
     test('test customFeedsUpdate', () async {
       // TODO
     });
+
   });
 }

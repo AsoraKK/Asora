@@ -12,7 +12,6 @@ import 'package:asora/features/auth/application/auth_providers.dart';
 import 'package:asora/features/auth/domain/user.dart';
 import 'package:asora/features/profile/application/profile_providers.dart';
 import 'package:asora/features/profile/domain/public_user.dart';
-import 'package:asora/features/profile/domain/trust_passport.dart';
 import 'package:asora/ui/screens/profile/profile_screen.dart';
 
 const _fakeUser = PublicUser(
@@ -33,12 +32,11 @@ const _ownerVisibleUser = PublicUser(
   reputationScore: 321,
 );
 
-const _privatePassportUser = PublicUser(
+const _otherUser = PublicUser(
   id: 'user-2',
   displayName: 'Private Person',
   handle: '@private',
   tier: 'bronze',
-  trustPassportVisibility: 'private',
   reputationScore: 12,
 );
 
@@ -182,24 +180,6 @@ void main() {
             publicUserProvider(
               'user-1',
             ).overrideWith((ref) async => _ownerVisibleUser),
-            trustPassportProvider('user-1').overrideWith((ref) async {
-              return const TrustPassport(
-                userId: 'user-1',
-                visibility: 'public_expanded',
-                transparencyStreakCategory: 'Consistent',
-                appealsResolvedFairlyLabel: '12/12 fair',
-                jurorReliabilityTier: 'Gold',
-                counts: TrustPassportCounts(
-                  totalPosts: 12,
-                  postsWithSignals: 8,
-                  appealsResolved: 4,
-                  appealsApproved: 3,
-                  appealsRejected: 1,
-                  votesCast: 20,
-                  alignedVotes: 18,
-                ),
-              );
-            }),
             jwtProvider.overrideWith((ref) async => 'tok'),
           ],
           child: const MaterialApp(home: ProfileScreen()),
@@ -208,13 +188,14 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('Editorial Contributor'), findsOneWidget);
-      expect(find.text('Trusted'), findsOneWidget);
-      expect(find.text('Editor'), findsOneWidget);
+      expect(find.text('gold'), findsOneWidget);
+      expect(find.text('Editorial Contributor'), findsNothing);
+      expect(find.text('Trusted'), findsNothing);
+      expect(find.text('Editor'), findsNothing);
       expect(find.text('Moderation hub'), findsNothing);
       expect(find.text('Control Panel'), findsNothing);
       expect(find.text('Settings'), findsOneWidget);
-      expect(find.text('Reputation'), findsOneWidget);
+      expect(find.text('Reputation'), findsNothing);
     });
 
     testWidgets('admin owner sees staff tools', (tester) async {
@@ -225,24 +206,6 @@ void main() {
             publicUserProvider(
               'user-1',
             ).overrideWith((ref) async => _ownerVisibleUser),
-            trustPassportProvider('user-1').overrideWith((ref) async {
-              return const TrustPassport(
-                userId: 'user-1',
-                visibility: 'public_expanded',
-                transparencyStreakCategory: 'Consistent',
-                appealsResolvedFairlyLabel: '12/12 fair',
-                jurorReliabilityTier: 'Gold',
-                counts: TrustPassportCounts(
-                  totalPosts: 12,
-                  postsWithSignals: 8,
-                  appealsResolved: 4,
-                  appealsApproved: 3,
-                  appealsRejected: 1,
-                  votesCast: 20,
-                  alignedVotes: 18,
-                ),
-              );
-            }),
             jwtProvider.overrideWith((ref) async => 'tok'),
           ],
           child: const MaterialApp(home: ProfileScreen()),
@@ -252,10 +215,11 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.text('Moderation hub'), findsOneWidget);
-      expect(find.text('Control Panel'), findsOneWidget);
+      expect(find.text('Control Panel'), findsNothing);
+      expect(find.text('Reputation'), findsNothing);
     });
 
-    testWidgets('owner can inspect Trust Passport aggregate counts', (
+    testWidgets('deferred Trust Passport surface is not rendered', (
       tester,
     ) async {
       await tester.pumpWidget(
@@ -265,24 +229,6 @@ void main() {
             publicUserProvider(
               'user-1',
             ).overrideWith((ref) async => _ownerVisibleUser),
-            trustPassportProvider('user-1').overrideWith((ref) async {
-              return const TrustPassport(
-                userId: 'user-1',
-                visibility: 'public_expanded',
-                transparencyStreakCategory: 'Consistent',
-                appealsResolvedFairlyLabel: '12/12 fair',
-                jurorReliabilityTier: 'Gold',
-                counts: TrustPassportCounts(
-                  totalPosts: 12,
-                  postsWithSignals: 8,
-                  appealsResolved: 4,
-                  appealsApproved: 3,
-                  appealsRejected: 1,
-                  votesCast: 20,
-                  alignedVotes: 18,
-                ),
-              );
-            }),
             jwtProvider.overrideWith((ref) async => 'tok'),
           ],
           child: const MaterialApp(home: ProfileScreen()),
@@ -290,18 +236,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.drag(find.byType(ListView), const Offset(0, -400));
-      await tester.pump();
-      await tester.tap(find.text('Appeals outcomes'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Trust Passport details'), findsOneWidget);
-      expect(find.text('Posts with signals: 8/12'), findsOneWidget);
-      expect(
-        find.text('Appeals resolved: 4 (approved 3, rejected 1)'),
-        findsOneWidget,
-      );
-      expect(find.text('Juror alignment: 18/20'), findsOneWidget);
+      expect(find.textContaining('Trust Passport'), findsNothing);
+      expect(find.text('Appeals outcomes'), findsNothing);
+      expect(find.textContaining('Juror'), findsNothing);
     });
 
     testWidgets('owner profile actions open their destination routes', (
@@ -314,30 +251,11 @@ void main() {
             publicUserProvider(
               'user-1',
             ).overrideWith((ref) async => _ownerVisibleUser),
-            trustPassportProvider('user-1').overrideWith((ref) async {
-              return const TrustPassport(
-                userId: 'user-1',
-                visibility: 'public_expanded',
-                transparencyStreakCategory: 'Consistent',
-                appealsResolvedFairlyLabel: '12/12 fair',
-                jurorReliabilityTier: 'Gold',
-                counts: TrustPassportCounts(),
-              );
-            }),
             jwtProvider.overrideWith((ref) async => 'tok'),
           ],
           child: const MaterialApp(home: ProfileScreen()),
         ),
       );
-      await tester.pumpAndSettle();
-
-      await tester.drag(find.byType(ListView), const Offset(0, -300));
-      await tester.pump();
-      await tester.tap(find.text('Reputation'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(find.text('Reputation Activity'), findsOneWidget);
-      await tester.pageBack();
       await tester.pumpAndSettle();
 
       await tester.ensureVisible(find.text('Edit profile'));
@@ -355,7 +273,7 @@ void main() {
       expect(find.text('Settings'), findsWidgets);
     });
 
-    testWidgets('non-owner with private passport sees safe message', (
+    testWidgets('non-owner does not receive deferred trust surfaces', (
       tester,
     ) async {
       await tester.pumpWidget(
@@ -364,12 +282,7 @@ void main() {
             currentUserProvider.overrideWithValue(_fakeAuthUser),
             publicUserProvider(
               'user-2',
-            ).overrideWith((ref) async => _privatePassportUser),
-            trustPassportProvider('user-2').overrideWith((ref) async {
-              throw StateError(
-                'should not load private passport for non-owner',
-              );
-            }),
+            ).overrideWith((ref) async => _otherUser),
             jwtProvider.overrideWith((ref) async => 'tok'),
           ],
           child: const MaterialApp(home: ProfileScreen(userId: 'user-2')),
@@ -378,11 +291,9 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(
-        find.text('This user keeps trust passport details private.'),
-        findsOneWidget,
-      );
-      expect(find.text('Trust Passport details'), findsNothing);
+      expect(find.text('Private Person'), findsWidgets);
+      expect(find.textContaining('Trust Passport'), findsNothing);
+      expect(find.text('Reputation'), findsNothing);
     });
   });
 }

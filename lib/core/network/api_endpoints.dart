@@ -1,14 +1,14 @@
 // ignore_for_file: public_member_api_docs
 
 /**
- * ASORA API ENDPOINTS
+ * LYTHAUS API ENDPOINTS
  * 
  * 🎯 Purpose: Centralized API endpoint definitions
- * 🔗 Network: Azure Functions REST API routes
+ * 🔗 Network: Native Lythaus REST API routes
  * 📱 Platform: Flutter HTTP client integration
  */
 
-/// API endpoint constants for Asora backend
+/// API endpoint constants for the native Lythaus backend.
 class ApiEndpoints {
   // Base path constants
   static const String _baseApi = '/api';
@@ -21,9 +21,10 @@ class ApiEndpoints {
   static const String getUserAuth = '$_baseApi/users/auth';
 
   // Privacy & GDPR endpoints
-  static const String exportUser = '$_baseApi/user/export';
-  static const String exportStatus = '$_baseApi/user/export/status';
-  static const String deleteUser = '$_baseApi/user/delete';
+  static const String privacyRequests = '$_baseApi/privacy/requests';
+  static const String exportUser = privacyRequests;
+  static const String exportStatus = '$privacyRequests?requestType=export';
+  static const String deleteUser = privacyRequests;
 
   // Feed & Posts
   static const String getFeed = '$_baseApi/feed';

@@ -77,11 +77,7 @@ void main() {
       expect(
         () => service.getMyAppeals(token: 'tok'),
         throwsA(
-          isA<ModerationException>().having(
-            (e) => e.code,
-            'code',
-            'SOME_CODE',
-          ),
+          isA<ModerationException>().having((e) => e.code, 'code', 'SOME_CODE'),
         ),
       );
     });
@@ -142,8 +138,11 @@ void main() {
           isA<ModerationException>()
               .having((e) => e.code, 'code', 'RATE_LIMITED')
               .having((e) => e.statusCode, 'statusCode', 429)
-              .having((e) => e.message, 'message',
-                  'Too many moderation requests. Please wait before trying again.')
+              .having(
+                (e) => e.message,
+                'message',
+                'Too many moderation requests. Please wait before trying again.',
+              )
               .having(
                 (e) => e.retryAfter,
                 'retryAfter',

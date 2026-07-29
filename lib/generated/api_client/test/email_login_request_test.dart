@@ -17,7 +17,8 @@ void main() {
       // TODO
     });
 
-    // String clientId (default value: 'lythaus-web')
+    // Optional registered audience; defaults to the server's first configured JWT audience.
+    // String clientId
     test('to test the property `clientId`', () async {
       // TODO
     });

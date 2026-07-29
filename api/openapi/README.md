@@ -3,7 +3,7 @@
 ## Editing the spec
 - Update `api/openapi/openapi.yaml` for any contract changes.
 - Run the lint and bundle commands before committing to catch validation issues.
-- Keep response schemas aligned with the deployed Azure Functions to prevent contract test failures.
+- Keep response schemas aligned with the native Lythaus Workers to prevent contract drift.
 
 ## Tooling commands
 - `npm run openapi:lint` – Validate the spec with Redocly rules.

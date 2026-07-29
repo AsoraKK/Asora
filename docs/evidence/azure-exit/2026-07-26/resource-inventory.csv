@@ -6,6 +6,7 @@ asoraflexdev1404,Microsoft.Storage/storageAccounts,asora-psql-flex,northeurope,S
 asoramediadev,Microsoft.Storage/storageAccounts,asora-psql-flex,northeurope,Succeeded,medium,Verified
 asorapsqlflex8fa9,Microsoft.Storage/storageAccounts,asora-psql-flex,northeurope,Succeeded,medium,Verified
 stasoradsrdev,Microsoft.Storage/storageAccounts,asora-psql-flex,eastus,Provider-list only,high,Unverified resource-list discrepancy
+lythaus-mvp-communication,Microsoft.Communication/communicationServices,asora-psql-flex,global,Succeeded,medium,Provider-list only; verified
 kv-asora-dev,Microsoft.KeyVault/vaults,asora-psql-flex,northeurope,Succeeded,low,Verified
 kv-asora-flex-dev,Microsoft.KeyVault/vaults,asora-psql-flex,northeurope,Succeeded,low,Verified
 appi-asora-function-dev-dsr,Microsoft.Insights/components,asora-psql-flex,northeurope,Succeeded,medium,Verified

@@ -50,7 +50,7 @@ class AuthService {
     return EnvironmentConfig.fromEnvironment().apiBaseUrl;
   }
 
-  /// Login with email - calls your authEmail Azure Function
+  /// Login with email through the configured Lythaus API.
   Future<bool> loginWithEmail(String email) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(

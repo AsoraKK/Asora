@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "lib": ["ES2022", "DOM"],
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@lythaus/contracts": ["packages/contracts/src/index.ts"],
+      "@lythaus/db": ["packages/db/src/index.ts"],
+      "@lythaus/security": ["packages/security/src/index.ts"],
+      "@lythaus/cloudflare-env": ["packages/cloudflare-env/src/index.ts"],
+      "@lythaus/media": ["packages/media/src/index.ts"],
+      "@lythaus/observability": ["packages/observability/src/index.ts"]
+    }
+  },
+  "include": [
+    "apps/lythaus-public-api/src/**/*.ts",
+    "apps/lythaus-admin-api/src/**/*.ts",
+    "apps/lythaus-jobs/src/**/*.ts",
+    "packages/*/src/**/*.ts"
+  ]
+}

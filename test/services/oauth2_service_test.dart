@@ -174,12 +174,15 @@ void main() {
   });
 
   group('OAuth2Service initialization', () {
-    test('loads config from compile-time values without remote fetch', () async {
-      await service.initialize();
+    test(
+      'loads config from compile-time values without remote fetch',
+      () async {
+        await service.initialize();
 
-      verifyNever(() => mockDio.get<Map<String, dynamic>>(any()));
-      expect(service.currentState, AuthState.unauthenticated);
-    });
+        verifyNever(() => mockDio.get<Map<String, dynamic>>(any()));
+        expect(service.currentState, AuthState.unauthenticated);
+      },
+    );
 
     test('checks for cached token on init', () async {
       when(
@@ -220,9 +223,7 @@ void main() {
         {'nonce': 'n'},
       );
       when(
-        () => mockAppAuth.authorizeAndExchangeCode(
-          any(),
-        ),
+        () => mockAppAuth.authorizeAndExchangeCode(any()),
       ).thenAnswer((_) async => tokenResponse);
 
       await service.initialize();
@@ -230,9 +231,11 @@ void main() {
 
       expect(result.accessToken, 'access-token');
       expect(service.currentState, AuthState.authenticated);
-      final request = verify(
-        () => mockAppAuth.authorizeAndExchangeCode(captureAny()),
-      ).captured.single as AuthorizationTokenRequest;
+      final request =
+          verify(
+                () => mockAppAuth.authorizeAndExchangeCode(captureAny()),
+              ).captured.single
+              as AuthorizationTokenRequest;
       expect(request.additionalParameters?['p'], 'B2C_1_signupsignin');
       expect(request.discoveryUrl, contains('?p=B2C_1_signupsignin'));
       expect(request.scopes, contains('openid'));
@@ -249,9 +252,7 @@ void main() {
         ),
       ).thenAnswer((_) async {});
 
-      when(
-        () => mockAppAuth.authorizeAndExchangeCode(any()),
-      ).thenAnswer(
+      when(() => mockAppAuth.authorizeAndExchangeCode(any())).thenAnswer(
         (_) async => AuthorizationTokenResponse(
           'google-access',
           null,
@@ -267,80 +268,87 @@ void main() {
       await service.initialize();
       await service.signInGoogle();
 
-      final request = verify(
-        () => mockAppAuth.authorizeAndExchangeCode(captureAny()),
-      ).captured.single as AuthorizationTokenRequest;
+      final request =
+          verify(
+                () => mockAppAuth.authorizeAndExchangeCode(captureAny()),
+              ).captured.single
+              as AuthorizationTokenRequest;
       expect(request.additionalParameters?['p'], 'B2C_1_signupsignin');
       expect(request.additionalParameters?['idp'], 'Google');
       expect(request.additionalParameters?['prompt'], 'login');
     });
 
-    test('getAccessToken refreshes when the cached token is near expiry', () async {
-      final now = DateTime.now();
-      when(
-        () => mockStorage.read(key: 'access_token'),
-      ).thenAnswer((_) async => 'cached-token');
-      when(
-        () => mockStorage.read(key: 'expires_on'),
-      ).thenAnswer(
-        (_) async => now.subtract(const Duration(minutes: 1)).toIso8601String(),
-      );
-      when(
-        () => mockStorage.read(key: 'refresh_token'),
-      ).thenAnswer((_) async => 'refresh-token');
-      when(
-        () => mockStorage.write(
-          key: any(named: 'key'),
-          value: any(named: 'value'),
-        ),
-      ).thenAnswer((_) async {});
-      when(() => mockAppAuth.token(any())).thenAnswer(
-        (_) async => TokenResponse(
-          'refreshed-token',
-          'refreshed-refresh-token',
-          now.add(const Duration(hours: 1)),
-          'refreshed-id-token',
-          'Bearer',
-          ['openid'],
-          {'p': 'B2C_1_signupsignin'},
-        ),
-      );
+    test(
+      'getAccessToken refreshes when the cached token is near expiry',
+      () async {
+        final now = DateTime.now();
+        when(
+          () => mockStorage.read(key: 'access_token'),
+        ).thenAnswer((_) async => 'cached-token');
+        when(() => mockStorage.read(key: 'expires_on')).thenAnswer(
+          (_) async =>
+              now.subtract(const Duration(minutes: 1)).toIso8601String(),
+        );
+        when(
+          () => mockStorage.read(key: 'refresh_token'),
+        ).thenAnswer((_) async => 'refresh-token');
+        when(
+          () => mockStorage.write(
+            key: any(named: 'key'),
+            value: any(named: 'value'),
+          ),
+        ).thenAnswer((_) async {});
+        when(() => mockAppAuth.token(any())).thenAnswer(
+          (_) async => TokenResponse(
+            'refreshed-token',
+            'refreshed-refresh-token',
+            now.add(const Duration(hours: 1)),
+            'refreshed-id-token',
+            'Bearer',
+            ['openid'],
+            {'p': 'B2C_1_signupsignin'},
+          ),
+        );
 
-      await service.initialize();
-      final token = await service.getAccessToken();
+        await service.initialize();
+        final token = await service.getAccessToken();
 
-      expect(token, 'refreshed-token');
-      final request = verify(() => mockAppAuth.token(captureAny())).captured.single
-          as TokenRequest;
-      expect(request.refreshToken, 'refresh-token');
-      expect(request.additionalParameters?['p'], 'B2C_1_signupsignin');
-      expect(service.currentState, AuthState.unauthenticated);
-    });
+        expect(token, 'refreshed-token');
+        final request =
+            verify(() => mockAppAuth.token(captureAny())).captured.single
+                as TokenRequest;
+        expect(request.refreshToken, 'refresh-token');
+        expect(request.additionalParameters?['p'], 'B2C_1_signupsignin');
+        expect(service.currentState, AuthState.unauthenticated);
+      },
+    );
 
-    test('getAccessToken returns the cached token when it is still valid', () async {
-      when(
-        () => mockStorage.read(key: 'access_token'),
-      ).thenAnswer((_) async => 'cached-token');
-      when(
-        () => mockStorage.read(key: 'expires_on'),
-      ).thenAnswer(
-        (_) async => DateTime.now().add(const Duration(hours: 1)).toIso8601String(),
-      );
+    test(
+      'getAccessToken returns the cached token when it is still valid',
+      () async {
+        when(
+          () => mockStorage.read(key: 'access_token'),
+        ).thenAnswer((_) async => 'cached-token');
+        when(() => mockStorage.read(key: 'expires_on')).thenAnswer(
+          (_) async =>
+              DateTime.now().add(const Duration(hours: 1)).toIso8601String(),
+        );
 
-      final token = await service.getAccessToken();
+        final token = await service.getAccessToken();
 
-      expect(token, 'cached-token');
-      verifyNever(() => mockAppAuth.token(any()));
-    });
+        expect(token, 'cached-token');
+        verifyNever(() => mockAppAuth.token(any()));
+      },
+    );
 
     test('getAccessToken returns null when refresh token is missing', () async {
       when(
         () => mockStorage.read(key: 'access_token'),
       ).thenAnswer((_) async => 'cached-token');
-      when(
-        () => mockStorage.read(key: 'expires_on'),
-      ).thenAnswer(
-        (_) async => DateTime.now().subtract(const Duration(minutes: 1)).toIso8601String(),
+      when(() => mockStorage.read(key: 'expires_on')).thenAnswer(
+        (_) async => DateTime.now()
+            .subtract(const Duration(minutes: 1))
+            .toIso8601String(),
       );
       when(
         () => mockStorage.read(key: 'refresh_token'),
@@ -363,21 +371,11 @@ void main() {
 
       await service.signOut();
 
-      verify(
-        () => mockStorage.delete(key: 'access_token'),
-      ).called(1);
-      verify(
-        () => mockStorage.delete(key: 'refresh_token'),
-      ).called(1);
-      verify(
-        () => mockStorage.delete(key: 'id_token'),
-      ).called(1);
-      verify(
-        () => mockStorage.delete(key: 'expires_on'),
-      ).called(1);
-      verify(
-        () => mockStorage.delete(key: 'account_id'),
-      ).called(1);
+      verify(() => mockStorage.delete(key: 'access_token')).called(1);
+      verify(() => mockStorage.delete(key: 'refresh_token')).called(1);
+      verify(() => mockStorage.delete(key: 'id_token')).called(1);
+      verify(() => mockStorage.delete(key: 'expires_on')).called(1);
+      verify(() => mockStorage.delete(key: 'account_id')).called(1);
       expect(service.currentState, AuthState.unauthenticated);
     });
   });

@@ -1,9 +1,9 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "Lythaus (formerly Asora) API",
+    "title": "Lythaus API",
     "version": "v3",
-    "description": "HTTP contract for Lythaus (formerly Asora) Functions v1.",
+    "description": "HTTP contract for the Lythaus API.",
     "license": {
       "name": "MIT",
       "url": "https://opensource.org/licenses/MIT"
@@ -3103,9 +3103,10 @@
     },
     "/auth/email": {
       "post": {
+        "deprecated": true,
         "operationId": "authEmailLogin",
         "summary": "Sign in with a verified email identity",
-        "description": "Verifies email/password credentials with Google Identity Platform, requires a verified\nprovider email and an existing invited Lythaus account, then returns short-lived Lythaus\naccess and rotating refresh tokens. The endpoint never creates an uninvited account.\n",
+        "description": "Legacy email/password login contract retained for compatibility during the\nCloudflare-native migration. New clients should use the native authentication flow.\n",
         "tags": [
           "Auth"
         ],
@@ -4625,8 +4626,10 @@
     "/user/export": {
       "get": {
         "operationId": "exportUserData",
-        "summary": "Export personal data (GDPR Article 20)",
-        "description": "Returns a structured copy of all personal data held for the authenticated user.\nExport cooldown periods are tier-gated. The `X-Export-ID` response header\ncontains the export identifier for tracking.\n",
+        "summary": "Legacy synchronous personal-data export",
+        "description": "Legacy Azure Functions compatibility route retained only while source\nmigration evidence is collected. The Lythaus production runtime uses\nthe asynchronous `/privacy/requests` contract.\n",
+        "deprecated": true,
+        "x-lythaus-runtime-status": "migration-only-legacy",
         "tags": [
           "Privacy"
         ],
@@ -4653,52 +4656,12 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DSRExportResponse"
-                },
-                "examples": {
-                  "exportReady": {
-                    "summary": "Structured export payload",
-                    "value": {
-                      "metadata": {
-                        "exportId": "exp_1714478400000_abc123",
-                        "exportedAt": "2026-04-30T12:00:00Z",
-                        "exportedBy": "usr_01HZPQ2B3C4D5E6F7G8H9JABCD",
-                        "dataVersion": "1.0"
-                      },
-                      "userProfile": {
-                        "displayName": "Alice Example"
-                      },
-                      "content": {
-                        "posts": [],
-                        "comments": []
-                      },
-                      "interactions": {
-                        "likes": [],
-                        "flags": []
-                      },
-                      "moderation": {
-                        "appeals": [],
-                        "votes": []
-                      },
-                      "reputation": {
-                        "ledger": []
-                      },
-                      "privacy": {
-                        "previousExports": [],
-                        "dataRequests": []
-                      }
-                    }
-                  }
                 }
               }
             }
           },
           "401": {
             "description": "Missing or invalid authentication",
-            "headers": {
-              "X-Correlation-ID": {
-                "$ref": "#/components/headers/XCorrelationID"
-              }
-            },
             "content": {
               "application/json": {
                 "schema": {
@@ -4712,18 +4675,6 @@
             "headers": {
               "Retry-After": {
                 "$ref": "#/components/headers/RetryAfter"
-              },
-              "X-RateLimit-Limit": {
-                "$ref": "#/components/headers/XRateLimitLimit"
-              },
-              "X-RateLimit-Remaining": {
-                "$ref": "#/components/headers/XRateLimitRemaining"
-              },
-              "X-RateLimit-Reset": {
-                "$ref": "#/components/headers/XRateLimitReset"
-              },
-              "X-Correlation-ID": {
-                "$ref": "#/components/headers/XCorrelationID"
               }
             },
             "content": {
@@ -4740,8 +4691,10 @@
     "/user/delete": {
       "delete": {
         "operationId": "deleteUserAccount",
-        "summary": "Delete own account (GDPR Article 17)",
-        "description": "Permanently deletes the authenticated user's account and anonymises all authored\ncontent. Requires the `X-Confirm-Delete: true` header to guard against accidental\ninvocations. This action is **irreversible**.\n",
+        "summary": "Legacy synchronous account deletion",
+        "description": "Legacy Azure Functions compatibility route retained only while source\nmigration evidence is collected. The Lythaus production runtime uses\nthe asynchronous `/privacy/requests` contract.\n",
+        "deprecated": true,
+        "x-lythaus-runtime-status": "migration-only-legacy",
         "tags": [
           "Privacy"
         ],
@@ -4776,28 +4729,12 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AccountDeleteResponse"
-                },
-                "examples": {
-                  "deleted": {
-                    "summary": "Successful deletion",
-                    "value": {
-                      "message": "Account deletion completed",
-                      "userId": "usr_01HZPQ2B3C4D5E6F7G8H9JABCD",
-                      "deletedAt": "2026-04-30T12:00:00Z",
-                      "alreadyDeleted": false
-                    }
-                  }
                 }
               }
             }
           },
           "400": {
             "description": "Missing confirmation header or invalid request",
-            "headers": {
-              "X-Correlation-ID": {
-                "$ref": "#/components/headers/XCorrelationID"
-              }
-            },
             "content": {
               "application/json": {
                 "schema": {
@@ -4808,11 +4745,6 @@
           },
           "401": {
             "description": "Missing or invalid authentication",
-            "headers": {
-              "X-Correlation-ID": {
-                "$ref": "#/components/headers/XCorrelationID"
-              }
-            },
             "content": {
               "application/json": {
                 "schema": {
@@ -4826,18 +4758,173 @@
             "headers": {
               "Retry-After": {
                 "$ref": "#/components/headers/RetryAfter"
-              },
-              "X-RateLimit-Limit": {
-                "$ref": "#/components/headers/XRateLimitLimit"
-              },
-              "X-RateLimit-Remaining": {
-                "$ref": "#/components/headers/XRateLimitRemaining"
-              },
-              "X-RateLimit-Reset": {
-                "$ref": "#/components/headers/XRateLimitReset"
-              },
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/privacy/requests": {
+      "get": {
+        "operationId": "privacyRequestStatus",
+        "summary": "Get the latest privacy request status",
+        "description": "Returns the authenticated user's latest matching asynchronous privacy request.",
+        "tags": [
+          "Privacy"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "requestType",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "export",
+                "delete",
+                "rectify"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Latest matching request, or null when none exists",
+            "headers": {
               "X-Correlation-ID": {
                 "$ref": "#/components/headers/XCorrelationID"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivacyRequestStatusResponse"
+                },
+                "examples": {
+                  "processing": {
+                    "value": {
+                      "request": {
+                        "requestId": "018f2c4e-8c2b-7b4e-8d2a-2e2f0b7e4b1a",
+                        "requestType": "export",
+                        "state": "processing",
+                        "acceptedAt": "2026-07-29T07:00:00Z",
+                        "completedAt": null
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "privacyRequestCreate",
+        "summary": "Submit an asynchronous privacy request",
+        "description": "Records an export, account deletion, or rectification request and queues\nit for durable processing. Acceptance does not mean processing is complete.\n",
+        "tags": [
+          "Privacy"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrivacyRequestCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Privacy request accepted for processing",
+            "headers": {
+              "X-Correlation-ID": {
+                "$ref": "#/components/headers/XCorrelationID"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivacyRequestAccepted"
+                },
+                "examples": {
+                  "accepted": {
+                    "value": {
+                      "requestId": "018f2c4e-8c2b-7b4e-8d2a-2e2f0b7e4b1a",
+                      "requestType": "export",
+                      "state": "received",
+                      "acceptedAt": "2026-07-29T07:00:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid privacy request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Privacy request rate limit enforced",
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
               }
             },
             "content": {
@@ -13850,7 +13937,7 @@
         }
       },
       "DSRExportResponse": {
-        "description": "GDPR Article 20 data portability export payload.",
+        "description": "Legacy GDPR Article 20 data portability export payload.",
         "type": "object",
         "required": [
           "metadata",
@@ -13916,7 +14003,7 @@
         }
       },
       "AccountDeleteResponse": {
-        "description": "Confirmation of account deletion.",
+        "description": "Legacy confirmation of account deletion.",
         "type": "object",
         "required": [
           "message",
@@ -13940,6 +14027,90 @@
             "type": "boolean",
             "description": "True when the account was already in a deleted state",
             "default": false
+          }
+        }
+      },
+      "PrivacyRequestCreate": {
+        "description": "An asynchronous privacy request submitted by the authenticated subject.",
+        "type": "object",
+        "required": [
+          "requestType"
+        ],
+        "properties": {
+          "requestType": {
+            "type": "string",
+            "enum": [
+              "export",
+              "delete",
+              "rectify"
+            ]
+          }
+        }
+      },
+      "PrivacyRequest": {
+        "description": "Current state of an asynchronous privacy request.",
+        "type": "object",
+        "required": [
+          "requestId",
+          "requestType",
+          "state",
+          "acceptedAt"
+        ],
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "requestType": {
+            "type": "string",
+            "enum": [
+              "export",
+              "delete",
+              "rectify"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "received",
+              "processing",
+              "blocked",
+              "completed",
+              "failed"
+            ]
+          },
+          "acceptedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "PrivacyRequestAccepted": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PrivacyRequest"
+          }
+        ]
+      },
+      "PrivacyRequestStatusResponse": {
+        "type": "object",
+        "required": [
+          "request"
+        ],
+        "properties": {
+          "request": {
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PrivacyRequest"
+              }
+            ],
+            "nullable": true
           }
         }
       },

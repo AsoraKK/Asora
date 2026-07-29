@@ -97,7 +97,7 @@ class PrivacyController extends StateNotifier<PrivacyState> {
       final snapshot = await _repository.requestExport(authToken: token);
 
       state = state.copyWith(
-        exportStatus: ExportStatus.emailSent,
+        exportStatus: ExportStatus.accepted,
         lastExportAt: snapshot.lastExportAt,
         remainingCooldown: snapshot.remainingCooldown,
       );
@@ -125,9 +125,7 @@ class PrivacyController extends StateNotifier<PrivacyState> {
 
       _logger.info('privacy_delete_confirmed');
 
-      await _signOut();
-
-      state = state.copyWith(deleteStatus: DeleteStatus.deleted);
+      state = state.copyWith(deleteStatus: DeleteStatus.requested);
     } on PrivacyException catch (error) {
       _logger.warning('privacy_delete_failed');
       state = state.copyWith(
@@ -207,7 +205,7 @@ class PrivacyController extends StateNotifier<PrivacyState> {
         return ExportStatus.queued;
       case 'email_sent':
       case 'accepted':
-        return ExportStatus.emailSent;
+        return ExportStatus.accepted;
       case 'failed':
         return ExportStatus.failed;
       default:

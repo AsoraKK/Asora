@@ -13,7 +13,7 @@ import 'package:asora/features/moderation/domain/moderation_repository.dart';
 /// ✅ Features: Like, Share, Comment, Flag/Report functionality
 /// 🔐 Security: JWT authentication for flag submissions
 /// 📱 UX: Confirmation dialogs and success/error feedback
-/// 🚀 Integration: Connects to Azure Functions moderation backend
+/// 🚀 Integration: Connects to the native Lythaus moderation API
 
 class PostActions extends ConsumerWidget {
   final String contentId;
@@ -113,8 +113,7 @@ class _ActionButton extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               label,
-              style: TextStyle(
-                fontSize: 12,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 color: color ?? Theme.of(context).textTheme.bodySmall?.color,
               ),
             ),

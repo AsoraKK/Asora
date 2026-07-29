@@ -3,7 +3,7 @@
 /// ASORA POST SERVICE
 ///
 /// 🎯 Purpose: HTTP client for post management API calls
-/// 📡 Endpoints: create, delete, getFeed integrated with Azure Functions
+/// 📡 Endpoints: create, delete, and feed reads through the native Lythaus API
 /// 🔐 Authentication: Bearer token from secure storage
 /// 📱 Platform: Flutter with Dio HTTP client
 library;
@@ -14,7 +14,7 @@ import 'package:asora/core/observability/asora_tracer.dart';
 import 'package:asora/features/auth/domain/user_models.dart';
 import 'package:asora/core/network/response_models.dart';
 
-/// Post management service for Azure Functions integration
+/// Post management service for the native Lythaus API
 class PostService {
   final Dio _dio;
 
@@ -91,7 +91,7 @@ class PostService {
     );
   }
 
-  /// Get feed with cursor-based pagination (Azure Functions format)
+  /// Get feed with cursor-based pagination.
   Future<FeedResponse> getFeed({
     int limit = 20,
     String? cursor,
@@ -175,7 +175,7 @@ class PostService {
     );
   }
 
-  /// Check health of the Azure Functions backend
+  /// Check health of the native Lythaus API.
   Future<Map<String, dynamic>> checkHealth() async {
     return AsoraTracer.traceOperation(
       'PostService.checkHealth',

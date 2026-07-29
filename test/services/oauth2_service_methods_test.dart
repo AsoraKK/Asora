@@ -453,10 +453,7 @@ void main() {
         () => mockStorage.read(key: any(named: 'key')),
       ).thenAnswer((_) async => null);
 
-      final svc = OAuth2Service(
-        dio: mockDio2,
-        secureStorage: mockStorage,
-      );
+      final svc = OAuth2Service(dio: mockDio2, secureStorage: mockStorage);
 
       await svc.initialize();
 

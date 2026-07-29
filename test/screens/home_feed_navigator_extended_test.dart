@@ -526,71 +526,9 @@ void main() {
       expect(find.text('Trending'), findsOneWidget);
     });
 
-    testWidgets('feed tools open moderation destination', (tester) async {
-      tester.binding.platformDispatcher.textScaleFactorTestValue = 0.8;
-      addTearDown(
-        () => tester.binding.platformDispatcher.clearTextScaleFactorTestValue(),
-      );
-
-      await tester.pumpWidget(
-        buildWithState(
-          stateForFeed: (feed) => LiveFeedState(
-            items: [
-              FeedItem(
-                id: '${feed.id}-1',
-                feedId: feed.id,
-                author: 'Alex',
-                contentType: ContentType.text,
-                title: 'T',
-                body: 'B',
-                publishedAt: DateTime(2024),
-              ),
-            ],
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byType(InkWell).first);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Moderation hub'));
-      await tester.pump();
-      expect(find.text('Moderation'), findsWidgets);
-    });
-
-    testWidgets('feed tools open appeals destination', (tester) async {
-      tester.binding.platformDispatcher.textScaleFactorTestValue = 0.8;
-      addTearDown(
-        () => tester.binding.platformDispatcher.clearTextScaleFactorTestValue(),
-      );
-
-      await tester.pumpWidget(
-        buildWithState(
-          stateForFeed: (feed) => LiveFeedState(
-            items: [
-              FeedItem(
-                id: '${feed.id}-1',
-                feedId: feed.id,
-                author: 'Alex',
-                contentType: ContentType.text,
-                title: 'T',
-                body: 'B',
-                publishedAt: DateTime(2024),
-              ),
-            ],
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byType(InkWell).first);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Appeals queue'));
-      await tester.pump();
-      expect(find.text('My Appeals'), findsOneWidget);
-    });
-
-    testWidgets('feed control panel opens custom feed flow', (tester) async {
+    testWidgets('launch feed tools hide deferred and staff-only actions', (
+      tester,
+    ) async {
       tester.binding.platformDispatcher.textScaleFactorTestValue = 0.8;
       addTearDown(
         () => tester.binding.platformDispatcher.clearTextScaleFactorTestValue(),
@@ -618,12 +556,9 @@ void main() {
       await tester.tap(find.byType(InkWell).first);
       await tester.pumpAndSettle();
       expect(find.text('Feed tools'), findsOneWidget);
-      expect(find.text('Build custom feed'), findsOneWidget);
-
-      await tester.tap(find.text('Build custom feed'));
-      await tester.pumpAndSettle();
-      expect(find.text('Create Custom Feed'), findsOneWidget);
-      expect(find.text('What type of content?'), findsOneWidget);
+      expect(find.text('Build custom feed'), findsNothing);
+      expect(find.text('Moderation hub'), findsNothing);
+      expect(find.text('Appeals queue'), findsNothing);
     });
   });
 }

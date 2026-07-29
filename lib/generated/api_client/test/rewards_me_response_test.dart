@@ -56,5 +56,6 @@ void main() {
     test('to test the property `affiliateDisclosure`', () async {
       // TODO
     });
+
   });
 }

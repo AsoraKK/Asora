@@ -16,8 +16,6 @@ import 'package:asora/ui/components/asora_top_bar.dart';
 import 'package:asora/ui/components/feed_control_panel.dart';
 import 'package:asora/design_system/theme/theme_build_context_x.dart';
 import 'package:asora/design_system/tokens/motion.dart';
-import 'package:asora/features/moderation/presentation/moderation_console/moderation_console_screen.dart';
-import 'package:asora/features/moderation/presentation/screens/appeal_history_screen.dart';
 import 'package:asora/features/feed/presentation/post_detail_screen.dart';
 import 'package:asora/ui/screens/home/custom_feed.dart';
 import 'package:asora/ui/screens/home/custom_feed_creation_flow.dart';
@@ -205,30 +203,7 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
     showModalBottomSheet<void>(
       context: context,
       useSafeArea: true,
-      builder: (_) => FeedControlPanel(
-        onCreateCustom: () {
-          Navigator.of(context).maybePop();
-          Navigator.of(context).push(
-            MaterialPageRoute<void>(
-              builder: (_) => const CustomFeedCreationFlow(),
-            ),
-          );
-        },
-        onOpenModerationHub: () {
-          Navigator.of(context).maybePop();
-          _openModerationHub();
-        },
-        onOpenAppeals: () {
-          Navigator.of(context).maybePop();
-          _openAppeals();
-        },
-      ),
-    );
-  }
-
-  void _openModerationHub() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const ModerationConsoleScreen()),
+      builder: (_) => const FeedControlPanel(),
     );
   }
 
@@ -242,12 +217,6 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
     Navigator.of(
       context,
     ).push(MaterialPageRoute<void>(builder: (_) => const FeedSearchScreen()));
-  }
-
-  void _openAppeals() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const AppealHistoryScreen()),
-    );
   }
 }
 

@@ -12,7 +12,7 @@ const apiBase = import.meta.env.PUBLIC_API_BASE_URL ?? 'https://api.lythaus.co/a
       class="status-panel"
       id="invite-status"
       data-api-base={apiBase}
-      data-deeplink-base="asora://invite/"
+      data-deeplink-base="https://app.lythaus.co/invite/"
     >
       <span class="pill">Invite check</span>
       <h1>You're almost in.</h1>
@@ -40,7 +40,8 @@ const apiBase = import.meta.env.PUBLIC_API_BASE_URL ?? 'https://api.lythaus.co/a
     const openApp = document.getElementById('open-app');
     const copyButton = document.getElementById('copy-code');
     const apiBase = status?.dataset.apiBase || '';
-    const deepLinkBase = status?.dataset.deeplinkBase || 'asora://invite/';
+    const deepLinkBase =
+      status?.dataset.deeplinkBase || 'https://app.lythaus.co/invite/';
 
     function parseInviteCode() {
       const url = new URL(window.location.href);

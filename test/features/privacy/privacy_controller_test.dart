@@ -28,7 +28,7 @@ void main() {
       addTearDown(harness.dispose);
       harness.repository.exportSnapshot = const ExportSnapshot(
         remainingCooldown: Duration(hours: 24),
-        serverState: 'email_sent',
+        serverState: 'accepted',
       );
 
       final controller = await harness.controller();
@@ -58,7 +58,7 @@ void main() {
     );
 
     test(
-      'delete success marks controller deleted and triggers sign-out',
+      'delete success marks the request submitted without signing out',
       () async {
         final harness = _ControllerHarness(initialCooldown: Duration.zero);
         addTearDown(harness.dispose);
@@ -66,8 +66,8 @@ void main() {
         final controller = await harness.controller();
         await controller.delete();
 
-        expect(controller.state.deleteStatus, DeleteStatus.deleted);
-        expect(harness.signOutCalls, 1);
+        expect(controller.state.deleteStatus, DeleteStatus.requested);
+        expect(harness.signOutCalls, 0);
       },
     );
 

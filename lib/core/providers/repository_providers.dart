@@ -10,7 +10,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:asora/core/config/environment_config.dart';
-import 'package:asora/core/config/web_release_guard.dart';
 import 'package:asora/features/moderation/domain/moderation_repository.dart';
 import 'package:asora/features/moderation/application/moderation_service.dart';
 import 'package:asora/features/feed/domain/feed_repository.dart';
@@ -19,7 +18,7 @@ import 'package:asora/core/security/cert_pinning.dart';
 
 /// **Core HTTP Client Provider**
 ///
-/// Centralized Dio instance with Azure Functions configuration.
+/// Centralized Dio instance for the native Lythaus API.
 ///
 /// Native platforms use certificate pinning; web keeps Dio's browser adapter.
 /// Used by all repository implementations for consistency
@@ -41,18 +40,6 @@ final httpClientProvider = Provider<Dio>((ref) {
 });
 
 String _resolveFunctionBaseUrl() {
-  if (isReleaseWebBuild) {
-    return EnvironmentConfig.fromEnvironment().apiBaseUrl;
-  }
-
-  const configured = String.fromEnvironment(
-    'AZURE_FUNCTION_URL',
-    defaultValue: '',
-  );
-  if (configured.trim().isNotEmpty) {
-    return configured.trim();
-  }
-
   return EnvironmentConfig.fromEnvironment().apiBaseUrl;
 }
 

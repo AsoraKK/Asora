@@ -66,7 +66,7 @@ void main() {
     ).called(greaterThanOrEqualTo(1));
   });
 
-  testWidgets('sign in shows provider picker', (tester) async {
+  testWidgets('sign in shows Google-only provider picker', (tester) async {
     tester.view.physicalSize = const Size(1200, 2400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() => tester.view.resetPhysicalSize());
@@ -77,10 +77,9 @@ void main() {
     await tester.tap(find.text('Sign in'));
     await tester.pumpAndSettle();
 
-    // Bottom sheet should show provider options
     expect(find.text('Sign in with'), findsOneWidget);
     expect(find.text('Google'), findsOneWidget);
-    expect(find.text('Email'), findsOneWidget);
+    expect(find.text('Email'), findsNothing);
     expect(find.text('Apple'), findsNothing);
     expect(find.text('World ID'), findsNothing);
   });

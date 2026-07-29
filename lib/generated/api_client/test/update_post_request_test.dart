@@ -37,7 +37,7 @@ void main() {
       // TODO
     });
 
-    // Public authorship disclosure. `generated` is blocked at submit.
+    // Required whenever content or media changes. Public responses use categorical labels only.
     // String aiLabel
     test('to test the property `aiLabel`', () async {
       // TODO
@@ -47,5 +47,6 @@ void main() {
     test('to test the property `proofSignals`', () async {
       // TODO
     });
+
   });
 }

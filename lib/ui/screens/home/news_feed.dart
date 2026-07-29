@@ -43,7 +43,8 @@ class NewsFeed extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tier = ref.watch(currentUserProvider)?.subscriptionTier;
-    final isPreview = tier == null ||
+    final isPreview =
+        tier == null ||
         tier == SubscriptionTier.guest ||
         tier == SubscriptionTier.free;
     return RefreshIndicator(

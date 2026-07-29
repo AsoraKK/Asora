@@ -59,6 +59,7 @@ void main() {
           () => api.requestExport(authToken: any(named: 'authToken')),
         ).thenAnswer((_) async {
           return ExportRequestResult(
+            requestId: 'request-1',
             acceptedAt: acceptedAt,
             retryAfter: const Duration(hours: 24),
           );
@@ -162,6 +163,7 @@ void main() {
         () => api.requestExport(authToken: any(named: 'authToken')),
       ).thenAnswer((_) async {
         return ExportRequestResult(
+          requestId: 'request-2',
           acceptedAt: acceptedAt,
           retryAfter: const Duration(hours: 48),
         );
@@ -171,7 +173,7 @@ void main() {
       expect(snapshot.remainingCooldown, const Duration(hours: 24));
     });
 
-    test('deleteAccount clears persisted export timestamp', () async {
+    test('deleteAccount preserves export status history', () async {
       when(
         () => api.deleteAccount(
           authToken: any(named: 'authToken'),
@@ -180,7 +182,7 @@ void main() {
       ).thenAnswer((_) async {});
 
       await repository.deleteAccount(authToken: 'token', hardDelete: true);
-      verify(() => storage.delete(key: 'privacy.lastExportAt')).called(1);
+      verifyNever(() => storage.delete(key: 'privacy.lastExportAt'));
     });
 
     test('maps api exceptions to user friendly privacy exceptions', () async {

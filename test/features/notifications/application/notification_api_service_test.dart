@@ -79,8 +79,7 @@ void main() {
     when(
       () => dio.get<Map<String, dynamic>>('/notifications/unread-count'),
     ).thenAnswer(
-      (_) async =>
-          _response({'unreadCount': 4}, '/notifications/unread-count'),
+      (_) async => _response({'unreadCount': 4}, '/notifications/unread-count'),
     );
 
     final count = await service.getUnreadCount();
@@ -217,9 +216,7 @@ void main() {
     final service = NotificationApiService(dioClient: dio);
 
     when(
-      () => dio.post<Map<String, dynamic>>(
-        '/notifications/devices/d1/revoke',
-      ),
+      () => dio.post<Map<String, dynamic>>('/notifications/devices/d1/revoke'),
     ).thenAnswer(
       (_) async => _response({}, '/notifications/devices/d1/revoke'),
     );
@@ -227,9 +224,7 @@ void main() {
     await service.revokeDevice('d1');
 
     verify(
-      () => dio.post<Map<String, dynamic>>(
-        '/notifications/devices/d1/revoke',
-      ),
+      () => dio.post<Map<String, dynamic>>('/notifications/devices/d1/revoke'),
     ).called(1);
   });
 
@@ -263,9 +258,7 @@ void main() {
       DioException(
         requestOptions: RequestOptions(path: '/notifications/unread-count'),
         response: Response(
-          requestOptions: RequestOptions(
-            path: '/notifications/unread-count',
-          ),
+          requestOptions: RequestOptions(path: '/notifications/unread-count'),
           statusCode: 500,
           data: {'message': 'fail'},
         ),

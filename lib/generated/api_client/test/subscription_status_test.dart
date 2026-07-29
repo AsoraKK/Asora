@@ -37,9 +37,26 @@ void main() {
       // TODO
     });
 
+    // Manual Alpha entitlement label; no active payment system is implied.
+    // String accessLabel
+    test('to test the property `accessLabel`', () async {
+      // TODO
+    });
+
+    // DateTime manualGrantExpiresAt
+    test('to test the property `manualGrantExpiresAt`', () async {
+      // TODO
+    });
+
+    // DateTime manualGrantReviewAt
+    test('to test the property `manualGrantReviewAt`', () async {
+      // TODO
+    });
+
     // SubscriptionStatusEntitlements entitlements
     test('to test the property `entitlements`', () async {
       // TODO
     });
+
   });
 }

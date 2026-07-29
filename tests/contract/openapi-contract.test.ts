@@ -119,7 +119,7 @@ function getValidator(pathKey: string, method: HttpMethod, status: string) {
   return validate;
 }
 
-async function request({ method, pathKey, auth, query, body }: RequestOptions) {
+async function request({ method, pathKey, auth, query, body }: RequestOptions): Promise<{ response: Response; payload: any }> {
   ensureServerAvailable();
   if (!(await isServerReachable())) {
     throw new StagingUnavailableError(`Staging endpoint ${baseUrl} is unreachable. Skipping contract request.`);

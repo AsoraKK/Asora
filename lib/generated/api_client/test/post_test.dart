@@ -57,6 +57,11 @@ void main() {
       // TODO
     });
 
+    // PublicAuthorship authorship
+    test('to test the property `authorship`', () async {
+      // TODO
+    });
+
     // DateTime createdAt
     test('to test the property `createdAt`', () async {
       // TODO
@@ -66,5 +71,6 @@ void main() {
     test('to test the property `updatedAt`', () async {
       // TODO
     });
+
   });
 }

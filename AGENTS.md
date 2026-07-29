@@ -9,6 +9,76 @@ Authoritative, concise instructions for agents working in this repository via Co
 - When generating code, use "Lythaus" for user-visible strings.
 - Do **not** rename Azure resources, package identifiers, or internal imports without explicit instruction.
 - Full guide: `docs/branding/lythaus-transition.md`
+
+## PlanetScale Database
+
+- Organization: `lythaus`
+- Database: `lythaus-core`
+- Production branch: `main`
+- Development branch: `development`
+- AI development branch: `ai-development` (Git convention only; not a permanent database branch)
+- Default PostgreSQL database: `postgres`
+
+Use PlanetScale MCP for schema inspection and approved database operations.
+Do not execute write queries against `main` without explicit human approval.
+Use `development` with synthetic data and a disposable local PostgreSQL 17
+container for migration validation. Never create another PlanetScale branch;
+do not create automatic `ci-*` branches.
+Initial verification prompt: use PlanetScale MCP to confirm access to
+`lythaus/lythaus-core`, list all branches, and inspect the schema. Do not
+execute writes or DDL.
+Verified 2026-07-28 through PlanetScale CLI and MCP: `main` and the synthetic
+`development` branch exist. `main` is an empty Frankfurt PS-5 ARM PostgreSQL
+17.10 branch. `development` is a Frankfurt PS-DEV ARM PostgreSQL 18.4 branch
+with 74 application tables, one media view, 11 feature flags, and five
+provisioned login roles. `pgcrypto`, `pg_trgm`, and `unaccent` are installed;
+PostGIS is unavailable and is not a launch dependency. Do not apply writes or
+DDL to `main` until the PostgreSQL 17 compatibility test, exact baseline, data
+classification, migration reconciliation, and explicit migration gates pass.
+
+Use application-generated UUIDv7 identifiers for new records. Store them in
+native PostgreSQL `uuid` columns; do not add a database UUIDv7 function or
+default to `main`.
+
+The native implementation branch is `codex/cloudflare-planetscale-provisioning`.
+
+## Cloudflare Architecture
+
+Use only the existing shared Cloudflare account `e5b7ae46e04698f507b7e4b3d4ef1af0`
+and active zone `lythaus.co`. Approved resources are prefixed `lythaus-`, with
+the temporary legacy exception `asora-azure-compat`. Never mutate Nite Owl,
+`asora.co.za`, unrelated zones, or unrelated resources.
+
+Use only the existing Lythaus Workers, Hyperdrives, R2 buckets, Queues/DLQs,
+Workflows, KV namespace, and Access applications listed in
+`infrastructure/lythaus-resource-registry.json`. Existing `-development` and
+`-dev` resources are promoted in place for the initial production runtime;
+their physical names remain unchanged, but their logical environment,
+retention, access policy, and deletion protection become production.
+
+Before any agent creates or changes a provider resource it must read the
+registry, inspect live provider state, search for an equivalent, prefer reuse
+or rebinding, check possible cost, and stop if a duplicate or new cost may be
+required. No automatic create-if-missing behavior is permitted.
+
+Azure extraction is read-only. The approved Cosmos Built-in Data Reader and
+container-scoped Storage Blob Data Reader assignments are active. PostgreSQL
+remains `BLOCKED — ACCESS REQUIRED` unless Cosmos classification proves that
+recovering it is required.
+Never import access tokens, refresh tokens, secrets, or reversible passwords.
+Import password hashes only when their algorithm, parameters, association, and
+security policy are verified compatible; otherwise mark password login
+reset-required.
+
+Before any Azure data write to PlanetScale `main` or R2, produce the measured
+record/object/byte, operation, included-usage, and worst-case incremental-cost
+report. Proceed only when existing capacity and included allowances cover the
+operation with no indicated incremental charge. Otherwise stop for:
+`AUTHORISE MIGRATION USAGE: maximum additional cost US$___`.
+
+Do not delete PlanetScale `development`, Azure resources, or any other
+destructive target without the explicit gates defined in the migration runbook.
+
 ## Quick Start
 
 1. Read the repo structure with `rg --files` and open relevant files in small chunks (≤250 lines each).

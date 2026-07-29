@@ -8,7 +8,7 @@ import 'package:built_value/serializer.dart';
 
 part 'account_delete_response.g.dart';
 
-/// Confirmation of account deletion.
+/// Legacy confirmation of account deletion.
 ///
 /// Properties:
 /// * [message]

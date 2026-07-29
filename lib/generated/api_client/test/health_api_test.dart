@@ -1,6 +1,7 @@
 import 'package:test/test.dart';
 import 'package:asora_api_client/asora_api_client.dart';
 
+
 /// tests for HealthApi
 void main() {
   final instance = AsoraApiClient().getHealthApi();
@@ -14,5 +15,13 @@ void main() {
     test('test getHealth', () async {
       // TODO
     });
+
+    // Readiness probe
+    //
+    //Future<JsonObject> ready() async
+    test('test ready', () async {
+      // TODO
+    });
+
   });
 }

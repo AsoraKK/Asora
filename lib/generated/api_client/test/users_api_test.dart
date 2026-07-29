@@ -1,6 +1,7 @@
 import 'package:test/test.dart';
 import 'package:asora_api_client/asora_api_client.dart';
 
+
 /// tests for UsersApi
 void main() {
   final instance = AsoraApiClient().getUsersApi();
@@ -47,5 +48,6 @@ void main() {
     test('test usersTrustPassport', () async {
       // TODO
     });
+
   });
 }

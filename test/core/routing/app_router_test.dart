@@ -20,7 +20,6 @@ import 'package:go_router/go_router.dart';
 import 'package:asora/features/feed/presentation/post_detail_screen.dart';
 import 'package:asora/ui/screens/adaptive_shell.dart';
 import 'package:asora/ui/screens/profile/profile_screen.dart';
-import 'package:asora/ui/screens/profile/reputation_ledger_screen.dart';
 
 class _MockAuthStateNotifier extends StateNotifier<AsyncValue<User?>>
     implements AuthStateNotifier {
@@ -139,7 +138,9 @@ void main() {
       expect(router.routerDelegate.currentConfiguration.uri.path, '/login');
     });
 
-    testWidgets('real router preserves pending invite redirect', (tester) async {
+    testWidgets('real router preserves pending invite redirect', (
+      tester,
+    ) async {
       final router = buildRouter(
         user: _fakeUser(),
         pendingCode: 'ABCD-1234',
@@ -154,7 +155,42 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(InviteRedeemScreen), findsOneWidget);
-      expect(router.routerDelegate.currentConfiguration.uri.path, '/invite/ABCD-1234');
+      expect(
+        router.routerDelegate.currentConfiguration.uri.path,
+        '/invite/ABCD-1234',
+      );
+    });
+
+    test('staff moderation route rejects ordinary users and guests', () {
+      expect(
+        resolveAppRedirect(
+          matchedLocation: '/moderation',
+          user: _fakeUser(),
+          isGuest: false,
+        ),
+        '/',
+      );
+      expect(
+        resolveAppRedirect(
+          matchedLocation: '/moderation',
+          user: null,
+          isGuest: true,
+        ),
+        '/',
+      );
+    });
+
+    test('staff moderation route permits moderators and administrators', () {
+      for (final role in [UserRole.moderator, UserRole.admin]) {
+        expect(
+          resolveAppRedirect(
+            matchedLocation: '/moderation',
+            user: _fakeUser().copyWith(role: role),
+            isGuest: false,
+          ),
+          isNull,
+        );
+      }
     });
 
     test('shell route has expected nested routes', () {
@@ -227,8 +263,8 @@ void main() {
             context,
             buildState('/auth/callback', fullPath: '/auth/callback'),
           );
-      final inviteWidget = routes.firstWhere((r) => r.path == '/invite/:code')
-          .builder!(
+      final inviteWidget =
+          routes.firstWhere((r) => r.path == '/invite/:code').builder!(
             context,
             buildState(
               '/invite/ABCD-1234',
@@ -238,11 +274,13 @@ void main() {
           );
       expect(routes.where((r) => r.path == '/user/test'), isEmpty);
       expect(routes.where((r) => r.path == '/post/test'), isEmpty);
-      final shellWidget =
-          shellRoute.builder!(context, buildState('/', fullPath: '/'));
+      final shellWidget = shellRoute.builder!(
+        context,
+        buildState('/', fullPath: '/'),
+      );
       final shellChildren = shellRoute.routes.whereType<GoRoute>().toList();
-      final postWidget = shellChildren.firstWhere((r) => r.path == 'post/:postId')
-          .builder!(
+      final postWidget =
+          shellChildren.firstWhere((r) => r.path == 'post/:postId').builder!(
             context,
             buildState(
               '/post/abc',
@@ -250,8 +288,8 @@ void main() {
               pathParameters: const {'postId': 'abc'},
             ),
           );
-      final profileWidget = shellChildren.firstWhere((r) => r.path == 'user/:userId')
-          .builder!(
+      final profileWidget =
+          shellChildren.firstWhere((r) => r.path == 'user/:userId').builder!(
             context,
             buildState(
               '/user/abc',
@@ -259,30 +297,30 @@ void main() {
               pathParameters: const {'userId': 'abc'},
             ),
           );
-      final moderationWidget = shellChildren.firstWhere((r) => r.path == 'moderation')
-          .builder!(context, buildState('/moderation', fullPath: '/moderation'));
+      final moderationWidget =
+          shellChildren.firstWhere((r) => r.path == 'moderation').builder!(
+            context,
+            buildState('/moderation', fullPath: '/moderation'),
+          );
       final moderationChildren = shellChildren
           .firstWhere((r) => r.path == 'moderation')
           .routes
           .whereType<GoRoute>()
           .toList();
-      final appealWidget = moderationChildren
-          .firstWhere((r) => r.path == 'appeal')
-          .builder!(context, buildState('/moderation/appeal', fullPath: '/moderation/appeal'));
-      final notificationsWidget = shellChildren
-          .firstWhere((r) => r.path == 'settings/notifications')
-          .builder!(
+      final appealWidget =
+          moderationChildren.firstWhere((r) => r.path == 'appeal').builder!(
+            context,
+            buildState('/moderation/appeal', fullPath: '/moderation/appeal'),
+          );
+      final notificationsWidget =
+          shellChildren
+              .firstWhere((r) => r.path == 'settings/notifications')
+              .builder!(
             context,
             buildState(
               '/settings/notifications',
               fullPath: '/settings/notifications',
             ),
-          );
-      final reputationWidget = shellChildren
-          .firstWhere((r) => r.path == 'reputation/ledger')
-          .builder!(
-            context,
-            buildState('/reputation/ledger', fullPath: '/reputation/ledger'),
           );
 
       expect(loginWidget, isA<AuthChoiceScreen>());
@@ -294,7 +332,10 @@ void main() {
       expect(moderationWidget, isA<ModerationConsoleScreen>());
       expect(appealWidget, isA<AppealHistoryScreen>());
       expect(notificationsWidget, isA<NotificationsSettingsScreen>());
-      expect(reputationWidget, isA<ReputationLedgerScreen>());
+      expect(
+        shellChildren.where((r) => r.path == 'reputation/ledger'),
+        isEmpty,
+      );
     });
   });
 
@@ -382,10 +423,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('home'), findsOneWidget);
-      expect(
-        router.routerDelegate.currentConfiguration.uri.path,
-        '/',
-      );
+      expect(router.routerDelegate.currentConfiguration.uri.path, '/');
     });
 
     testWidgets('authenticated user can open /auth/callback without redirect', (

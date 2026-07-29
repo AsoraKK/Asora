@@ -12,11 +12,10 @@ import 'package:asora/features/notifications/presentation/notifications_settings
 class DeeplinkRouter {
   /// Parse and navigate to deep-linked content
   /// Supported formats:
-  /// - asora://post/{postId} - Navigate to post detail
-  /// - asora://user/{userId} - Navigate to user profile
-  /// - asora://comment/{commentId}?postId={postId} - Navigate to comment thread
-  /// - asora://settings/notifications - Navigate to notification settings
-  /// - asora://invite/{code} - Navigate to invite redemption
+  /// - https://app.lythaus.co/post/{postId} - Navigate to post detail
+  /// - https://app.lythaus.co/user/{userId} - Navigate to user profile
+  /// - https://app.lythaus.co/invite/{code} - Navigate to invite redemption
+  /// - lythaus://post/{postId} - Native-scheme compatibility
   static Future<void> navigate(BuildContext context, String deeplink) async {
     final uri = Uri.tryParse(deeplink);
     if (uri == null) {
@@ -177,7 +176,7 @@ class _NormalizedDeepLink {
 }
 
 _NormalizedDeepLink? _normalize(Uri uri) {
-  if (uri.scheme == 'asora') {
+  if (uri.scheme == 'lythaus' || uri.scheme == 'asora') {
     final type = uri.host.trim();
     if (type.isEmpty) {
       return null;
