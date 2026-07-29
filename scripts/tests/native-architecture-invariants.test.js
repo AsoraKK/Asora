@@ -218,6 +218,13 @@ test('jobs Worker exposes durable privacy and appeal workflows', () => {
   assert.match(source, /backup\.schema_validation\.completed/);
 });
 
+test('public API CORS preflight uses a bodyless 204 response', () => {
+  const source = fs.readFileSync(path.join(root, 'apps/lythaus-public-api/src/index.ts'), 'utf8');
+  assert.match(source, /init\.status === 204 \? new Response\(null, init\) : json\(body, init\)/);
+  assert.match(source, /request\.method === 'OPTIONS'/);
+  assert.match(source, /'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS'/);
+});
+
 test('PlanetScale CI uses a disposable local PostgreSQL 17 service', () => {
   const workflow = fs.readFileSync(path.join(root, '.github/workflows/native-planetscale-ci.yml'), 'utf8');
   assert.match(workflow, /image: postgres:17/);

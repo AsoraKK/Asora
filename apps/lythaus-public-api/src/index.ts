@@ -453,7 +453,7 @@ function corsOrigin(request: Request, env: Env): string | undefined {
 }
 
 function response(request: Request, env: Env, body: unknown, init: ResponseInit = {}): Response {
-  const result = json(body, init);
+  const result = init.status === 204 ? new Response(null, init) : json(body, init);
   const origin = corsOrigin(request, env);
   if (origin) {
     result.headers.set('access-control-allow-origin', origin);
