@@ -249,7 +249,10 @@ test('production deployment accepts only the exact merged main SHA', () => {
   const workflow = fs.readFileSync(path.join(root, '.github/workflows/native-workers-deploy.yml'), 'utf8');
   assert.match(workflow, /ref: main/);
   assert.match(workflow, /git rev-parse origin\/main/);
-  assert.match(workflow, /Refusing deployment: release_sha is not the checked-out origin\/main SHA/);
+  assert.match(workflow, /\[\[ "\$RELEASE_SHA" != "\$checked_out_sha" \]\]/);
+  assert.match(workflow, /Refusing deployment: release_sha is not the checked-out main SHA/);
+  assert.match(workflow, /\[\[ "\$checked_out_sha" != "\$remote_main_sha" \]\]/);
+  assert.match(workflow, /Refusing deployment: checked-out main is not current origin\/main/);
 });
 
 test('Azure transformation evidence uses deterministic canonical hashes', () => {

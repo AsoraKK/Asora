@@ -113,8 +113,7 @@ class _ActionButton extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               label,
-              style: TextStyle(
-                fontSize: 12,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 color: color ?? Theme.of(context).textTheme.bodySmall?.color,
               ),
             ),
