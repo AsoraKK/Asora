@@ -173,11 +173,11 @@
       "source": "Azure PostgreSQL asora_db",
       "sourceIdentifier": "table primary key",
       "destination": "explicit canonical table mapping after schema inventory",
-      "classification": "BLOCKED — ACCESS REQUIRED / CANDIDATE FOR PRE-PRODUCTION ABANDONMENT",
-      "transform": "logical export, schema analysis, classification, deterministic canonical transformation",
+      "classification": "DISCARD — PRE-PRODUCTION LEGACY IDENTITY STORE",
+      "transform": "owner-authorised abandonment; do not retry credentials, firewall, Entra authentication, or export",
       "identityRule": "preserve verified stable UUIDs or generate UUIDv7 locally",
       "excludedFields": ["Azure connection data", "deployment metadata", "secrets", "provider-only runtime state"],
-      "validation": "pg_dump hash, row counts, constraints, relationships, and rejects"
+      "validation": "owner decision record proves Cosmos, privacy, legal-hold, DSR, payment, recovery, and authorship obligations do not require PostgreSQL recovery"
     }
   ],
   "preserveAsEvidence": [

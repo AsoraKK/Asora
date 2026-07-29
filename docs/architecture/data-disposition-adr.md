@@ -80,18 +80,23 @@ If any condition is unproved, retain `BLOCKED — ACCESS REQUIRED`.
 
 ### Current PostgreSQL decision
 
-`Azure PostgreSQL disposition: BLOCKED — ACCESS REQUIRED`
+`Azure PostgreSQL disposition: DISCARD — PRE-PRODUCTION LEGACY IDENTITY STORE`
 
-The exported DSR identity for one unresolved profile has no email or provider
-subject, while five canonical identities require relinking. The inaccessible
-store may contain the only safe continuity signal for that profile. Until a
-read-only PostgreSQL export proves otherwise, or the owner explicitly accepts
-pre-production abandonment, clean Google sign-in could create an ownership
-ambiguity for the preserved profile and its privacy history.
+`Reason: No authoritative production identity, legal, privacy, payment or
+account-continuity obligation was identified that requires recovery of the
+inaccessible PostgreSQL records.`
+
+The owner explicitly accepts that legacy provider-link information may not be
+recovered. Five preserved accounts remain `relink_required`; two are deleted.
+Fresh Google authentication may relink only an unambiguous migration match and
+must never rely on an unverified email address alone. Unresolved records remain
+restricted rather than being assigned to the wrong account. No further Azure
+PostgreSQL credential, firewall, Entra authentication, or export attempt is
+permitted by this decision.
 
 ## Owner decision record
 
 - Decision: `selective-preservation authorised`
 - Owner: Kyle Kern
-- Date: 2026-07-28
-- Reference: approved controlled clean-slate migration instruction
+- Date: 2026-07-29
+- Reference: explicit owner authorisation for Azure PostgreSQL pre-production abandonment

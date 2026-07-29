@@ -61,7 +61,8 @@
     "benchmark:native-endpoints": "node scripts/benchmarks/native-endpoint-benchmark.mjs",
     "validate:planetscale-ci-script": "node --check scripts/ci/apply-planetscale-migrations.mjs",
     "validate:planetscale-production-script": "node --check scripts/ci/apply-planetscale-production-migrations.mjs",
-    "apply:planetscale-production-migrations": "node scripts/ci/apply-planetscale-production-migrations.mjs"
+    "apply:planetscale-production-migrations": "node scripts/ci/apply-planetscale-production-migrations.mjs",
+    "import:planetscale-dsr-evidence": "node scripts/azure-exit/import-dsr-evidence.mjs"
   },
   "devDependencies": {
     "@openapitools/openapi-generator-cli": "^2.25.0",

@@ -23,9 +23,10 @@ The resource registry is authoritative for reuse and deletion protection.
 - User-media Blob assignment `a865269d-86e4-4a1f-a752-35825841e7f4` at
   `asoramediadev/user-media`.
 
-Do not create, update, or revoke these assignments during extraction. PostgreSQL
-remains blocked by rejected credentials and is governed by the disposition
-test in `docs/architecture/data-disposition-adr.md`.
+Do not create, update, or revoke these assignments during extraction. Azure
+PostgreSQL is owner-authorised for abandonment as pre-production legacy state;
+do not retry credentials, Entra authentication, firewall changes, or export.
+The controlling record is `docs/architecture/data-disposition-adr.md`.
 
 ## Execution gates
 
@@ -79,6 +80,13 @@ The protected migration prefix is `protected-migration/dsr/`, which is outside
 the live `exports/` 30-day lifecycle rule. The selected source packages remain
 manual-review evidence until the native privacy workflow reissues or resolves
 the corresponding requests.
+
+On 2026-07-29, five encrypted packages totaling 5,800 bytes were written to
+that protected prefix. Their upload ETags match the local encrypted-file MD5
+checksums. The sanitised 3,403-byte upload manifest is stored separately under
+`audit/migrations/azure-exit-2026-07-29/` in `lythaus-audit-archive-dev`, where
+the `audit/` prefix has a one-year object-lock rule. The private bucket's
+`exports/` expiry rule does not match the protected migration prefix.
 
 The management-plane inventory command is:
 

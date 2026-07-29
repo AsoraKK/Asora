@@ -269,6 +269,17 @@ test('Azure transformation evidence uses deterministic canonical hashes', () => 
   assert.match(transform, /aes-256-gcm/);
 });
 
+test('DSR evidence import is protected, idempotent, and UUIDv7-based', () => {
+  const importer = fs.readFileSync(path.join(root, 'scripts/azure-exit/import-dsr-evidence.mjs'), 'utf8');
+  assert.match(importer, /protected-migration\/dsr\//);
+  assert.match(importer, /restoreVerified !== true/);
+  assert.match(importer, /ON CONFLICT \(request_id, object_key\) DO UPDATE/);
+  assert.match(importer, /ON CONFLICT \(subject_id, store_type, resource_reference, entity_type, entity_key\) DO UPDATE/);
+  assert.match(importer, /bytes\[6\] = \(bytes\[6\] & 0x0f\) \| 0x70/);
+  assert.match(importer, /sourceSemanticHash/);
+  assert.match(importer, /destinationSemanticHash/);
+});
+
 test('jobs role can read trust ledgers required by Data Passport exports', () => {
   const grants = fs.readFileSync(path.join(root, 'database/planetscale/grants/roles.sql'), 'utf8');
   const jobs = fs.readFileSync(path.join(root, 'apps/lythaus-jobs/src/index.ts'), 'utf8');
