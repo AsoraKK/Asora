@@ -20,9 +20,9 @@ env:
   DSR_CONTAINER: dsr-exports
   MEDIA_STORAGE_ACCOUNT: asoramediadev
   MEDIA_CONTAINER: user-media
-  MAX_COSMOS_RECORDS: "10000"
-  MAX_DSR_OBJECTS: "10"
-  MAX_DSR_BYTES: "52428800"
+  EXPECTED_COSMOS_RECORDS: "224"
+  EXPECTED_DSR_OBJECTS: "11"
+  EXPECTED_DSR_BYTES: "17641"
 
 jobs:
   extract:
@@ -199,14 +199,14 @@ jobs:
           };
           await writeFile(join(root, "usage-preflight.json"), `${JSON.stringify(guard, null, 2)}\n`);
           console.log(`AZURE_EXTRACTION_USAGE_PREFLIGHT ${JSON.stringify(guard)}`);
-          if (totalRecords > Number(process.env.MAX_COSMOS_RECORDS)) {
-            throw new Error("Cosmos record guard exceeded");
+          if (totalRecords !== Number(process.env.EXPECTED_COSMOS_RECORDS)) {
+            throw new Error("Cosmos record count changed after approved preflight");
           }
-          if (blobPreflight["dsr-exports"].count > Number(process.env.MAX_DSR_OBJECTS)) {
-            throw new Error("DSR object-count guard exceeded");
+          if (blobPreflight["dsr-exports"].count !== Number(process.env.EXPECTED_DSR_OBJECTS)) {
+            throw new Error("DSR object count changed after approved preflight");
           }
-          if (blobPreflight["dsr-exports"].bytes > Number(process.env.MAX_DSR_BYTES)) {
-            throw new Error("DSR byte guard exceeded");
+          if (blobPreflight["dsr-exports"].bytes !== Number(process.env.EXPECTED_DSR_BYTES)) {
+            throw new Error("DSR byte count changed after approved preflight");
           }
           if (blobPreflight["user-media"].count !== 0) {
             throw new Error("User-media is no longer empty; a revised cost and disposition review is required");
