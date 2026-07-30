@@ -131,7 +131,7 @@ jobs:
             az postgres flexible-server db list --resource-group "$RESOURCE_GROUP" --server-name "$server" \
               --query '[].{id:id,name:name,charset:charset,collation:collation}' --output json \
               >"$output/services/postgresql-databases-${server}.json"
-            az postgres flexible-server firewall-rule list --resource-group "$RESOURCE_GROUP" --name "$server" \
+            az postgres flexible-server firewall-rule list --resource-group "$RESOURCE_GROUP" --server-name "$server" \
               --query '[].{id:id,name:name,startIpAddress:startIpAddress,endIpAddress:endIpAddress}' --output json \
               >"$output/services/postgresql-firewall-${server}.json"
           done
