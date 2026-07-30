@@ -87,7 +87,7 @@ jobs:
             --output json >"$output/resource-group-resources.json"
 
           az extension add --name resource-graph --only-show-errors >/dev/null
-          az graph query --first 1000 --query \
+          az graph query --first 1000 --graph-query \
             "Resources | project id, name, type, resourceGroup, subscriptionId, location, kind, sku=tostring(sku.name), tags | order by type asc, name asc" \
             --output json >"$output/resource-graph.json"
 
