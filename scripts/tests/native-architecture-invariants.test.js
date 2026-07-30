@@ -243,8 +243,10 @@ test('account deletion clears private and derived relationships while preserving
   assert.match(source, /privacy\.deletion_tombstones/);
   assert.doesNotMatch(source, /DELETE FROM privacy\.(?:requests|request_events|legal_holds|deletion_tombstones)/);
   assert.match(grants, /GRANT DELETE ON feed\.author_outbox/);
+  assert.match(grants, /GRANT SELECT, DELETE ON trust\.accountability_signals, trust\.reputation_balances, system\.idempotency_keys TO lythaus_jobs/);
   assert.match(grants, /social\.blocks, social\.mutes/);
-  assert.match(grants, /identity\.user_region_preferences, identity\.admin_memberships/);
+  assert.match(grants, /GRANT SELECT, DELETE ON identity\.provider_links[\s\S]*identity\.user_region_preferences, identity\.admin_memberships TO lythaus_privacy/);
+  assert.match(grants, /GRANT SELECT, DELETE ON editorial\.applications, editorial\.memberships TO lythaus_privacy/);
 });
 
 test('public API CORS preflight uses a bodyless 204 response', () => {
