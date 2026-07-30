@@ -5,8 +5,8 @@ const { resolve } = require('node:path');
 
 const drillPath = resolve(__dirname, '../dsr-drills/live-dsr-queue-drill.mjs');
 const drill = readFileSync(drillPath, 'utf8');
-const workflowPath = resolve(__dirname, '../../.github/workflows/deploy-asora-function-dev.yml');
-const workflow = readFileSync(workflowPath, 'utf8');
+const jobsConfigPath = resolve(__dirname, '../../apps/lythaus-jobs/wrangler.jsonc');
+const jobsConfig = readFileSync(jobsConfigPath, 'utf8');
 
 test('live DSR drill requires successful terminal states', () => {
   assert.match(drill, /export: new Set\(\['awaiting_review', 'ready_to_release', 'released', 'succeeded'\]\)/);
@@ -17,7 +17,9 @@ test('live DSR drill requires successful terminal states', () => {
 test('live DSR drill uses isolated synthetic identities', () => {
   assert.match(drill, /DSR_DRILL_EXPORT_USER_ID is required/);
   assert.match(drill, /DSR_DRILL_DELETE_USER_ID \|\| uuidv7\(\)/);
-  assert.match(workflow, /DSR_DRILL_EXPORT_USER_ID: \$\{\{ vars\.ALPHA_SMOKE_USER_ID \}\}/);
+  assert.match(jobsConfig, /"PRIVACY_QUEUE"/);
+  assert.match(jobsConfig, /"ACCOUNT_DELETE"/);
+  assert.match(jobsConfig, /"ACCOUNT_EXPORT"/);
 });
 
 test('live DSR evidence hashes failures and user identifiers', () => {
