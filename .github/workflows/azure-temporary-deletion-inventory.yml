@@ -103,9 +103,24 @@ jobs:
             --output json >"$output/services/function-apps.json"
           jq -r '.[].name' "$output/services/function-apps.json" | while read -r app; do
             [[ -n "$app" ]] || continue
-            az functionapp deployment slot list --resource-group "$RESOURCE_GROUP" --name "$app" \
-              --query '[].{id:id,name:name,state:state,hostNames:hostNames}' --output json \
-              >"$output/services/function-slots-${app}.json"
+            slots_file="$output/services/function-slots-${app}.json"
+            if slot_error="$(az functionapp deployment slot list \
+              --resource-group "$RESOURCE_GROUP" \
+              --name "$app" \
+              --query '[].{id:id,name:name,state:state,hostNames:hostNames}' \
+              --output json 2>&1 >"$slots_file")"; then
+              continue
+            fi
+            if grep -Fq 'not currently supported for Azure Functions on the Flex Consumption plan' \
+              <<<"$slot_error"; then
+              jq -n \
+                --arg app "$app" \
+                '{application:$app,status:"NOT_APPLICABLE",reason:"FLEX_CONSUMPTION_DOES_NOT_SUPPORT_DEPLOYMENT_SLOTS",slots:[]}' \
+                >"$slots_file"
+              continue
+            fi
+            printf 'Function slot inventory failed for %s: %s\n' "$app" "$slot_error" >&2
+            exit 1
           done
 
           az postgres flexible-server list --resource-group "$RESOURCE_GROUP" \
