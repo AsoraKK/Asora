@@ -390,21 +390,15 @@ jobs:
       - name: Run gitleaks
         run: scripts/secret-scan.sh
 
-  verify-secrets:
-    name: Verify required secrets
+  github-azure-disconnection:
+    name: GitHub-to-Azure disconnection
     runs-on: ubuntu-latest
     steps:
-      - name: Ensure required secrets
-        env:
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-        run: |
-          set -euo pipefail
-          for k in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID; do
-            v="${!k:-}"
-            [ -n "$v" ] || { echo "Missing secret: $k"; exit 1; }
-          done
+      - uses: actions/checkout@v5
+      - name: Test disconnection scanner
+        run: node --test scripts/tests/github-azure-disconnection.test.mjs
+      - name: Reject executable Azure paths
+        run: npm run validate:github-azure-disconnection
 
   dependency_audit:
     name: Dependency audit (high/critical)
@@ -903,7 +897,7 @@ jobs:
       - validate_extension_bundle
       - openapi_validation
       - secret-scan
-      - verify-secrets
+      - github-azure-disconnection
       - dependency_audit
       - pin_verification
       - flutter_tests
@@ -927,7 +921,7 @@ jobs:
           EXTENSION_BUNDLE:          ${{ needs.validate_extension_bundle.result }}
           OPENAPI_VALIDATION:        ${{ needs.openapi_validation.result }}
           SECRET_SCAN:               ${{ needs.secret-scan.result }}
-          VERIFY_SECRETS:            ${{ needs.verify-secrets.result }}
+          GITHUB_AZURE_DISCONNECTION: ${{ needs.github-azure-disconnection.result }}
           DEPENDENCY_AUDIT:           ${{ needs.dependency_audit.result }}
           PIN_VERIFICATION:          ${{ needs.pin_verification.result }}
           FLUTTER_TESTS:             ${{ needs.flutter_tests.result }}
@@ -956,7 +950,7 @@ jobs:
               ["Extension bundle version"]="$EXTENSION_BUNDLE"
               ["OpenAPI validation"]="$OPENAPI_VALIDATION"
               ["Secret scan (gitleaks)"]="$SECRET_SCAN"
-              ["Secrets present in repo"]="$VERIFY_SECRETS"
+              ["GitHub-to-Azure disconnection"]="$GITHUB_AZURE_DISCONNECTION"
               ["Dependency audit (high/critical)"]="$DEPENDENCY_AUDIT"
               ["Dependency pin verification"]="$PIN_VERIFICATION"
               ["Flutter tests + coverage"]="$FLUTTER_TESTS"

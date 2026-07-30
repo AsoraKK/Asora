@@ -3,7 +3,7 @@ name: Canary SLO Gate (k6)
 on:
   workflow_call:
   workflow_run:
-    workflows: ["Deploy to asora-function-dev"]
+    workflows: ["native-workers-deploy"]
     types: [completed]
     branches: [main]
 

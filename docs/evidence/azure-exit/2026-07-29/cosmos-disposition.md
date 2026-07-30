@@ -86,8 +86,12 @@ create provider links. Google sign-in must fail with
 
 ## PostgreSQL
 
-Azure PostgreSQL remains `BLOCKED — ACCESS REQUIRED`. One unresolved profile
-has no email or provider subject in the Cosmos/DSR export, so the inaccessible
-store may contain its only account-continuity signal. This blocks final
-identity disposition and Azure deletion, but does not justify inventing a
-provider mapping.
+`DISCARD — PRE-PRODUCTION LEGACY IDENTITY STORE`
+
+The owner formally accepted abandonment of the inaccessible Azure PostgreSQL
+identity store. The platform was pre-production, no provider subject may be
+invented, and migrated identities without a defensible provider mapping remain
+`relink_required`. Clean Google authentication must not re-establish ownership
+from an unverified email address alone. The preserved Cosmos, privacy,
+legal-hold, moderation, and encrypted DSR evidence remains authoritative for
+the Azure exit decision.

@@ -218,6 +218,35 @@ test('jobs Worker exposes durable privacy and appeal workflows', () => {
   assert.match(source, /backup\.schema_validation\.completed/);
 });
 
+test('account deletion clears private and derived relationships while preserving evidence', () => {
+  const source = fs.readFileSync(path.join(root, 'apps/lythaus-jobs/src/index.ts'), 'utf8');
+  const grants = fs.readFileSync(path.join(root, 'database/planetscale/grants/roles.sql'), 'utf8');
+  for (const relation of [
+    'identity.auth_sessions',
+    'identity.refresh_token_families',
+    'identity.provider_links',
+    'identity.contact_emails',
+    'identity.user_region_preferences',
+    'identity.admin_memberships',
+    'social.profiles',
+    'social.profile_private_fields',
+    'social.custom_feeds',
+    'social.blocks',
+    'social.mutes',
+    'feed.user_inbox',
+    'feed.feed_events',
+    'feed.notifications',
+    'media.storage_ledger',
+  ]) assert.match(source, new RegExp(`DELETE FROM ${relation.replace('.', '\\\.')}`));
+  assert.match(source, /privacy\.legal_holds WHERE subject_id = \$1 AND active/);
+  assert.doesNotMatch(source, /DELETE FROM privacy\.retention_rules/);
+  assert.match(source, /privacy\.deletion_tombstones/);
+  assert.doesNotMatch(source, /DELETE FROM privacy\.(?:requests|request_events|legal_holds|deletion_tombstones)/);
+  assert.match(grants, /GRANT DELETE ON feed\.author_outbox/);
+  assert.match(grants, /social\.blocks, social\.mutes/);
+  assert.match(grants, /identity\.user_region_preferences, identity\.admin_memberships/);
+});
+
 test('public API CORS preflight uses a bodyless 204 response', () => {
   const source = fs.readFileSync(path.join(root, 'apps/lythaus-public-api/src/index.ts'), 'utf8');
   assert.match(source, /init\.status === 204 \? new Response\(null, init\) : json\(body, init\)/);

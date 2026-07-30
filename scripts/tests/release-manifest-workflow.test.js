@@ -3,16 +3,20 @@ const { readFileSync } = require('node:fs');
 const { test } = require('node:test');
 const { resolve } = require('node:path');
 
-const workflowPath = resolve(__dirname, '../../.github/workflows/deploy-asora-function-dev.yml');
+const workflowPath = resolve(__dirname, '../../.github/workflows/native-workers-deploy.yml');
 const workflow = readFileSync(workflowPath, 'utf8');
 
-test('release manifest derives a non-empty Flex hostname', () => {
-  assert.match(workflow, /DEPLOYED_HOST="\$\{FUNC_APP\}\.azurewebsites\.net"/);
-  assert.match(workflow, /Unable to derive a valid deployed Function hostname/);
-  assert.match(workflow, /--arg deployedHost "\$DEPLOYED_HOST"/);
+test('native release requires the exact current main SHA', () => {
+  assert.match(workflow, /release_sha must be a full 40-character commit SHA/);
+  assert.match(workflow, /RELEASE_SHA.*checked_out_sha/s);
+  assert.match(workflow, /checked_out_sha.*remote_main_sha/s);
 });
 
-test('release manifest records the actual shared-cost Cosmos posture', () => {
-  assert.match(workflow, /cosmosNetworkPosture: "passed"/);
-  assert.doesNotMatch(workflow, /cosmosPrivateNetworking: "passed"/);
+test('native release verifies schema read-only and deploys only existing Workers', () => {
+  assert.match(workflow, /Verify production schema read-only/);
+  assert.match(workflow, /PLANETSCALE_SCHEMA_READ_DATABASE_URL/);
+  assert.match(workflow, /apps\/lythaus-public-api\/wrangler\.jsonc/);
+  assert.match(workflow, /apps\/lythaus-admin-api\/wrangler\.jsonc/);
+  assert.match(workflow, /apps\/lythaus-jobs\/wrangler\.jsonc/);
+  assert.doesNotMatch(workflow, /azurewebsites\.net|azure\/login@|az\s+(?:functionapp|webapp)/i);
 });

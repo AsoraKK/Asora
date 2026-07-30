@@ -1,4 +1,3 @@
----
 name: Mobile Security Check
 
 on:
@@ -11,219 +10,39 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 jobs:
-  verify-secrets:
-    name: Verify Required Variables
-    runs-on: ubuntu-latest
-    steps:
-      - name: Ensure required variables
-        env:
-          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
-          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
-          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-        run: |
-          for k in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID; do
-            v="${!k:-}"
-            [ -n "$v" ] || { echo "Missing variable: $k"; exit 1; }
-          done
-
   check-pins-and-integrity:
-    # Only run on push to main/release branches - skip for pull_request events
-    # because Azure federated identity doesn't have pull_request subject claim
-    if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')) }}
+    name: Validate mobile security contracts
     runs-on: ubuntu-latest
-    needs: verify-secrets
-    permissions:
-      id-token: write
-      contents: read
-    env:
-      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
-      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
-      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
     steps:
       - uses: actions/checkout@v5
 
-      - name: Install jq, zip, unzip
-        run: sudo apt-get update && sudo apt-get install -y jq zip unzip
-
-      - name: Isolate AZ cache
+      - name: Check for SPKI pin placeholders
         shell: bash
         run: |
           set -euo pipefail
-          DIR="$RUNNER_TEMP/azcfg-${GITHUB_RUN_ID}"
-          mkdir -p "$DIR"
-          echo "AZURE_CONFIG_DIR=$DIR" >> "$GITHUB_ENV"
-      - name: Verify OIDC token env
-        run: |
-          set -euo pipefail
-          test -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" || { echo "::error::ACTIONS_ID_TOKEN_REQUEST_URL missing"; exit 1; }
-
-      - name: Fail if legacy Azure secrets are present
-        env:
-          AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
-          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
-        run: |
-          set -euo pipefail
-          [ -z "${AZURE_CREDENTIALS:-}" ] || { echo "ERROR: legacy secret AZURE_CREDENTIALS present"; exit 1; }
-          [ -z "${ARM_CLIENT_SECRET:-}" ] || { echo "ERROR: legacy secret ARM_CLIENT_SECRET present"; exit 1; }
-
-      - name: Azure login (OIDC)
-        uses: azure/login@v3
-        with:
-          client-id: ${{ env.AZURE_CLIENT_ID }}
-          tenant-id: ${{ env.AZURE_TENANT_ID }}
-          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Set Azure subscription context
-        run: |
-          set -euo pipefail
-          az cloud set -n AzureCloud
-          az account set --subscription "${{ vars.AZURE_SUBSCRIPTION_ID }}"
-          az account show -o table
-
-      - name: Resolve function host
-        env:
-          SUBS: ${{ env.AZURE_SUBSCRIPTION_ID }}
-        run: |
-          set -euo pipefail
-          SUBS="${SUBS:?}"
-          RG="asora-psql-flex"
-          APP="asora-function-dev"
-          az account set --subscription "$SUBS"
-          echo "Try ARM first (more reliable across plan types)"
-          APP_JSON=$(az rest --method get --url "https://management.azure.com/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}?api-version=2022-03-01")
-          HOST=$(jq -r '.properties.defaultHostName // empty' <<<"$APP_JSON")
-          if [ -z "$HOST" ]; then
-            echo "::error::defaultHostName not returned"; exit 1
-          fi
-          echo "Detected function host: $HOST"
-          echo "FUNCTION_BASE_URL=https://${HOST}" >> "$GITHUB_ENV"
-          echo "BASE_URL=https://${HOST}" >> "$GITHUB_ENV"
-
-
-      - name: Check for SPKI pin placeholders in entire codebase
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          echo "Scanning entire codebase for SPKI pin placeholders..."
-
-          # Search for actual placeholder values in pin lists, excluding validation code
-          # Look for placeholder patterns that appear as actual pin values (not in validation)
           placeholder_matches="$(find . -name "*.dart" -type f -exec grep -Hn "sha256/.*REPLACE_WITH_SPKI\|sha256/.*YOUR_SPKI_PIN\|sha256/.*TODO\|sha256/.*FIXME" {} \; 2>/dev/null || true)"
-
           if [ -n "$placeholder_matches" ]; then
             echo "::error::Found SPKI pin placeholders in pin values:"
             printf '%s\n' "$placeholder_matches"
-            echo ""
-            echo "All SPKI pin placeholders must be replaced with real pins before merging."
-            echo "Update the authoritative pins in lib/core/security/cert_pinning.dart."
             exit 1
-          else
-            echo "✓ No SPKI pin placeholders found in pin values."
-            echo "Reference pins live in lib/core/security/cert_pinning.dart."
           fi
 
-      - name: Check preview/MVP SPKI pin lifecycle state
+      - name: Check preview and production pin lifecycle
         shell: bash
         run: |
           set -euo pipefail
           ENV_FILE="lib/core/config/environment_config.dart"
-          if [ ! -f "$ENV_FILE" ]; then
-            echo "::error::$ENV_FILE not found"
-            exit 1
-          fi
-
+          test -f "$ENV_FILE" || { echo "::error::$ENV_FILE not found"; exit 1; }
           get_state() {
-            local block_start="$1"
-            local block_end="$2"
-            awk "/^const ${block_start}/,/^const ${block_end}/" "$ENV_FILE" \
+            awk "/^const $1/,/^const $2/" "$ENV_FILE" \
               | sed -n 's/.*lifecycleState: PinLifecycleState\.\([a-z]*\).*/\1/p' \
               | head -n 1
           }
-
-          # Check for empty spkiPinsBase64 arrays inside the preview/MVP security const blocks
-          # and only fail if a live lifecycle state is marked empty.
-          preview_state="$(get_state '_previewMobileSecurity' '_previewConfig')"
-          prod_state="$(get_state '_prodMobileSecurity' '_prodConfig')"
-          for state_name in preview_state prod_state; do
-            state="${!state_name:-}"
-            case "$state" in
-              live|planned|deprecated|disabled) ;;
-              '')
-                echo "::error::Missing $state_name lifecycle state in $ENV_FILE."
-                exit 1
-                ;;
-              *)
-                echo "::error::Invalid $state_name lifecycle state '$state' in $ENV_FILE."
-                exit 1
-                ;;
-            esac
+          for state in "$(get_state _previewMobileSecurity _previewConfig)" "$(get_state _prodMobileSecurity _prodConfig)"; do
+            case "$state" in live|planned|deprecated|disabled) ;; *) echo "::error::Invalid or missing pin lifecycle state"; exit 1;; esac
           done
-
-          preview_empty=false
-          prod_empty=false
-
-          # Extract preview block and check for empty array
-          if awk '/^const _previewMobileSecurity/,/^const _previewConfig/' "$ENV_FILE" \
-              | grep -Eq 'spkiPinsBase64:[[:space:]]*\['; then
-            if awk '/^const _previewMobileSecurity/,/^const _previewConfig/' "$ENV_FILE" \
-                | grep -Eq 'spkiPinsBase64:[[:space:]]*\[[[:space:]]*\]'; then
-              preview_empty=true
-            fi
-          fi
-
-          # Extract prod block and check for empty array
-          if awk '/^const _prodMobileSecurity/,/^const _prodConfig/' "$ENV_FILE" \
-              | grep -Eq 'spkiPinsBase64:[[:space:]]*\['; then
-            if awk '/^const _prodMobileSecurity/,/^const _prodConfig/' "$ENV_FILE" \
-                | grep -Eq 'spkiPinsBase64:[[:space:]]*\[[[:space:]]*\]'; then
-              prod_empty=true
-            fi
-          fi
-
-          failed=false
-          if [ "$preview_state" = "live" ] && [ "$preview_empty" = "true" ]; then
-            echo "::error::LAUNCH BLOCKER: preview pins are marked live but spkiPinsBase64 is empty in $ENV_FILE."
-            echo "  Preview API host is supplied explicitly per deployment."
-            echo "  TLS pinning is currently FAIL-OPEN for preview (all connections pass unchecked)."
-            echo ""
-            echo "  Populate _previewMobileSecurity.tlsPins.spkiPinsBase64 or keep its lifecycle planned."
-            echo "  See docs/runbooks/tls-pinning-rotation.md for the full procedure."
-            failed=true
-          fi
-
-          if [ "$prod_state" = "live" ] && [ "$prod_empty" = "true" ]; then
-            echo "::error::LAUNCH BLOCKER: MVP pins are marked live but spkiPinsBase64 is empty in $ENV_FILE."
-            echo "  MVP API host: api.lythaus.co"
-            echo "  TLS pinning is currently FAIL-OPEN for MVP live (all connections pass unchecked)."
-            echo ""
-            echo "  To fix, extract and populate the MVP SPKI pins (include a backup):"
-            echo "    ./scripts/extract-spki-pins.sh api.lythaus.co"
-            echo "    CERT_INDEX=1 ./scripts/extract-spki-pins.sh api.lythaus.co"
-            echo "  Then add both outputs to _prodMobileSecurity.tlsPins.spkiPinsBase64 in $ENV_FILE."
-            echo "  See docs/runbooks/tls-pinning-rotation.md for the full procedure."
-            failed=true
-          fi
-
-          if [ "$failed" = "true" ]; then
-            echo ""
-            echo "  NOTE: Preview and MVP live share the authorised Azure MVP origin; mobile remains Beta scope."
-            echo "  The public API host may not be provisioned yet, so pin extraction can fail gracefully."
-            exit 1
-          fi
-
-          if [ "$preview_state" = "planned" ] && [ "$preview_empty" = "true" ]; then
-            echo "ℹ preview pins are planned; empty spkiPinsBase64 is intentional for ephemeral preview hosts."
-          fi
-
-          if [ "$prod_state" = "planned" ] && [ "$prod_empty" = "true" ]; then
-            echo "ℹ MVP pins are planned; empty spkiPinsBase64 is intentional until the host is provisioned."
-          fi
-
-          echo "✓ Preview and MVP SPKI lifecycle states are explicit."
 
       - name: Reject strict pinning without validated pins
         shell: bash
@@ -242,30 +61,6 @@ jobs:
           set -euo pipefail
           security_matches="$(find . -name "*.dart" -type f -exec grep -Hn "TODO.*[Ss]ecurity\|FIXME.*[Ss]ecurity\|PLACEHOLDER.*[Ss]ecurity" {} \; 2>/dev/null || true)"
           if [ -n "$security_matches" ]; then
-            echo "::warning::Found security-related placeholders that may need attention:"
+            echo "::warning::Security-related placeholders require review:"
             printf '%s\n' "$security_matches"
-          else
-            echo "✓ No security TODO/FIXME placeholders detected."
-          fi
-
-      - name: Dart format check (optional)
-        shell: bash
-        run: |
-          # Check if Flutter/Dart is available, skip if not
-          if command -v dart &> /dev/null; then
-            echo "Running Dart format check..."
-            dart format --set-exit-if-changed . || echo "::warning::Code formatting issues found. Run 'dart format .' to fix."
-          else
-            echo "Dart not available, skipping format check."
-          fi
-
-      - name: Dart analyze (optional)
-        shell: bash
-        run: |
-          # Check if Flutter/Dart is available, skip if not
-          if command -v dart &> /dev/null; then
-            echo "Running Dart analyzer..."
-            dart analyze . || echo "::warning::Dart analyzer found issues. Review and fix before merging."
-          else
-            echo "Dart not available, skipping analysis."
           fi

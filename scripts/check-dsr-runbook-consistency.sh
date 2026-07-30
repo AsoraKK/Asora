@@ -1,99 +1,54 @@
 #!/usr/bin/env bash
-# check-dsr-runbook-consistency.sh
-#
-# Validates that the required DSR app settings listed in docs/runbooks/dsr-settings.md
-# are all set (or have visible defaults) in the deployment workflow.
-#
-# This prevents "runbook says X is required but deploy never sets it" drift.
-#
-# Exit codes:
-#   0 – all required DSR keys are covered
-#   1 – missing keys found (drift detected)
-
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-
 RUNBOOK="$ROOT/docs/runbooks/dsr-settings.md"
-DEPLOY_WORKFLOW="$ROOT/.github/workflows/deploy-asora-function-dev.yml"
+JOBS_CONFIG="$ROOT/apps/lythaus-jobs/wrangler.jsonc"
+JOBS_SOURCE="$ROOT/apps/lythaus-jobs/src/index.ts"
+ADMIN_CONFIG="$ROOT/apps/lythaus-admin-api/wrangler.jsonc"
 
-if [[ ! -f "$RUNBOOK" ]]; then
-  echo "❌ DSR runbook not found: $RUNBOOK"
-  exit 1
-fi
-
-if [[ ! -f "$DEPLOY_WORKFLOW" ]]; then
-  echo "❌ Deploy workflow not found: $DEPLOY_WORKFLOW"
-  exit 1
-fi
-
-# ─── Extract required DSR keys from runbook ─────────────────────────────────
-# The runbook lists required settings as bullet points like: "- DSR_EXPORT_STORAGE_ACCOUNT"
-# Optional keys are flagged with "(optional" in the same line.
-mapfile -t REQUIRED_KEYS < <(
-  grep -E '^\s*-\s+DSR_[A-Z_]+' "$RUNBOOK" \
-  | grep -iv '(optional' \
-  | grep -oE 'DSR_[A-Z_]+'
-)
-
-if [[ ${#REQUIRED_KEYS[@]} -eq 0 ]]; then
-  echo "⚠️  No required DSR keys found in $RUNBOOK – check runbook format."
-  exit 0
-fi
-
-echo "Required DSR keys from runbook (${#REQUIRED_KEYS[@]}):"
-printf '  %s\n' "${REQUIRED_KEYS[@]}"
-echo ""
-
-# ─── Extract DSR keys set by the deploy workflow ─────────────────────────────
-# Grep for `DSR_xxx` names used in az appsettings set calls.
-mapfile -t DEPLOY_KEYS < <(
-  grep -oE 'DSR_[A-Z_]+' "$DEPLOY_WORKFLOW" | sort -u
-)
-
-echo "DSR keys in deploy workflow (${#DEPLOY_KEYS[@]}):"
-printf '  %s\n' "${DEPLOY_KEYS[@]}"
-echo ""
-
-# Also check local.settings.json.example
-SETTINGS_EXAMPLE="$ROOT/local.settings.json.example"
-EXAMPLE_KEYS=()
-if [[ -f "$SETTINGS_EXAMPLE" ]]; then
-  mapfile -t EXAMPLE_KEYS < <(
-    grep -oE '"DSR_[A-Z_]+"' "$SETTINGS_EXAMPLE" | tr -d '"' | sort -u
-  )
-fi
-
-# ─── Compare ──────────────────────────────────────────────────────────────────
-MISSING=()
-for key in "${REQUIRED_KEYS[@]}"; do
-  in_deploy=false
-  in_example=false
-  for dk in "${DEPLOY_KEYS[@]}"; do
-    [[ "$dk" == "$key" ]] && in_deploy=true && break
-  done
-  for ek in "${EXAMPLE_KEYS[@]}"; do
-    [[ "$ek" == "$key" ]] && in_example=true && break
-  done
-  if ! $in_deploy && ! $in_example; then
-    MISSING+=("$key")
-  fi
+for required in "$RUNBOOK" "$JOBS_CONFIG" "$JOBS_SOURCE" "$ADMIN_CONFIG"; do
+  [[ -f "$required" ]] || { echo "Missing native privacy contract file: $required"; exit 1; }
 done
 
-# ─── Report ───────────────────────────────────────────────────────────────────
-if [[ ${#MISSING[@]} -eq 0 ]]; then
-  echo "✅ DSR runbook consistency check passed: all required keys are set in the deploy workflow."
-  exit 0
+required_config_tokens=(
+  DB_PRIVACY_FRESH
+  PRIVATE_EXPORTS
+  PRIVACY_QUEUE
+  lythaus-privacy-dlq-dev
+  ACCOUNT_DELETE
+  ACCOUNT_EXPORT
+  RETENTION_CLEANUP
+  lythaus-private-exports-dev
+  lythaus-audit-archive-dev
+)
+
+required_source_tokens=(
+  AccountDeleteWorkflow
+  AccountExportWorkflow
+  RetentionCleanupWorkflow
+  privacy.reconcile_subject_data_locations
+  privacy.legal_holds
+  privacy.deletion_tombstones
+  privacy.export_manifests
+)
+
+missing=()
+for token in "${required_config_tokens[@]}"; do
+  grep -Fq "$token" "$JOBS_CONFIG" || missing+=("jobs config: $token")
+  grep -Fq "$token" "$RUNBOOK" || missing+=("runbook: $token")
+done
+for token in "${required_source_tokens[@]}"; do
+  grep -Fq "$token" "$JOBS_SOURCE" || missing+=("jobs source: $token")
+  grep -Fq "$token" "$RUNBOOK" || missing+=("runbook: $token")
+done
+grep -Fq 'DB_PRIVACY_FRESH' "$ADMIN_CONFIG" || missing+=("admin config: DB_PRIVACY_FRESH")
+grep -Fq 'PRIVATE_EXPORTS' "$ADMIN_CONFIG" || missing+=("admin config: PRIVATE_EXPORTS")
+
+if [[ ${#missing[@]} -gt 0 ]]; then
+  echo "Native privacy runbook consistency drift detected:"
+  printf '  - %s\n' "${missing[@]}"
+  exit 1
 fi
 
-echo "❌ DSR runbook consistency drift detected!"
-echo ""
-echo "The following required DSR keys are documented in $RUNBOOK"
-echo "but are NOT set in $DEPLOY_WORKFLOW (or local.settings.json.example):"
-printf '  - %s\n' "${MISSING[@]}"
-echo ""
-echo "Remediation:"
-echo "  1. Add the missing key(s) to the 'Configure DSR app settings' step in the deploy workflow, OR"
-echo "  2. Add them to local.settings.json.example with a placeholder value, OR"
-echo "  3. Mark them as '(optional)' in the runbook if they are truly optional."
-exit 1
+echo "Native privacy runbook consistency check passed."
