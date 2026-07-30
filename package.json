@@ -46,6 +46,7 @@
     "validate:native-scope": "node scripts/validate-native-scope.mjs",
     "validate:native-scope:production": "node scripts/validate-native-scope.mjs --production",
     "validate:native-azure-dependencies": "node scripts/validate-native-azure-dependencies.mjs",
+    "validate:github-azure-disconnection": "node scripts/validate-github-azure-disconnection.mjs",
     "validate:lythaus-resource-registry": "node scripts/validate-lythaus-resource-registry.mjs",
     "validate:production-gates": "node scripts/validate-production-gates.mjs",
     "validate:production-gates:predeploy": "node scripts/validate-production-gates.mjs --phase predeploy",

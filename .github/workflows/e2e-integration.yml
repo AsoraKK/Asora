@@ -11,7 +11,7 @@ on:
         options:
           - mvp
   workflow_run:
-    workflows: ["Deploy Lythaus MVP backend"]
+    workflows: ["native-workers-deploy"]
     types: [completed]
     branches: [main, "infra/azure-retirement-hardening-node22-tls-kv-pg-ha"]
 
@@ -45,8 +45,3 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/e2e-itest.js
-
-# Azure host-admin endpoints are deliberately not invoked here. They are
-# platform diagnostics, not ordinary application traffic, and require a
-# separate enforcement rehearsal before Azure origin authentication can move
-# beyond observe mode.

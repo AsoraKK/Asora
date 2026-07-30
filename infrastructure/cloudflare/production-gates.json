@@ -53,7 +53,7 @@
       },
       "githubToAzureDisconnection": {
         "status": "IN PROGRESS",
-        "evidence": [".github/workflows/native-workers-deploy.yml", "docs/runbooks/lythaus-azure-exit.md"]
+        "evidence": ["scripts/validate-github-azure-disconnection.mjs", "docs/evidence/azure-exit/2026-07-30/github-to-azure-disconnection.md"]
       },
       "azureDeletionEvidence": {
         "status": "IN PROGRESS",

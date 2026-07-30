@@ -500,18 +500,38 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
       await transaction(this.env.DB_JOBS_FRESH, async (client) => {
         await client.query(`UPDATE content.comments SET body = '[deleted]', moderation_state = 'blocked' WHERE author_id = $1`, [subjectId]);
         await client.query(`UPDATE content.posts SET body = '[deleted]', visibility = 'private', moderation_state = 'blocked', published_at = NULL, updated_at = now() WHERE author_id = $1`, [subjectId]);
+        await client.query(`DELETE FROM feed.author_outbox WHERE author_id = $1`, [subjectId]);
+        await client.query(`DELETE FROM feed.discovery_candidates WHERE post_id IN (SELECT id FROM content.posts WHERE author_id = $1)`, [subjectId]);
+        await client.query(`DELETE FROM feed.user_inbox WHERE user_id = $1`, [subjectId]);
+        await client.query(`DELETE FROM feed.feed_events WHERE recipient_id = $1`, [subjectId]);
+        await client.query(`DELETE FROM feed.notifications WHERE recipient_id = $1`, [subjectId]);
         await client.query(`DELETE FROM social.follows WHERE follower_id = $1 OR followed_id = $1`, [subjectId]);
+        await client.query(`DELETE FROM social.blocks WHERE blocker_id = $1 OR blocked_id = $1`, [subjectId]);
+        await client.query(`DELETE FROM social.mutes WHERE muter_id = $1 OR muted_id = $1`, [subjectId]);
         await client.query(`DELETE FROM social.reactions WHERE user_id = $1`, [subjectId]);
         await client.query(`DELETE FROM social.bookmarks WHERE user_id = $1`, [subjectId]);
+        await client.query(`DELETE FROM trust.accountability_signals WHERE user_id = $1`, [subjectId]);
+        await client.query(`DELETE FROM trust.reputation_balances WHERE user_id = $1`, [subjectId]);
+        await client.query(`DELETE FROM system.idempotency_keys WHERE actor_id = $1`, [subjectId]);
+        await client.query(`DELETE FROM system.consumer_inbox WHERE payload ->> 'subjectId' = $1 OR payload ->> 'subject_id' = $1`, [subjectId]);
+        await client.query(`UPDATE system.outbox_events SET actor_id = NULL, payload = '{}'::jsonb WHERE actor_id = $1`, [subjectId]);
       });
       await transaction(this.env.DB_PRIVACY_FRESH, async (client) => {
+        await client.query(`DELETE FROM identity.auth_sessions WHERE user_id = $1`, [subjectId]);
+        await client.query(`DELETE FROM identity.refresh_token_families WHERE user_id = $1`, [subjectId]);
         await client.query(`DELETE FROM identity.provider_links WHERE user_id = $1`, [subjectId]);
         await client.query(`DELETE FROM identity.email_credentials WHERE user_id = $1`, [subjectId]);
         await client.query(`DELETE FROM identity.contact_emails WHERE user_id = $1`, [subjectId]);
         await client.query(`DELETE FROM identity.email_verification_tokens WHERE user_id = $1`, [subjectId]);
         await client.query(`DELETE FROM identity.password_reset_tokens WHERE user_id = $1`, [subjectId]);
         await client.query(`DELETE FROM identity.handles WHERE user_id = $1`, [subjectId]);
+        await client.query(`DELETE FROM identity.user_region_preferences WHERE user_id = $1`, [subjectId]);
+        await client.query(`DELETE FROM identity.admin_memberships WHERE user_id = $1`, [subjectId]);
         await client.query(`DELETE FROM social.profile_private_fields WHERE user_id = $1`, [subjectId]);
+        await client.query(`DELETE FROM social.profiles WHERE user_id = $1`, [subjectId]);
+        await client.query(`DELETE FROM social.custom_feeds WHERE user_id = $1`, [subjectId]);
+        await client.query(`DELETE FROM editorial.applications WHERE user_id = $1`, [subjectId]);
+        await client.query(`DELETE FROM editorial.memberships WHERE user_id = $1`, [subjectId]);
         await client.query(`UPDATE identity.users SET status = 'deleted', display_name = '[deleted]', deleted_at = COALESCE(deleted_at, now()), updated_at = now() WHERE id = $1`, [subjectId]);
       });
       return true;
@@ -519,13 +539,25 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
 
     await step.do('purge-media-and-mark-locator', async () => {
       if (!this.env.MEDIA_APPROVED || !this.env.MEDIA_QUARANTINE) throw new Error('media_purge_not_configured');
-      const objects = await query<{ object_key: string }>(this.env.DB_JOBS_FRESH, `SELECT object_key FROM media.objects WHERE owner_id = $1 AND deleted_at IS NULL`, [subjectId]);
+      const objects = await query<{ id: string; object_key: string; sha256: string | null }>(this.env.DB_JOBS_FRESH, `SELECT id, object_key, sha256 FROM media.objects WHERE owner_id = $1 AND deleted_at IS NULL`, [subjectId]);
       for (const object of objects.rows) await this.env.MEDIA_APPROVED.delete(object.object_key);
       const uploads = await query<{ object_key: string }>(this.env.DB_JOBS_FRESH, `SELECT object_key FROM media.upload_sessions WHERE user_id = $1 AND status IN ('pending', 'queued')`, [subjectId]);
       for (const upload of uploads.rows) await this.env.MEDIA_QUARANTINE.delete(upload.object_key);
       await transaction(this.env.DB_JOBS_FRESH, async (client) => {
+        for (const object of objects.rows) {
+          await client.query(
+            `INSERT INTO media.deletion_events (id, object_id, owner_id, reason_code, completed_at, evidence_hash)
+             SELECT $1, $2, $3, 'ACCOUNT_DELETION', now(), $4
+              WHERE NOT EXISTS (
+                SELECT 1 FROM media.deletion_events
+                 WHERE object_id = $2 AND reason_code = 'ACCOUNT_DELETION' AND completed_at IS NOT NULL
+              )`,
+            [uuidv7(), object.id, subjectId, object.sha256],
+          );
+        }
         await client.query(`UPDATE media.objects SET state = 'deleted', deleted_at = COALESCE(deleted_at, now()) WHERE owner_id = $1`, [subjectId]);
         await client.query(`UPDATE media.upload_sessions SET status = 'expired' WHERE user_id = $1 AND status IN ('pending', 'queued')`, [subjectId]);
+        await client.query(`DELETE FROM media.storage_ledger WHERE user_id = $1`, [subjectId]);
       });
       await query(this.env.DB_PRIVACY_FRESH,
         `UPDATE privacy.subject_data_locations SET deletion_state = 'deleted', last_verified_at = now() WHERE subject_id = $1`, [subjectId]);

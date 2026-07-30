@@ -14,7 +14,6 @@ on:
       - '**/*.tfvars'
 
 permissions:
-  id-token: write
   contents: read
 
 jobs:
@@ -27,7 +26,6 @@ jobs:
     env:
       TF_IN_AUTOMATION: true
       TF_INPUT: false
-      PLAN: false   # set to 'true' to enable plan in CI when backend auth is available
 
     steps:
       - name: Checkout
@@ -36,14 +34,6 @@ jobs:
       - name: Test protected-resource plan guard
         working-directory: .
         run: node --test scripts/tests/validate-terraform-plan-safety.test.mjs
-
-      - name: Azure Login (OIDC)
-        if: env.PLAN == 'true'
-        uses: azure/login@v3
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v4
@@ -54,12 +44,7 @@ jobs:
         run: terraform fmt -check -recursive
 
       - name: Terraform init
-        run: |
-          if [ "$PLAN" = "true" ]; then
-            terraform init -input=false
-          else
-            terraform init -backend=false -input=false
-          fi
+        run: terraform init -backend=false -input=false
 
       - name: Terraform validate
         run: terraform validate
@@ -79,11 +64,3 @@ jobs:
           additional_args: --config-file=.tfsec.yml
           github_token: ${{ github.token }}
         continue-on-error: false
-
-      - name: Optional plan (dev workspace)
-        if: env.PLAN == 'true' && github.event_name == 'pull_request'
-        run: |
-          terraform workspace list || true
-          terraform workspace select dev || terraform workspace new dev
-          terraform init -input=false
-          terraform plan -detailed-exitcode -input=false

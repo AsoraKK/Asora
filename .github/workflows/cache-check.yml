@@ -28,13 +28,12 @@ on:
         required: false
   workflow_run:
     workflows:
-      - "Deploy Feed Cache Worker"
-      - "deploy-asora-function-dev"
+      - "native-workers-deploy"
     types: [completed]
     branches: [main]
 
 env:
-  DEFAULT_EDGE_DOMAIN: dev.asora.co.za
+  DEFAULT_EDGE_DOMAIN: api.lythaus.co
   TEST_ENDPOINT: '/api/feed/discover'
 
 jobs:

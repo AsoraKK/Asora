@@ -39,15 +39,17 @@ GRANT SELECT, INSERT ON system.audit_events TO lythaus_admin;
 
 GRANT USAGE ON SCHEMA content, moderation, feed, social, trust, media, system TO lythaus_jobs;
 GRANT SELECT, INSERT, UPDATE ON content.posts, content.comments, content.content_declarations, moderation.cases, moderation.decisions, moderation.detector_runs, moderation.appeals, moderation.enforcement_events, feed.author_outbox, feed.discovery_candidates, feed.user_inbox, feed.feed_events, feed.topic_memberships, feed.regional_memberships, feed.notifications, media.upload_sessions, media.objects, media.storage_ledger, media.variants, media.moderation_results, media.deletion_events, system.outbox_events, system.consumer_inbox TO lythaus_jobs;
+GRANT DELETE ON feed.author_outbox, feed.discovery_candidates, feed.user_inbox, feed.feed_events, feed.notifications, media.storage_ledger, trust.accountability_signals, trust.reputation_balances, system.consumer_inbox, system.idempotency_keys TO lythaus_jobs;
 GRANT SELECT, INSERT ON trust.provenance_events, trust.human_contribution_events TO lythaus_jobs;
 GRANT SELECT ON trust.reputation_events TO lythaus_jobs;
-GRANT SELECT, DELETE ON social.follows, social.reactions, social.bookmarks TO lythaus_jobs;
+GRANT SELECT, DELETE ON social.follows, social.reactions, social.blocks, social.mutes, social.bookmarks TO lythaus_jobs;
 GRANT SELECT, INSERT ON system.audit_events TO lythaus_jobs;
 
-GRANT USAGE ON SCHEMA privacy, media, identity, social, system TO lythaus_privacy;
+GRANT USAGE ON SCHEMA privacy, media, identity, social, editorial, system TO lythaus_privacy;
 GRANT SELECT, INSERT, UPDATE ON privacy.requests, privacy.request_events, privacy.legal_holds, privacy.retention_rules, privacy.subject_data_locations, privacy.deletion_tombstones, privacy.export_manifests, media.objects, media.storage_ledger, media.ownership, media.deletion_events, identity.users, identity.account_events, identity.auth_sessions, identity.refresh_token_families TO lythaus_privacy;
-GRANT DELETE ON identity.provider_links, identity.email_credentials, identity.contact_emails, identity.handles, identity.auth_sessions, identity.refresh_token_families, identity.email_verification_tokens, identity.password_reset_tokens TO lythaus_privacy;
-GRANT SELECT, DELETE ON social.profile_private_fields TO lythaus_privacy;
+GRANT DELETE ON identity.provider_links, identity.email_credentials, identity.contact_emails, identity.handles, identity.auth_sessions, identity.refresh_token_families, identity.email_verification_tokens, identity.password_reset_tokens, identity.user_region_preferences, identity.admin_memberships TO lythaus_privacy;
+GRANT SELECT, DELETE ON social.profiles, social.profile_private_fields, social.custom_feeds TO lythaus_privacy;
+GRANT DELETE ON editorial.applications, editorial.memberships TO lythaus_privacy;
 GRANT SELECT, INSERT ON system.audit_events TO lythaus_privacy;
 GRANT EXECUTE ON FUNCTION privacy.reconcile_subject_data_locations(uuid) TO lythaus_privacy;
 
