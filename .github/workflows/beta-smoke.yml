@@ -40,7 +40,7 @@ jobs:
         run: echo "BETA_SMOKE_REPORT_PATH=$RUNNER_TEMP/beta-smoke-report.json" >> "$GITHUB_ENV"
 
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: 'npm'
