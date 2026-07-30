@@ -169,12 +169,35 @@ jobs:
             --query '[].{id:id,name:name,location:location,subnet:subnet.id,privateLinkServiceConnections:privateLinkServiceConnections[].{name:name,privateLinkServiceId:privateLinkServiceId,groupIds:groupIds,status:privateLinkServiceConnectionState.status}}' \
             --output json >"$output/services/private-endpoints.json"
 
-          az ad app show --id "$AZURE_CLIENT_ID" \
+          oidc_application_file="$output/services/oidc-application.json"
+          if oidc_application_error="$(az ad app show --id "$AZURE_CLIENT_ID" \
             --query '{id:id,appId:appId,displayName:displayName,signInAudience:signInAudience}' \
-            --output json >"$output/services/oidc-application.json"
-          az ad app federated-credential list --id "$AZURE_CLIENT_ID" \
+            --output json 2>&1 >"$oidc_application_file")"; then
+            :
+          elif grep -Fq 'Insufficient privileges to complete the operation.' <<<"$oidc_application_error"; then
+            jq -n \
+              --arg operation 'az ad app show' \
+              '{status:"BLOCKED — ACCESS REQUIRED",errorCode:"INSUFFICIENT_PRIVILEGES",operation:$operation}' \
+              >"$oidc_application_file"
+          else
+            printf 'OIDC application inventory failed: %s\n' "$oidc_application_error" >&2
+            exit 1
+          fi
+
+          oidc_federated_file="$output/services/oidc-federated-credentials.json"
+          if oidc_federated_error="$(az ad app federated-credential list --id "$AZURE_CLIENT_ID" \
             --query '[].{id:id,name:name,issuer:issuer,subject:subject,audiences:audiences}' \
-            --output json >"$output/services/oidc-federated-credentials.json"
+            --output json 2>&1 >"$oidc_federated_file")"; then
+            :
+          elif grep -Fq 'Insufficient privileges to complete the operation.' <<<"$oidc_federated_error"; then
+            jq -n \
+              --arg operation 'az ad app federated-credential list' \
+              '{status:"BLOCKED — ACCESS REQUIRED",errorCode:"INSUFFICIENT_PRIVILEGES",operation:$operation}' \
+              >"$oidc_federated_file"
+          else
+            printf 'OIDC federated credential inventory failed: %s\n' "$oidc_federated_error" >&2
+            exit 1
+          fi
           az ad sp show --id "$AZURE_CLIENT_ID" \
             --query '{id:id,appId:appId,displayName:displayName,accountEnabled:accountEnabled,servicePrincipalType:servicePrincipalType}' \
             --output json >"$output/services/oidc-service-principal.json"
