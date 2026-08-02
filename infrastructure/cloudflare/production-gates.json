@@ -1,12 +1,13 @@
 {
   "schemaVersion": "lythaus-production-gates-v2",
-  "releaseSha": null,
+  "releaseSha": "f815d646aac8e0690df381d3dc333b0dba5f36ae",
   "releaseShaPolicy": "workflow input must equal the checked-out merged main SHA",
   "cutoverAuthorized": true,
   "migrationUsageAuthorized": false,
   "migrationUsageMaxUsd": 0,
   "estimatedIncrementalCostUsd": 0,
   "azureDeletionAuthorized": false,
+  "azureDeletionExecution": "NOT STARTED",
   "requiredOwnerActions": [
     "Approve migration usage only if a future measured estimate exceeds US$0",
     "AUTHORISE FINAL AZURE DELETION only after every final gate is completed"
@@ -43,9 +44,18 @@
         "status": "IN PROGRESS",
         "evidence": ["infrastructure/lythaus-resource-registry.json", "docs/runbooks/native-deployment-and-rollback.md"]
       },
-      "domainAndOAuthCutover": {
+      "domainCutover": {
         "status": "IN PROGRESS",
         "evidence": ["docs/architecture/lythaus-domain-architecture.md", "apps/lythaus-public-api/src/index.ts"]
+      },
+      "googleOAuthAcceptance": {
+        "status": "DEFERRED TO ADR 003",
+        "ownerApproved": true,
+        "launchBlocking": true,
+        "scope": "Google OAuth end-to-end session acceptance only",
+        "decisionDate": "2026-08-02",
+        "expiresWhen": "ADR 003 authentication acceptance completes",
+        "evidence": ["docs/evidence/azure-exit/2026-08-02/azure-independence-closure.md"]
       },
       "runtimeCutover": {
         "status": "IN PROGRESS",
@@ -55,7 +65,7 @@
         "status": "IN PROGRESS",
         "evidence": ["scripts/validate-github-azure-disconnection.mjs", "docs/evidence/azure-exit/2026-07-30/github-to-azure-disconnection.md"]
       },
-      "azureDeletionEvidence": {
+      "azureDeletionInventory": {
         "status": "IN PROGRESS",
         "evidence": ["docs/runbooks/lythaus-azure-exit.md", "docs/runbooks/native-deployment-and-rollback.md"]
       }

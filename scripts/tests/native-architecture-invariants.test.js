@@ -1,5 +1,7 @@
+import { spawnSync, execFileSync } from 'node:child_process';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
@@ -294,7 +296,17 @@ test('production deployment is fail-closed on predeploy and final gate phases', 
   const validator = fs.readFileSync(path.join(root, 'scripts/validate-production-gates.mjs'), 'utf8');
   assert.match(workflow, /Validate production predeployment gates/);
   assert.ok(Object.keys(manifest.gates.predeploy).length >= 6);
-  assert.ok(Object.keys(manifest.gates.final).length >= 5);
+  assert.ok(Object.keys(manifest.gates.final).length >= 6);
+  assert.ok(manifest.gates.final.domainCutover);
+  assert.equal(manifest.gates.final.domainAndOAuthCutover, undefined);
+  assert.equal(manifest.gates.final.googleOAuthAcceptance.status, 'DEFERRED TO ADR 003');
+  assert.equal(manifest.gates.final.googleOAuthAcceptance.ownerApproved, true);
+  assert.equal(manifest.gates.final.googleOAuthAcceptance.launchBlocking, true);
+  assert.equal(manifest.gates.final.googleOAuthAcceptance.scope, 'Google OAuth end-to-end session acceptance only');
+  assert.equal(manifest.gates.final.googleOAuthAcceptance.decisionDate, '2026-08-02');
+  assert.equal(manifest.gates.final.googleOAuthAcceptance.expiresWhen, 'ADR 003 authentication acceptance completes');
+  assert.ok(manifest.gates.final.azureDeletionInventory);
+  assert.equal(manifest.azureDeletionExecution, 'NOT STARTED');
   assert.equal(manifest.cutoverAuthorized, true);
   assert.equal(manifest.migrationUsageAuthorized, false);
   assert.equal(manifest.migrationUsageMaxUsd, 0);
@@ -302,7 +314,59 @@ test('production deployment is fail-closed on predeploy and final gate phases', 
   assert.equal(manifest.azureDeletionAuthorized, false);
   assert.match(validator, /phase === 'predeploy'/);
   assert.match(validator, /phase === 'final'/);
+  assert.match(validator, /DEFERRED TO ADR 003/);
+  assert.match(validator, /googleOAuthAcceptance/);
   assert.match(validator, /zero-cost deployment requires migration usage authorization false and maximum US\$0/);
+});
+
+test('ADR 003 deferral is accepted only for final Google OAuth acceptance', () => {
+  const manifestPath = path.join(root, 'infrastructure/cloudflare/production-gates.json');
+  const validatorSource = fs.readFileSync(path.join(root, 'scripts/validate-production-gates.mjs'), 'utf8');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'lythaus-production-gates-'));
+  const temporaryManifestPath = path.join(temporaryRoot, 'infrastructure/cloudflare/production-gates.json');
+  const temporaryValidatorPath = path.join(temporaryRoot, 'scripts/validate-production-gates.mjs');
+
+  try {
+    fs.mkdirSync(path.dirname(temporaryManifestPath), { recursive: true });
+    fs.mkdirSync(path.dirname(temporaryValidatorPath), { recursive: true });
+    fs.writeFileSync(temporaryValidatorPath, validatorSource);
+
+    const validManifest = structuredClone(manifest);
+    for (const record of Object.values(validManifest.gates.predeploy)) record.status = 'COMPLETED';
+    for (const [gateName, record] of Object.entries(validManifest.gates.final)) {
+      if (gateName !== 'googleOAuthAcceptance') record.status = 'COMPLETED';
+    }
+    fs.writeFileSync(temporaryManifestPath, JSON.stringify(validManifest));
+
+    assert.doesNotThrow(() => execFileSync(
+      process.execPath,
+      [temporaryValidatorPath, '--phase', 'final'],
+      {
+        cwd: temporaryRoot,
+        env: { ...process.env, RELEASE_SHA: validManifest.releaseSha },
+        encoding: 'utf8',
+      },
+    ));
+
+    const invalidManifest = structuredClone(validManifest);
+    invalidManifest.gates.final.domainCutover = structuredClone(validManifest.gates.final.googleOAuthAcceptance);
+    fs.writeFileSync(temporaryManifestPath, JSON.stringify(invalidManifest));
+    const result = spawnSync(
+      process.execPath,
+      [temporaryValidatorPath, '--phase', 'final'],
+      {
+        cwd: temporaryRoot,
+        env: { ...process.env, RELEASE_SHA: invalidManifest.releaseSha },
+        encoding: 'utf8',
+      },
+    );
+
+    assert.notEqual(result.status, 0);
+    assert.match(`${result.stdout}${result.stderr}`, /final\.domainCutover may not use DEFERRED TO ADR 003/);
+  } finally {
+    fs.rmSync(temporaryRoot, { recursive: true, force: true });
+  }
 });
 
 test('production deployment accepts only the exact merged main SHA', () => {
