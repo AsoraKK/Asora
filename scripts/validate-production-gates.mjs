@@ -7,13 +7,25 @@ const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 const phaseIndex = process.argv.indexOf('--phase');
 const phase = phaseIndex === -1 ? null : process.argv[phaseIndex + 1];
 const expectedSha = process.env.RELEASE_SHA ?? '';
-const allowedStatuses = new Set(['COMPLETED', 'IN PROGRESS', 'BLOCKED', 'DEFERRED BY ARCHITECTURE', 'FAILED ACCEPTANCE']);
+const allowedStatuses = new Set(['COMPLETED', 'IN PROGRESS', 'BLOCKED', 'DEFERRED TO ADR 003', 'FAILED ACCEPTANCE']);
 const failures = [];
+
+function isApprovedGoogleOAuthDeferral(groupName, gateName, record) {
+  return groupName === 'final'
+    && gateName === 'googleOAuthAcceptance'
+    && record?.status === 'DEFERRED TO ADR 003'
+    && record?.ownerApproved === true
+    && record?.launchBlocking === true
+    && record?.scope === 'Google OAuth end-to-end session acceptance only'
+    && record?.decisionDate === '2026-08-02'
+    && record?.expiresWhen === 'ADR 003 authentication acceptance completes';
+}
 
 if (manifest.schemaVersion !== 'lythaus-production-gates-v2') failures.push('unsupported production gate manifest schema');
 if (manifest.releaseSha !== null && (typeof manifest.releaseSha !== 'string' || !/^[0-9a-f]{40}$/.test(manifest.releaseSha))) failures.push('releaseSha must be null before merge or a full 40-character commit SHA');
 if (manifest.releaseShaPolicy !== 'workflow input must equal the checked-out merged main SHA') failures.push('releaseShaPolicy must require the merged main checkout');
 if (manifest.azureDeletionAuthorized !== false) failures.push('Azure deletion authorization must remain false in the production gate manifest');
+if (manifest.azureDeletionExecution !== 'NOT STARTED') failures.push('Azure deletion execution must remain NOT STARTED');
 if (typeof manifest.estimatedIncrementalCostUsd !== 'number' || manifest.estimatedIncrementalCostUsd < 0) failures.push('estimatedIncrementalCostUsd must be a non-negative number');
 if (manifest.estimatedIncrementalCostUsd === 0) {
   if (manifest.migrationUsageAuthorized !== false || manifest.migrationUsageMaxUsd !== 0) {
@@ -36,6 +48,9 @@ for (const groupName of ['predeploy', 'final']) {
   for (const [gateName, record] of Object.entries(group)) {
     if (!allowedStatuses.has(record?.status)) failures.push(`${groupName}.${gateName} has unsupported status ${record?.status}`);
     if (!Array.isArray(record?.evidence) || record.evidence.length === 0) failures.push(`${groupName}.${gateName} must cite evidence`);
+    if (record?.status === 'DEFERRED TO ADR 003' && !isApprovedGoogleOAuthDeferral(groupName, gateName, record)) {
+      failures.push(`${groupName}.${gateName} may not use DEFERRED TO ADR 003`);
+    }
   }
 }
 
@@ -50,7 +65,9 @@ if (phase === 'predeploy' || phase === 'final') {
 
 if (phase === 'final') {
   for (const [gateName, record] of Object.entries(manifest.gates?.final ?? {})) {
-    if (record.status !== 'COMPLETED') failures.push(`final.${gateName} is not COMPLETED`);
+    if (record.status !== 'COMPLETED' && !isApprovedGoogleOAuthDeferral('final', gateName, record)) {
+      failures.push(`final.${gateName} is not COMPLETED`);
+    }
   }
 }
 
