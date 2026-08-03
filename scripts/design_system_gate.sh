@@ -30,17 +30,24 @@ search() {
 resolve_target_files() {
   local base="${DESIGN_SYSTEM_GATE_BASE:-}"
 
+  # workflow_dispatch has no github.event.before. Use the checked-out
+  # commit's parent so manual main runs enforce only newly introduced
+  # production Dart violations, just like push runs.
+  if [ -z "$base" ] && [ -n "${GITHUB_SHA:-}" ]; then
+    base="$(git rev-parse "${GITHUB_SHA}^" 2>/dev/null || true)"
+  fi
+
   if [ -n "$base" ] && git cat-file -e "${base}^{commit}" 2>/dev/null; then
     mapfile -t target_files < <(
       git diff --name-only --diff-filter=ACMR "$base"...HEAD -- 'lib/**/*.dart' \
-        | awk '!/^lib\/(design_system|generated)\//'
+        | awk '!/^lib\\/(design_system|generated)\\//'
     )
     return
   fi
 
   mapfile -t target_files < <(
     git ls-files 'lib/**/*.dart' \
-      | awk '!/^lib\/(design_system|generated)\//'
+      | awk '!/^lib\\/(design_system|generated)\\//'
   )
 }
 
