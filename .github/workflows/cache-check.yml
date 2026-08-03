@@ -26,12 +26,6 @@ on:
       staging_domain:
         description: 'Optional edge host override for manual runs'
         required: false
-  workflow_run:
-    workflows:
-      - "native-workers-deploy"
-    types: [completed]
-    branches: [main]
-
 env:
   DEFAULT_EDGE_DOMAIN: api.lythaus.co
   TEST_ENDPOINT: '/api/feed/discover'
@@ -67,7 +61,7 @@ jobs:
           NODE_ENV: test
 
   live-cache-validation:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     name: Validate Edge Cache Behavior
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -75,10 +69,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
-
-      - name: Wait for deployment to settle
-        if: ${{ github.event_name == 'workflow_run' }}
-        run: sleep 30
 
       - name: Resolve validation domain
         env:
