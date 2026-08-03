@@ -19,6 +19,7 @@ const VERBOSE = process.argv.includes("--verbose");
 const LATENCY_THRESHOLD_SEC = Number(process.env.LATENCY_THRESHOLD_SEC || process.env.THRESHOLD_SEC || 2.0);
 
 const ok = (j) => j?.ok === true || j?.success === true || j?.status === "ok";
+const responseIsValid = (name, j) => name === "discovery" ? Array.isArray(j?.items) : ok(j);
 
 if (!BASE_URL) {
   console.error("API_BASE_URL is required (set API_BASE_URL or BASE_URL)");
@@ -94,7 +95,7 @@ async function main() {
       const t0 = Date.now();
       const res = await getJsonWithRetry(url);
       const durationMs = Date.now() - t0;
-      let pass = res.status === 200 && res.json && ok(res.json);
+      let pass = res.status === 200 && res.json && responseIsValid(name, res.json);
       if (durationMs > LATENCY_THRESHOLD_SEC * 1000) {
         pass = false;
       }
@@ -110,7 +111,7 @@ async function main() {
         const level = required ? console.error : console.warn;
         level.call(console, `${logLine} (fail)`);
         if (required) failures++;
-        if (!res.json || !ok(res.json)) {
+        if (!res.json || !responseIsValid(name, res.json)) {
           level.call(console, `${name} response validation failed: ${JSON.stringify(res.json)}`);
         }
         if (durationMs > LATENCY_THRESHOLD_SEC * 1000) {
