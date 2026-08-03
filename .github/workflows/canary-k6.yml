@@ -8,13 +8,13 @@ on:
     branches: [main]
 
 env:
-  K6_BASE_URL: ${{ vars.MVP_PUBLIC_API_BASE_URL }}
+  K6_BASE_URL: ${{ vars.PUBLIC_API_BASE_URL }}
   K6_SMOKE_TOKEN: ${{ secrets.K6_SMOKE_TOKEN }} # set in repo Secrets
   ALLOW_SHARED_MVP_LOAD_TESTS: ${{ vars.ALLOW_SHARED_MVP_LOAD_TESTS }}
 
 jobs:
   canary-k6:
-    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success') && vars.ALLOW_SHARED_MVP_LOAD_TESTS == 'true' }}
     name: Run k6 canary tests
     runs-on: ubuntu-latest
     steps:
@@ -101,13 +101,14 @@ jobs:
             </details>
 
   canary-k6-chaos:
-    if: ${{ vars.ALLOW_SHARED_MVP_CHAOS_TESTS == 'true' }}
+    if: ${{ vars.ALLOW_SHARED_MVP_LOAD_TESTS == 'true' && vars.ALLOW_SHARED_MVP_CHAOS_TESTS == 'true' }}
     needs: [canary-k6]
     name: Run k6 chaos scenarios
     runs-on: ubuntu-latest
     env:
       CHAOS_ENABLED: "true"
-      K6_BASE_URL: ${{ vars.MVP_PUBLIC_API_BASE_URL }}
+      ALLOW_SHARED_MVP_LOAD_TESTS: ${{ vars.ALLOW_SHARED_MVP_LOAD_TESTS }}
+      K6_BASE_URL: ${{ vars.PUBLIC_API_BASE_URL }}
       K6_SMOKE_TOKEN: ${{ secrets.K6_SMOKE_TOKEN }}
     steps:
       - uses: actions/checkout@v5
