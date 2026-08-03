@@ -338,13 +338,14 @@ test('ADR 003 deferral is accepted only for final Google OAuth acceptance', () =
       if (gateName !== 'googleOAuthAcceptance') record.status = 'COMPLETED';
     }
     fs.writeFileSync(temporaryManifestPath, JSON.stringify(validManifest));
+    const validationReleaseSha = validManifest.releaseSha ?? '0'.repeat(40);
 
     assert.doesNotThrow(() => execFileSync(
       process.execPath,
       [temporaryValidatorPath, '--phase', 'final'],
       {
         cwd: temporaryRoot,
-        env: { ...process.env, RELEASE_SHA: validManifest.releaseSha },
+        env: { ...process.env, RELEASE_SHA: validationReleaseSha },
         encoding: 'utf8',
       },
     ));
