@@ -1,6 +1,6 @@
 {
   "schemaVersion": "lythaus-production-gates-v2",
-  "releaseSha": "f815d646aac8e0690df381d3dc333b0dba5f36ae",
+  "releaseSha": null,
   "releaseShaPolicy": "workflow input must equal the checked-out merged main SHA",
   "cutoverAuthorized": true,
   "migrationUsageAuthorized": false,
