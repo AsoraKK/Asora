@@ -3,50 +3,50 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:lythaus_api_client/src/model/user_info_response_data.dart';
+import 'package:lythaus_api_client/src/model/email_session_response_data.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
-part 'user_info_response.g.dart';
+part 'email_session_response.g.dart';
 
-/// Authenticated Lythaus user envelope.
+/// Email authentication session response envelope.
 ///
 /// Properties:
 /// * [success]
 /// * [data]
 /// * [timestamp]
 @BuiltValue()
-abstract class UserInfoResponse implements Built<UserInfoResponse, UserInfoResponseBuilder> {
+abstract class EmailSessionResponse implements Built<EmailSessionResponse, EmailSessionResponseBuilder> {
   @BuiltValueField(wireName: r'success')
   bool get success;
 
   @BuiltValueField(wireName: r'data')
-  UserInfoResponseData get data;
+  EmailSessionResponseData get data;
 
   @BuiltValueField(wireName: r'timestamp')
   DateTime get timestamp;
 
-  UserInfoResponse._();
+  EmailSessionResponse._();
 
-  factory UserInfoResponse([void updates(UserInfoResponseBuilder b)]) = _$UserInfoResponse;
+  factory EmailSessionResponse([void updates(EmailSessionResponseBuilder b)]) = _$EmailSessionResponse;
 
   @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(UserInfoResponseBuilder b) => b;
+  static void _defaults(EmailSessionResponseBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<UserInfoResponse> get serializer => _$UserInfoResponseSerializer();
+  static Serializer<EmailSessionResponse> get serializer => _$EmailSessionResponseSerializer();
 }
 
-class _$UserInfoResponseSerializer implements PrimitiveSerializer<UserInfoResponse> {
+class _$EmailSessionResponseSerializer implements PrimitiveSerializer<EmailSessionResponse> {
   @override
-  final Iterable<Type> types = const [UserInfoResponse, _$UserInfoResponse];
+  final Iterable<Type> types = const [EmailSessionResponse, _$EmailSessionResponse];
 
   @override
-  final String wireName = r'UserInfoResponse';
+  final String wireName = r'EmailSessionResponse';
 
   Iterable<Object?> _serializeProperties(
     Serializers serializers,
-    UserInfoResponse object, {
+    EmailSessionResponse object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
     yield r'success';
@@ -57,7 +57,7 @@ class _$UserInfoResponseSerializer implements PrimitiveSerializer<UserInfoRespon
     yield r'data';
     yield serializers.serialize(
       object.data,
-      specifiedType: const FullType(UserInfoResponseData),
+      specifiedType: const FullType(EmailSessionResponseData),
     );
     yield r'timestamp';
     yield serializers.serialize(
@@ -69,7 +69,7 @@ class _$UserInfoResponseSerializer implements PrimitiveSerializer<UserInfoRespon
   @override
   Object serialize(
     Serializers serializers,
-    UserInfoResponse object, {
+    EmailSessionResponse object, {
     FullType specifiedType = FullType.unspecified,
   }) {
     return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
@@ -80,7 +80,7 @@ class _$UserInfoResponseSerializer implements PrimitiveSerializer<UserInfoRespon
     Object serialized, {
     FullType specifiedType = FullType.unspecified,
     required List<Object?> serializedList,
-    required UserInfoResponseBuilder result,
+    required EmailSessionResponseBuilder result,
     required List<Object?> unhandled,
   }) {
     for (var i = 0; i < serializedList.length; i += 2) {
@@ -97,8 +97,8 @@ class _$UserInfoResponseSerializer implements PrimitiveSerializer<UserInfoRespon
         case r'data':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(UserInfoResponseData),
-          ) as UserInfoResponseData;
+            specifiedType: const FullType(EmailSessionResponseData),
+          ) as EmailSessionResponseData;
           result.data.replace(valueDes);
           break;
         case r'timestamp':
@@ -117,12 +117,12 @@ class _$UserInfoResponseSerializer implements PrimitiveSerializer<UserInfoRespon
   }
 
   @override
-  UserInfoResponse deserialize(
+  EmailSessionResponse deserialize(
     Serializers serializers,
     Object serialized, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    final result = UserInfoResponseBuilder();
+    final result = EmailSessionResponseBuilder();
     final serializedList = (serialized as Iterable<Object?>).toList();
     final unhandled = <Object?>[];
     _deserializeProperties(

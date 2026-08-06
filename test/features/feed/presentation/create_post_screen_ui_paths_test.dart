@@ -11,7 +11,6 @@ import 'package:lythaus/features/feed/presentation/create_post_screen.dart';
 import 'package:lythaus/features/feed/application/post_creation_providers.dart';
 import 'package:lythaus/features/feed/domain/post_repository.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
-import 'package:lythaus/features/auth/application/oauth2_service.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
 
 class MockPostRepository extends Mock implements PostRepository {}
@@ -29,10 +28,6 @@ class _MockAuthStateNotifier extends StateNotifier<AsyncValue<User?>>
   Future<void> refreshToken() async {}
   @override
   Future<void> signInWithEmail(String email, String password) async {}
-  @override
-  Future<void> signInWithOAuth2() async {}
-  @override
-  Future<void> signInWithProvider(OAuth2Provider provider) async {}
   @override
   Future<void> signOut() async => state = const AsyncValue.data(null);
   @override

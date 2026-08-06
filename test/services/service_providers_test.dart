@@ -1,6 +1,4 @@
-import 'package:lythaus/services/auth_service.dart';
 import 'package:lythaus/services/moderation_service.dart';
-import 'package:lythaus/services/oauth2_service.dart';
 import 'package:lythaus/services/post_service.dart';
 import 'package:lythaus/services/push/device_token_service.dart';
 import 'package:lythaus/services/push/push_notification_service.dart';
@@ -26,8 +24,6 @@ void main() {
     addTearDown(container.dispose);
 
     expect(container.read(secureStorageProvider), isNotNull);
-    expect(container.read(oauth2ServiceProvider), isA<OAuth2Service>());
-    expect(container.read(authServiceProvider), isA<AuthService>());
     expect(container.read(postServiceProvider), isA<PostService>());
     expect(container.read(moderationServiceProvider), isA<ModerationClient>());
     expect(

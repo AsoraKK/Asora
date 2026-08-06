@@ -1,4 +1,4 @@
-# lythaus_api_client.model.EmailLoginRequest
+# lythaus_api_client.model.EmailSessionResponse
 
 ## Load the model package
 ```dart
@@ -8,8 +8,8 @@ import 'package:lythaus_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**mode** | **String** |  |
-**email** | **String** |  |
-**password** | **String** |  |
+**success** | **bool** |  |
+**data** | [**EmailSessionResponseData**](EmailSessionResponseData.md) |  |
+**timestamp** | [**DateTime**](DateTime.md) |  |
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

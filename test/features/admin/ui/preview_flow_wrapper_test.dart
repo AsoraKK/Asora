@@ -296,7 +296,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Sign in with Google'));
+    await tester.tap(find.text('Sign in with email'));
     await tester.pump();
 
     expect(container.read(previewFlowProvider), PreviewFlow.onboardingIntro);

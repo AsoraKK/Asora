@@ -4,7 +4,6 @@ import { REWARD_CATALOG, TIER_POLICIES, normalizeUserTier, type CreatePostInput,
 import { createPresignedPutUrl, ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES, type AllowedImageType } from '@lythaus/media';
 import { assertExpectedHostname, correlationId, json, logEvent } from '@lythaus/observability';
 import { constantTimeEqual, decryptField, encryptField, hashPassword, hashResetToken, hmacLookup, needsPasswordRehash, randomToken, signAccessToken, uuidv7, verifyAccessToken, verifyPassword, type PasswordHash, type Principal } from '@lythaus/security';
-import { createRemoteJWKSet, jwtVerify } from 'jose';
 
 interface Env extends EnvBindings {
   DB_APP_FRESH: HyperdriveBinding;
@@ -32,14 +31,6 @@ function normalizeEmail(value: string): string {
   const email = value.trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 320) throw new Error('invalid_email');
   return email;
-}
-
-function base64Url(bytes: Uint8Array): string {
-  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
-}
-
-async function pkceChallenge(verifier: string): Promise<string> {
-  return base64Url(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))));
 }
 
 async function sha256Hex(value: string): Promise<string> {
@@ -134,20 +125,26 @@ async function issueSession(env: Env, userId: string, roles: string[] = []): Pro
   return { accessToken, refreshToken, expiresIn: 900 };
 }
 
-async function sendEmailTransport(env: Env, input: { to: string; subject: string; html: string }): Promise<EmailDeliveryReference> {
+async function sendEmailTransport(env: Env, input: { to: string; subject: string; html: string; text: string }): Promise<EmailDeliveryReference> {
   const providerMode = env.EMAIL_PROVIDER_MODE ?? (env.ENVIRONMENT === 'production' ? 'cloudflare' : 'fallback');
   if (providerMode === 'disabled') throw new Error('provider_unavailable');
   if (providerMode === 'cloudflare') {
     if (!env.EMAIL || !env.EMAIL_FROM) throw new Error('email_delivery_not_configured');
-    await env.EMAIL.send({ to: input.to, from: env.EMAIL_FROM, subject: input.subject, html: input.html });
-    return { provider: 'cloudflare-email', messageId: 'accepted', acceptedAt: new Date().toISOString() };
+    const delivery = await env.EMAIL.send({
+      to: input.to,
+      from: { email: env.EMAIL_FROM, name: 'Lythaus' },
+      subject: input.subject,
+      html: input.html,
+      text: input.text,
+    });
+    return { provider: 'cloudflare-email', messageId: delivery.messageId, acceptedAt: new Date().toISOString() };
   }
   if (providerMode !== 'fallback') throw new Error('email_provider_mode_invalid');
   if (!env.EMAIL_PROVIDER_URL || !env.EMAIL_PROVIDER_TOKEN || !env.EMAIL_FROM) throw new Error('email_delivery_not_configured');
   const response = await fetch(env.EMAIL_PROVIDER_URL, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${env.EMAIL_PROVIDER_TOKEN}` },
-    body: JSON.stringify({ from: env.EMAIL_FROM, to: input.to, subject: input.subject, html: input.html }),
+    body: JSON.stringify({ from: env.EMAIL_FROM, to: input.to, subject: input.subject, html: input.html, text: input.text }),
   });
   if (!response.ok) throw new Error(`email_delivery_failed_${response.status}`);
   const payload = await response.json().catch(() => ({})) as { messageId?: string };
@@ -161,23 +158,26 @@ function createTransactionalEmailProvider(env: Env): TransactionalEmailProvider 
   return {
     async sendVerification(input) {
       const subject = 'Verify your Lythaus email';
-      return sendEmailTransport(env, { to: input.to, subject, html: `<p>${subject}.</p>${link(env.EMAIL_VERIFICATION_BASE_URL, input.token)}` });
+      const url = env.EMAIL_VERIFICATION_BASE_URL ? `${env.EMAIL_VERIFICATION_BASE_URL}${encodeURIComponent(input.token)}` : '';
+      return sendEmailTransport(env, { to: input.to, subject, html: `<p>${subject}.</p>${link(env.EMAIL_VERIFICATION_BASE_URL, input.token)}`, text: `${subject}.${url ? ` ${url}` : ''}` });
     },
     async sendPasswordReset(input) {
       const subject = 'Reset your Lythaus password';
-      return sendEmailTransport(env, { to: input.to, subject, html: `<p>${subject}.</p>${link(env.EMAIL_PASSWORD_RESET_BASE_URL, input.token)}` });
+      const url = env.EMAIL_PASSWORD_RESET_BASE_URL ? `${env.EMAIL_PASSWORD_RESET_BASE_URL}${encodeURIComponent(input.token)}` : '';
+      return sendEmailTransport(env, { to: input.to, subject, html: `<p>${subject}.</p>${link(env.EMAIL_PASSWORD_RESET_BASE_URL, input.token)}`, text: `${subject}.${url ? ` ${url}` : ''}` });
     },
     async sendSecurityNotice(input) {
       const subject = 'Lythaus security notice';
-      return sendEmailTransport(env, { to: input.to, subject, html: `<p>${subject}.</p><p>${input.reason.replace(/[&<>"']/g, (value) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[value] ?? value))}</p>` });
+      return sendEmailTransport(env, { to: input.to, subject, html: `<p>${subject}.</p><p>${input.reason.replace(/[&<>"']/g, (value) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[value] ?? value))}</p>`, text: `${subject}. ${input.reason}` });
     },
     async sendEmailChangeNotice(input) {
       const subject = 'Confirm your Lythaus email change';
-      return sendEmailTransport(env, { to: input.to, subject, html: `<p>${subject}.</p>${link(env.EMAIL_VERIFICATION_BASE_URL, input.token)}` });
+      const url = env.EMAIL_VERIFICATION_BASE_URL ? `${env.EMAIL_VERIFICATION_BASE_URL}${encodeURIComponent(input.token)}` : '';
+      return sendEmailTransport(env, { to: input.to, subject, html: `<p>${subject}.</p>${link(env.EMAIL_VERIFICATION_BASE_URL, input.token)}`, text: `${subject}.${url ? ` ${url}` : ''}` });
     },
     async sendAccountDeletionNotice(input) {
       const subject = 'Lythaus account deletion requested';
-      return sendEmailTransport(env, { to: input.to, subject, html: `<p>${subject}.</p><p>Request reference: ${input.requestId}</p>` });
+      return sendEmailTransport(env, { to: input.to, subject, html: `<p>${subject}.</p><p>Request reference: ${input.requestId}</p>`, text: `${subject}. Request reference: ${input.requestId}` });
     },
   };
 }
@@ -220,6 +220,7 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
     await transaction(env.DB_APP_FRESH, async (client) => {
       await client.query(`INSERT INTO identity.users (id) VALUES ($1)`, [userId]);
       await client.query(`INSERT INTO identity.email_credentials (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, hmac_key_version, password_hash) VALUES ($1, convert_to($2, 'utf8'), decode($3, 'base64'), 'v1', 'v1', $4::jsonb)`, [userId, encrypted.ciphertext, lookup, JSON.stringify(passwordHash)]);
+      await client.query(`INSERT INTO identity.contact_emails (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, source_provider) VALUES ($1, convert_to($2, 'utf8'), decode($3, 'base64'), 'v1', 'email')`, [userId, encrypted.ciphertext, lookup]);
       await client.query(`INSERT INTO identity.email_verification_tokens (id, user_id, token_hash, expires_at) VALUES ($1, $2, decode($3, 'base64'), now() + interval '30 minutes')`, [uuidv7(), userId, hashResetToken(verificationToken)]);
       await client.query(`INSERT INTO identity.account_events (id, user_id, event_type, metadata) VALUES ($1, $2, 'email_registration_started', '{}'::jsonb)`, [uuidv7(), userId]);
     });
@@ -234,6 +235,9 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
       `UPDATE identity.email_credentials SET password_hash = $1::jsonb, updated_at = now() WHERE user_id = $2`,
       [JSON.stringify(upgradedHash), account.id]);
   }
+  await query(env.DB_APP_FRESH,
+    `INSERT INTO identity.account_events (id, user_id, event_type, metadata) VALUES ($1, $2, 'email_login', '{}'::jsonb)`,
+    [uuidv7(), account.id]);
   const tokens = await issueSession(env, account.id);
   return privateResponse(request, env, { ...tokens, tokenType: 'Bearer' });
 }
@@ -247,6 +251,7 @@ async function verifyEmail(request: Request, env: Env): Promise<Response> {
     if (!found.rows[0]) throw new Error('verification_token_invalid');
     await client.query(`UPDATE identity.email_verification_tokens SET consumed_at = now() WHERE token_hash = decode($1, 'base64') AND consumed_at IS NULL`, [hashResetToken(token)]);
     await client.query(`UPDATE identity.email_credentials SET verified_at = COALESCE(verified_at, now()), updated_at = now() WHERE user_id = $1`, [found.rows[0].user_id]);
+    await client.query(`UPDATE identity.contact_emails SET verified_at = COALESCE(verified_at, now()), updated_at = now() WHERE user_id = $1`, [found.rows[0].user_id]);
     await client.query(`INSERT INTO identity.account_events (id, user_id, event_type, metadata) VALUES ($1, $2, 'email_verified', '{}'::jsonb)`, [uuidv7(), found.rows[0].user_id]);
     return found.rows[0].user_id;
   });
@@ -291,172 +296,6 @@ async function logout(request: Request, env: Env): Promise<Response> {
     await client.query(`UPDATE identity.users SET token_version = token_version + 1, updated_at = now() WHERE id = $1`, [user.userId]);
   });
   return privateResponse(request, env, { loggedOut: true });
-}
-
-interface OAuthStateRecord {
-  verifier: string;
-  appState: string;
-  redirectUri: string;
-  codeChallenge: string;
-  clientId: string;
-}
-
-interface OAuthExchangeRecord {
-  accessToken: string;
-  refreshToken: string;
-  expiresIn: number;
-  redirectUri: string;
-  codeChallenge: string;
-  clientId: string;
-}
-
-function allowedOAuthRedirect(value: string, env: Env): boolean {
-  try {
-    const uri = new URL(value);
-    if (uri.protocol === 'https:' && uri.pathname === '/auth/callback') {
-      const origins = (env.CORS_ALLOWED_ORIGINS ?? '').split(',').map((origin) => origin.trim()).filter(Boolean);
-      return origins.includes(uri.origin);
-    }
-    return (uri.protocol === 'lythaus:' || uri.protocol === 'lythaus:' || uri.protocol === 'co.lythaus.app:')
-      && uri.hostname === 'oauth'
-      && uri.pathname === '/callback';
-  } catch {
-    return false;
-  }
-}
-
-async function googleAuthStart(request: Request, env: Env): Promise<Response> {
-  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_REDIRECT_URI || !env.LYTHAUS_CONFIG) throw new Error('google_not_configured');
-  const url = new URL(request.url);
-  const appState = url.searchParams.get('state') ?? '';
-  const redirectUri = url.searchParams.get('redirect_uri') ?? '';
-  const codeChallenge = url.searchParams.get('code_challenge') ?? '';
-  const clientId = url.searchParams.get('client_id') ?? '';
-  const provider = (url.searchParams.get('idp') ?? 'Google').toLowerCase();
-  if (provider !== 'google') throw new Error('provider_unavailable');
-  if (!appState || !redirectUri || !codeChallenge || !clientId || !allowedOAuthRedirect(redirectUri, env)) {
-    throw new Error('oauth_request_invalid');
-  }
-  if (!/^[A-Za-z0-9_-]{43,128}$/.test(codeChallenge)) throw new Error('oauth_challenge_invalid');
-  const state = randomToken(24);
-  const verifier = randomToken(32);
-  const stateRecord: OAuthStateRecord = { verifier, appState, redirectUri, codeChallenge, clientId };
-  await env.LYTHAUS_CONFIG.put(`oauth:google:${state}`, JSON.stringify(stateRecord), { expirationTtl: 600 });
-  const authorization = new URL('https://accounts.google.com/o/oauth2/v2/auth');
-  authorization.search = new URLSearchParams({
-    client_id: env.GOOGLE_CLIENT_ID,
-    redirect_uri: env.GOOGLE_REDIRECT_URI,
-    response_type: 'code',
-    scope: 'openid email profile',
-    state,
-    access_type: 'offline',
-    prompt: 'select_account',
-    code_challenge: await pkceChallenge(verifier),
-    code_challenge_method: 'S256',
-  }).toString();
-  return new Response(null, { status: 302, headers: { location: authorization.toString(), 'cache-control': 'no-store' } });
-}
-
-async function googleAuthCallback(request: Request, env: Env): Promise<Response> {
-  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !env.GOOGLE_REDIRECT_URI || !env.GOOGLE_JWKS_URL || !env.LYTHAUS_CONFIG || !env.PII_HMAC_KEY_V1 || !env.PII_ENCRYPTION_KEY_V1 || !env.JWT_PRIVATE_KEY || !env.JWT_KEY_ID) throw new Error('google_not_configured');
-  const url = new URL(request.url);
-  const state = url.searchParams.get('state');
-  const code = url.searchParams.get('code');
-  if (!state || !code) throw new Error('google_callback_invalid');
-  const stateValue = await env.LYTHAUS_CONFIG.get(`oauth:google:${state}`);
-  if (!stateValue) throw new Error('google_state_invalid');
-  const stateRecord = typeof stateValue === 'string' ? JSON.parse(stateValue) as OAuthStateRecord : null;
-  if (!stateRecord?.verifier || !stateRecord.appState || !allowedOAuthRedirect(stateRecord.redirectUri, env)) throw new Error('google_state_invalid');
-  await env.LYTHAUS_CONFIG.delete(`oauth:google:${state}`);
-  const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'content-type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ code, client_id: env.GOOGLE_CLIENT_ID, client_secret: env.GOOGLE_CLIENT_SECRET, redirect_uri: env.GOOGLE_REDIRECT_URI, grant_type: 'authorization_code', code_verifier: stateRecord.verifier }),
-  });
-  if (!tokenResponse.ok) throw new Error('google_code_exchange_failed');
-  const tokenPayload = await tokenResponse.json() as { id_token?: string };
-  if (!tokenPayload.id_token) throw new Error('google_id_token_missing');
-  const verified = await jwtVerify(tokenPayload.id_token, createRemoteJWKSet(new URL(env.GOOGLE_JWKS_URL)), { issuer: ['https://accounts.google.com', 'accounts.google.com'], audience: env.GOOGLE_CLIENT_ID });
-  const claims = verified.payload as { sub?: string; email?: string; email_verified?: boolean; name?: string };
-  if (!claims.sub || !claims.email || claims.email_verified !== true) throw new Error('google_identity_unverified');
-  const email = normalizeEmail(claims.email);
-  const subjectHmac = hmacLookup(claims.sub, env.PII_HMAC_KEY_V1);
-  const emailHmac = hmacLookup(email, env.PII_HMAC_KEY_V1);
-  const existing = await query<{ id: string; status: string }>(env.DB_APP_FRESH,
-    `SELECT u.id, u.status FROM identity.provider_links p JOIN identity.users u ON u.id = p.user_id WHERE p.provider = 'google' AND p.provider_subject_hmac = decode($1, 'base64')`, [subjectHmac]);
-  let userId = existing.rows[0]?.id;
-  let accountStatus = existing.rows[0]?.status;
-  if (!userId) {
-    const byEmail = await query<{ id: string; status: string; source_provider: string | null; verified_at: string | null }>(env.DB_APP_FRESH,
-      `SELECT u.id, u.status, c.source_provider, c.verified_at
-         FROM identity.users u
-         LEFT JOIN identity.contact_emails c ON c.user_id = u.id AND c.email_lookup_hmac = decode($1, 'base64')
-        WHERE EXISTS (SELECT 1 FROM identity.email_credentials e WHERE e.user_id = u.id AND e.email_lookup_hmac = decode($1, 'base64'))
-           OR c.user_id IS NOT NULL
-        LIMIT 1`, [emailHmac]);
-    userId = byEmail.rows[0]?.id;
-    accountStatus = byEmail.rows[0]?.status;
-    if (userId && accountStatus === 'relink_required') throw new Error('account_relink_required');
-    const encryptedSubject = await encryptField(claims.sub, env.PII_ENCRYPTION_KEY_V1, 'v1');
-    await transaction(env.DB_APP_FRESH, async (client) => {
-      if (!userId) {
-        userId = uuidv7();
-        await client.query(`INSERT INTO identity.users (id, display_name) VALUES ($1, $2)`, [userId, claims.name?.trim().slice(0, 160) ?? '']);
-      }
-      await client.query(`INSERT INTO identity.provider_links (id, user_id, provider, provider_subject_ciphertext, provider_subject_hmac) VALUES ($1, $2, 'google', convert_to($3, 'utf8'), decode($4, 'base64')) ON CONFLICT (provider, provider_subject_hmac) DO NOTHING`, [uuidv7(), userId, encryptedSubject.ciphertext, subjectHmac]);
-    });
-  }
-  if (!userId || accountStatus === 'suspended' || accountStatus === 'deleted') throw new Error('account_unavailable');
-  const encryptedEmail = await encryptField(email, env.PII_ENCRYPTION_KEY_V1, 'v1');
-  await transaction(env.DB_APP_FRESH, async (client) => {
-    await client.query(
-      `INSERT INTO identity.contact_emails (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, source_provider, verified_at)
-       VALUES ($1, convert_to($2, 'utf8'), decode($3, 'base64'), 'v1', 'google', now())
-       ON CONFLICT (user_id) DO UPDATE SET email_ciphertext = EXCLUDED.email_ciphertext,
-         email_lookup_hmac = EXCLUDED.email_lookup_hmac, encryption_key_version = EXCLUDED.encryption_key_version,
-         source_provider = EXCLUDED.source_provider, verified_at = EXCLUDED.verified_at, updated_at = now()`,
-      [userId, encryptedEmail.ciphertext, emailHmac]);
-    await client.query(`INSERT INTO identity.account_events (id, user_id, event_type, metadata) VALUES ($1, $2, 'google_login', '{}'::jsonb)`, [uuidv7(), userId]);
-  });
-  const tokens = await issueSession(env, userId);
-  const authorizationCode = randomToken(32);
-  const exchange: OAuthExchangeRecord = {
-    accessToken: tokens.accessToken,
-    refreshToken: tokens.refreshToken,
-    expiresIn: tokens.expiresIn,
-    redirectUri: stateRecord.redirectUri,
-    codeChallenge: stateRecord.codeChallenge,
-    clientId: stateRecord.clientId,
-  };
-  await env.LYTHAUS_CONFIG.put(`oauth:exchange:${authorizationCode}`, JSON.stringify(exchange), { expirationTtl: 120 });
-  const appCallback = new URL(stateRecord.redirectUri);
-  appCallback.searchParams.set('code', authorizationCode);
-  appCallback.searchParams.set('state', stateRecord.appState);
-  return new Response(null, { status: 302, headers: { location: appCallback.toString(), 'cache-control': 'no-store' } });
-}
-
-async function exchangeOAuthCode(request: Request, env: Env): Promise<Response> {
-  if (!env.LYTHAUS_CONFIG) throw new Error('google_not_configured');
-  const form = new URLSearchParams(await request.text());
-  const code = form.get('code') ?? '';
-  const verifier = form.get('code_verifier') ?? '';
-  const redirectUri = form.get('redirect_uri') ?? '';
-  const clientId = form.get('client_id') ?? '';
-  if (form.get('grant_type') !== 'authorization_code' || !code || !verifier) throw new Error('oauth_exchange_invalid');
-  const stored = await env.LYTHAUS_CONFIG.get(`oauth:exchange:${code}`);
-  if (typeof stored !== 'string') throw new Error('oauth_code_invalid');
-  const exchange = JSON.parse(stored) as OAuthExchangeRecord;
-  if (exchange.redirectUri !== redirectUri || exchange.clientId !== clientId || !allowedOAuthRedirect(redirectUri, env)) {
-    throw new Error('oauth_exchange_invalid');
-  }
-  if (await pkceChallenge(verifier) !== exchange.codeChallenge) throw new Error('oauth_verifier_invalid');
-  await env.LYTHAUS_CONFIG.delete(`oauth:exchange:${code}`);
-  return privateResponse(request, env, {
-    access_token: exchange.accessToken,
-    refresh_token: exchange.refreshToken,
-    expires_in: exchange.expiresIn,
-    token_type: 'Bearer',
-  });
 }
 
 async function requestPasswordReset(request: Request, env: Env): Promise<Response> {
@@ -774,15 +613,16 @@ async function getUserInfo(request: Request, env: Env, userId: string): Promise<
     last_login_at: string;
   }>(env.DB_APP_FRESH,
     `SELECT u.id,
-            convert_from(e.email_ciphertext, 'utf8') AS email_ciphertext,
-            e.encryption_key_version,
-            a.role,
+            convert_from(COALESCE(c.email_ciphertext, e.email_ciphertext), 'utf8') AS email_ciphertext,
+            COALESCE(c.encryption_key_version, e.encryption_key_version) AS encryption_key_version,
+            m.role,
             COALESCE(r.points, 0)::integer AS reputation_score,
             u.created_at,
-            COALESCE((SELECT max(created_at) FROM identity.account_events x WHERE x.user_id = u.id AND x.event_type = 'google_login'), u.created_at) AS last_login_at
+            COALESCE((SELECT max(created_at) FROM identity.account_events x WHERE x.user_id = u.id AND x.event_type = 'email_login'), u.created_at) AS last_login_at
        FROM identity.users u
-       LEFT JOIN identity.contact_emails e ON e.user_id = u.id
-       LEFT JOIN identity.admin_memberships a ON a.user_id = u.id AND a.active = true
+       LEFT JOIN identity.contact_emails c ON c.user_id = u.id
+       LEFT JOIN identity.email_credentials e ON e.user_id = u.id
+       LEFT JOIN identity.admin_memberships m ON m.user_id = u.id AND m.active = true
        LEFT JOIN trust.reputation_balances r ON r.user_id = u.id
       WHERE u.id = $1 AND u.status = 'active'`, [userId]);
   const user = result.rows[0];
@@ -1467,9 +1307,6 @@ export default {
       if (request.method === 'POST' && url.pathname === '/api/auth/password/reset/complete') return await completePasswordReset(request, env);
       if (request.method === 'POST' && url.pathname === '/api/auth/refresh') return await refreshSession(request, env);
       if (request.method === 'POST' && url.pathname === '/api/auth/logout') return await logout(request, env);
-      if (request.method === 'GET' && (url.pathname === '/api/auth/authorize' || url.pathname === '/api/auth/google')) return await googleAuthStart(request, env);
-      if (request.method === 'GET' && url.pathname === '/api/auth/google/callback') return await googleAuthCallback(request, env);
-      if (request.method === 'POST' && url.pathname === '/api/auth/token') return await exchangeOAuthCode(request, env);
       if (request.method === 'POST' && url.pathname === '/api/posts') {
         const user = await principal(request, env);
         return await idempotentMutation(request, env, user.userId, 'post.create', () => createPost(request, env, user));
@@ -1484,9 +1321,6 @@ export default {
       if (request.method === 'POST' && finalise) {
         const user = await principal(request, env);
         return await idempotentMutation(request, env, user.userId, 'media.upload.finalise', () => finaliseUpload(request, env, user, finalise[1]));
-      }
-      if (url.pathname === '/api/auth/apple' || url.pathname === '/api/auth/world-id' || url.pathname === '/api/auth/world') {
-        return response(request, env, { error: 'provider_unavailable', provider: url.pathname.includes('apple') ? 'apple' : 'world_id', correlationId: id }, { status: 404 });
       }
       if (url.pathname.startsWith('/api/video') || url.pathname.startsWith('/api/payments') || url.pathname.startsWith('/api/federation')) {
         return response(request, env, { error: 'feature_disabled', correlationId: id }, { status: 404 });

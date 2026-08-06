@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
-import 'package:lythaus/features/auth/presentation/auth_callback_screen.dart';
 import 'package:lythaus/features/auth/presentation/auth_choice_screen.dart';
 import 'package:lythaus/features/auth/presentation/invite_redeem_screen.dart';
 import 'package:lythaus/features/feed/presentation/post_detail_screen.dart';
@@ -18,7 +17,6 @@ import 'package:lythaus/ui/screens/profile/profile_screen.dart';
 /// Route name constants.
 abstract final class AppRoutes {
   static const String login = 'login';
-  static const String authCallback = 'auth-callback';
   static const String shell = 'shell';
   static const String post = 'post';
   static const String profile = 'profile';
@@ -36,13 +34,12 @@ String? resolveAppRedirect({
 }) {
   final isLoggedIn = user != null || isGuest;
   final isOnLogin = matchedLocation == '/login';
-  final isOnAuthCallback = matchedLocation == '/auth/callback';
   final isOnInvite = matchedLocation.startsWith('/invite/');
   final isOnStaffModeration = matchedLocation == '/moderation';
   final canReviewModeration =
       user?.role == UserRole.moderator || user?.role == UserRole.admin;
 
-  if (isOnAuthCallback || isOnInvite) {
+  if (isOnInvite) {
     return null;
   }
   if (isLoggedIn && pendingCode != null && pendingCode.isNotEmpty) {
@@ -78,13 +75,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: AppRoutes.login,
         path: '/login',
         builder: (context, state) => const AuthChoiceScreen(),
-      ),
-
-      // OAuth2 callback — handles the redirect from the IdP.
-      GoRoute(
-        name: AppRoutes.authCallback,
-        path: '/auth/callback',
-        builder: (context, state) => const AuthCallbackScreen(),
       ),
 
       // Invite redemption — top-level public route so anonymous users can
