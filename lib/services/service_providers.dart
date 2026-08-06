@@ -7,37 +7,18 @@
 library;
 
 import 'package:lythaus/core/network/dio_client.dart';
-import 'package:lythaus/services/auth_service.dart';
 import 'package:lythaus/services/media/media_upload_service.dart';
 import 'package:lythaus/services/moderation_service.dart';
-import 'package:lythaus/services/oauth2_service.dart';
 import 'package:lythaus/services/post_service.dart';
 import 'package:lythaus/services/push/device_token_service.dart';
 import 'package:lythaus/services/push/push_notification_service.dart';
 import 'package:lythaus/services/subscription/subscription_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:opentelemetry/api.dart';
 
 /// Flutter secure storage provider.
 final secureStorageProvider = Provider<FlutterSecureStorage>((ref) {
   return const FlutterSecureStorage();
-});
-
-/// OAuth2 service provider.
-final oauth2ServiceProvider = Provider<OAuth2Service>((ref) {
-  final dio = ref.watch(secureDioProvider);
-  final storage = ref.watch(secureStorageProvider);
-  return OAuth2Service(
-    dio: dio,
-    secureStorage: storage,
-    tracer: globalTracerProvider.getTracer('oauth2_service'),
-  );
-});
-
-/// Authentication service provider.
-final authServiceProvider = Provider<AuthService>((ref) {
-  return AuthService(); // No constructor parameters
 });
 
 /// Post service provider.

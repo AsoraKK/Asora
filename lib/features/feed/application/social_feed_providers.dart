@@ -80,8 +80,7 @@ final commentsProvider =
 
 /// Provider for the current user's access token
 final authTokenProvider = FutureProvider<String?>((ref) async {
-  final oauth2Service = ref.read(oauth2ServiceProvider);
-  return await oauth2Service.getAccessToken();
+  return ref.read(jwtProvider.future);
 });
 
 Future<void> _enforceWriteIntegrity(Ref ref, IntegrityUseCase useCase) async {

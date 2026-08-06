@@ -203,7 +203,7 @@ class _PreviewAuthChoice extends StatelessWidget {
                   FilledButton.icon(
                     onPressed: onContinue,
                     icon: const Icon(Icons.login),
-                    label: const Text('Sign in with Google'),
+                    label: const Text('Sign in with email'),
                     style: FilledButton.styleFrom(
                       minimumSize: const Size.fromHeight(48),
                     ),

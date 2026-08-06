@@ -176,8 +176,8 @@ const _devMobileSecurity = MobileSecurityConfig(
 const _devConfig = EnvironmentConfig(
   environment: Environment.development,
   apiBaseUrl: kIsWeb
-      ? 'http://localhost:7072/api' // Local Functions on web
-      : 'http://10.0.2.2:7072/api', // Android emulator loopback
+      ? 'http://localhost:8787/api' // Local public Worker on web
+      : 'http://10.0.2.2:8787/api', // Android emulator loopback
   security: _devMobileSecurity,
 );
 

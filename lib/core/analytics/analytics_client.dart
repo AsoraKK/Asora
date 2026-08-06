@@ -30,7 +30,7 @@ abstract class AnalyticsClient {
   ///
   /// MUST be internal user ID (UUIDv7), never:
   /// - Email addresses
-  /// - Provider-specific IDs (Google, Apple)
+  /// - External provider-specific IDs
   /// - Device identifiers
   ///
   /// Pass null to clear user context (e.g., on sign-out).

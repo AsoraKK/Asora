@@ -120,15 +120,13 @@ Class | Method | HTTP request | Description
 [*AppealsApi*](doc/AppealsApi.md) | [**appealsCreate**](doc/AppealsApi.md#appealscreate) | **POST** /appeals | Submit a new appeal
 [*AppealsApi*](doc/AppealsApi.md) | [**appealsGet**](doc/AppealsApi.md#appealsget) | **GET** /appeals/{id} | Get appeal detail
 [*AppealsApi*](doc/AppealsApi.md) | [**appealsVote**](doc/AppealsApi.md#appealsvote) | **POST** /appeals/{id}/votes | Cast a community vote on an appeal
-[*AuthApi*](doc/AuthApi.md) | [**authAuthorize**](doc/AuthApi.md#authauthorize) | **GET** /auth/authorize | OAuth2 authorization endpoint
 [*AuthApi*](doc/AuthApi.md) | [**authEmailLogin**](doc/AuthApi.md#authemaillogin) | **POST** /auth/email | Sign in with a verified email identity
 [*AuthApi*](doc/AuthApi.md) | [**authInviteValidate**](doc/AuthApi.md#authinvitevalidate) | **GET** /auth/invite/validate | Validate an invite code
 [*AuthApi*](doc/AuthApi.md) | [**authPing**](doc/AuthApi.md#authping) | **GET** /auth/ping | Verify authentication token is valid
 [*AuthApi*](doc/AuthApi.md) | [**authRedeemInvite**](doc/AuthApi.md#authredeeminvite) | **POST** /auth/redeem-invite | Redeem an invite code to activate account
 [*AuthApi*](doc/AuthApi.md) | [**authRefresh**](doc/AuthApi.md#authrefresh) | **POST** /auth/refresh | Rotate a refresh token
 [*AuthApi*](doc/AuthApi.md) | [**authSessionsRevoke**](doc/AuthApi.md#authsessionsrevoke) | **POST** /auth/sessions/revoke | Revoke an active session
-[*AuthApi*](doc/AuthApi.md) | [**authToken**](doc/AuthApi.md#authtoken) | **POST** /auth/token | Issue OAuth2 tokens
-[*AuthApi*](doc/AuthApi.md) | [**authUserInfo**](doc/AuthApi.md#authuserinfo) | **GET** /auth/userinfo | OIDC UserInfo endpoint
+[*AuthApi*](doc/AuthApi.md) | [**authUserInfo**](doc/AuthApi.md#authuserinfo) | **GET** /auth/userinfo | Return the current email-authenticated user
 [*AuthApi*](doc/AuthApi.md) | [**authUserInfoPost**](doc/AuthApi.md#authuserinfopost) | **POST** /auth/userinfo | OIDC UserInfo endpoint (POST)
 [*CustomFeedsApi*](doc/CustomFeedsApi.md) | [**customFeedsCreate**](doc/CustomFeedsApi.md#customfeedscreate) | **POST** /custom-feeds | Create a new custom feed
 [*CustomFeedsApi*](doc/CustomFeedsApi.md) | [**customFeedsDelete**](doc/CustomFeedsApi.md#customfeedsdelete) | **DELETE** /custom-feeds/{id} | Delete a custom feed
@@ -278,7 +276,6 @@ Class | Method | HTTP request | Description
  - [AppealVoteRequest](doc/AppealVoteRequest.md)
  - [AppealVoteResponse](doc/AppealVoteResponse.md)
  - [AppealVoteResponseVote](doc/AppealVoteResponseVote.md)
- - [AuthTokenRequest](doc/AuthTokenRequest.md)
  - [BadGatewayError](doc/BadGatewayError.md)
  - [BadGatewayErrorError](doc/BadGatewayErrorError.md)
  - [CreateCustomFeedRequest](doc/CreateCustomFeedRequest.md)
@@ -291,6 +288,8 @@ Class | Method | HTTP request | Description
  - [DsrRequestInput](doc/DsrRequestInput.md)
  - [DsrRequestSummary](doc/DsrRequestSummary.md)
  - [EmailLoginRequest](doc/EmailLoginRequest.md)
+ - [EmailSessionResponse](doc/EmailSessionResponse.md)
+ - [EmailSessionResponseData](doc/EmailSessionResponseData.md)
  - [Error](doc/Error.md)
  - [ErrorResponse](doc/ErrorResponse.md)
  - [ErrorResponseError](doc/ErrorResponseError.md)
@@ -321,8 +320,6 @@ Class | Method | HTTP request | Description
  - [ModerationFlagValidationError](doc/ModerationFlagValidationError.md)
  - [NewsBoardFeedResponse](doc/NewsBoardFeedResponse.md)
  - [NewsSourceMetadata](doc/NewsSourceMetadata.md)
- - [OAuthTokenResponse](doc/OAuthTokenResponse.md)
- - [OAuthTokenResponseData](doc/OAuthTokenResponseData.md)
  - [Post](doc/Post.md)
  - [PostProofSignals](doc/PostProofSignals.md)
  - [PostTrustTimeline](doc/PostTrustTimeline.md)

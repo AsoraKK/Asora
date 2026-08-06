@@ -81,7 +81,6 @@ import 'package:lythaus_api_client/src/model/appeal_created_response_appeal.dart
 import 'package:lythaus_api_client/src/model/appeal_vote_request.dart';
 import 'package:lythaus_api_client/src/model/appeal_vote_response.dart';
 import 'package:lythaus_api_client/src/model/appeal_vote_response_vote.dart';
-import 'package:lythaus_api_client/src/model/auth_token_request.dart';
 import 'package:lythaus_api_client/src/model/bad_gateway_error.dart';
 import 'package:lythaus_api_client/src/model/bad_gateway_error_error.dart';
 import 'package:lythaus_api_client/src/model/create_custom_feed_request.dart';
@@ -94,6 +93,8 @@ import 'package:lythaus_api_client/src/model/dsr_export_response_metadata.dart';
 import 'package:lythaus_api_client/src/model/dsr_request_input.dart';
 import 'package:lythaus_api_client/src/model/dsr_request_summary.dart';
 import 'package:lythaus_api_client/src/model/email_login_request.dart';
+import 'package:lythaus_api_client/src/model/email_session_response.dart';
+import 'package:lythaus_api_client/src/model/email_session_response_data.dart';
 import 'package:lythaus_api_client/src/model/error.dart';
 import 'package:lythaus_api_client/src/model/error_response.dart';
 import 'package:lythaus_api_client/src/model/error_response_error.dart';
@@ -124,8 +125,6 @@ import 'package:lythaus_api_client/src/model/moderation_blocked_response.dart';
 import 'package:lythaus_api_client/src/model/moderation_flag_validation_error.dart';
 import 'package:lythaus_api_client/src/model/news_board_feed_response.dart';
 import 'package:lythaus_api_client/src/model/news_source_metadata.dart';
-import 'package:lythaus_api_client/src/model/o_auth_token_response.dart';
-import 'package:lythaus_api_client/src/model/o_auth_token_response_data.dart';
 import 'package:lythaus_api_client/src/model/post.dart';
 import 'package:lythaus_api_client/src/model/post_proof_signals.dart';
 import 'package:lythaus_api_client/src/model/post_trust_timeline.dart';
@@ -233,7 +232,6 @@ part 'serializers.g.dart';
   AppealVoteRequest,
   AppealVoteResponse,
   AppealVoteResponseVote,
-  AuthTokenRequest,
   BadGatewayError,
   BadGatewayErrorError,
   CreateCustomFeedRequest,
@@ -246,6 +244,8 @@ part 'serializers.g.dart';
   DsrRequestInput,
   DsrRequestSummary,
   EmailLoginRequest,
+  EmailSessionResponse,
+  EmailSessionResponseData,
   Error,
   ErrorResponse,
   ErrorResponseError,
@@ -276,8 +276,6 @@ part 'serializers.g.dart';
   ModerationFlagValidationError,
   NewsBoardFeedResponse,
   NewsSourceMetadata,
-  OAuthTokenResponse,
-  OAuthTokenResponseData,
   Post,$Post,
   PostProofSignals,
   PostTrustTimeline,

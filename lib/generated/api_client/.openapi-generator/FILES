@@ -72,7 +72,6 @@ doc/AppealVoteResponse.md
 doc/AppealVoteResponseVote.md
 doc/AppealsApi.md
 doc/AuthApi.md
-doc/AuthTokenRequest.md
 doc/BadGatewayError.md
 doc/BadGatewayErrorError.md
 doc/CreateCustomFeedRequest.md
@@ -86,6 +85,8 @@ doc/DSRExportResponseMetadata.md
 doc/DsrRequestInput.md
 doc/DsrRequestSummary.md
 doc/EmailLoginRequest.md
+doc/EmailSessionResponse.md
+doc/EmailSessionResponseData.md
 doc/Error.md
 doc/ErrorResponse.md
 doc/ErrorResponseError.md
@@ -120,8 +121,6 @@ doc/ModerationFlagValidationError.md
 doc/NewsBoardFeedResponse.md
 doc/NewsSourceMetadata.md
 doc/NotificationsApi.md
-doc/OAuthTokenResponse.md
-doc/OAuthTokenResponseData.md
 doc/PaymentsApi.md
 doc/Post.md
 doc/PostProofSignals.md
@@ -261,7 +260,6 @@ lib/src/model/appeal_created_response_appeal.dart
 lib/src/model/appeal_vote_request.dart
 lib/src/model/appeal_vote_response.dart
 lib/src/model/appeal_vote_response_vote.dart
-lib/src/model/auth_token_request.dart
 lib/src/model/bad_gateway_error.dart
 lib/src/model/bad_gateway_error_error.dart
 lib/src/model/create_custom_feed_request.dart
@@ -275,6 +273,8 @@ lib/src/model/dsr_export_response_metadata.dart
 lib/src/model/dsr_request_input.dart
 lib/src/model/dsr_request_summary.dart
 lib/src/model/email_login_request.dart
+lib/src/model/email_session_response.dart
+lib/src/model/email_session_response_data.dart
 lib/src/model/error.dart
 lib/src/model/error_response.dart
 lib/src/model/error_response_error.dart
@@ -305,8 +305,6 @@ lib/src/model/moderation_blocked_response.dart
 lib/src/model/moderation_flag_validation_error.dart
 lib/src/model/news_board_feed_response.dart
 lib/src/model/news_source_metadata.dart
-lib/src/model/o_auth_token_response.dart
-lib/src/model/o_auth_token_response_data.dart
 lib/src/model/post.dart
 lib/src/model/post_proof_signals.dart
 lib/src/model/post_trust_timeline.dart
@@ -416,7 +414,6 @@ test/appeal_vote_response_test.dart
 test/appeal_vote_response_vote_test.dart
 test/appeals_api_test.dart
 test/auth_api_test.dart
-test/auth_token_request_test.dart
 test/bad_gateway_error_error_test.dart
 test/bad_gateway_error_test.dart
 test/create_custom_feed_request_test.dart
@@ -430,6 +427,8 @@ test/dsr_export_response_test.dart
 test/dsr_request_input_test.dart
 test/dsr_request_summary_test.dart
 test/email_login_request_test.dart
+test/email_session_response_data_test.dart
+test/email_session_response_test.dart
 test/error_response_error_test.dart
 test/error_response_test.dart
 test/error_test.dart
@@ -464,8 +463,6 @@ test/moderation_flag_validation_error_test.dart
 test/news_board_feed_response_test.dart
 test/news_source_metadata_test.dart
 test/notifications_api_test.dart
-test/o_auth_token_response_data_test.dart
-test/o_auth_token_response_test.dart
 test/payments_api_test.dart
 test/post_proof_signals_test.dart
 test/post_test.dart
