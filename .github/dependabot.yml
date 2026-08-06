@@ -10,8 +10,6 @@ updates:
     labels:
       - "dependencies"
       - "flutter"
-    reviewers:
-      - "AsoraKK"
 
   # Native Workers and shared packages
   - package-ecosystem: "npm"
@@ -23,8 +21,6 @@ updates:
     labels:
       - "dependencies"
       - "backend"
-    reviewers:
-      - "AsoraKK"
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
@@ -36,8 +32,6 @@ updates:
     labels:
       - "dependencies"
       - "ci"
-    reviewers:
-      - "AsoraKK"
 
   # Marketing site (Astro)
   - package-ecosystem: "npm"

@@ -101,11 +101,6 @@ Class | Method | HTTP request | Description
 [*AdminApi*](doc/AdminApi.md) | [**adminInvitesRevoke**](doc/AdminApi.md#admininvitesrevoke) | **POST** /_admin/invites/{inviteId}/revoke | Revoke an invite code
 [*AdminApi*](doc/AdminApi.md) | [**adminModerationClassReset**](doc/AdminApi.md#adminmoderationclassreset) | **POST** /admin/moderation-classes/{className}/reset | Reset a moderation class to defaults
 [*AdminApi*](doc/AdminApi.md) | [**adminModerationClassesList**](doc/AdminApi.md#adminmoderationclasseslist) | **GET** /admin/moderation-classes | List moderation label classes
-[*AdminApi*](doc/AdminApi.md) | [**adminModerationTestDelete**](doc/AdminApi.md#adminmoderationtestdelete) | **DELETE** /admin/moderation/test/{path} | Proxy DELETE to Hive AI test endpoint
-[*AdminApi*](doc/AdminApi.md) | [**adminModerationTestGet**](doc/AdminApi.md#adminmoderationtestget) | **GET** /admin/moderation/test/{path} | Proxy GET to Hive AI test endpoint
-[*AdminApi*](doc/AdminApi.md) | [**adminModerationTestPatch**](doc/AdminApi.md#adminmoderationtestpatch) | **PATCH** /admin/moderation/test/{path} | Proxy PATCH to Hive AI test endpoint
-[*AdminApi*](doc/AdminApi.md) | [**adminModerationTestPost**](doc/AdminApi.md#adminmoderationtestpost) | **POST** /admin/moderation/test/{path} | Proxy POST to Hive AI test endpoint
-[*AdminApi*](doc/AdminApi.md) | [**adminModerationTestPut**](doc/AdminApi.md#adminmoderationtestput) | **PUT** /admin/moderation/test/{path} | Proxy PUT to Hive AI test endpoint
 [*AdminApi*](doc/AdminApi.md) | [**adminModerationWeightsUpdate**](doc/AdminApi.md#adminmoderationweightsupdate) | **POST** /admin/moderation-classes/weights | Bulk-update moderation class weights
 [*AdminApi*](doc/AdminApi.md) | [**adminNewsIngest**](doc/AdminApi.md#adminnewsingest) | **POST** /_admin/news/ingest | Ingest news items into the news board
 [*AdminApi*](doc/AdminApi.md) | [**adminOpsMetrics**](doc/AdminApi.md#adminopsmetrics) | **GET** /_admin/ops/metrics | Get operational metrics

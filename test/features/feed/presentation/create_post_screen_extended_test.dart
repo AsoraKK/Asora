@@ -139,22 +139,21 @@ void main() {
     });
   });
 
-  group('Media handling', () {
-    testWidgets('add media button is present', (tester) async {
+  group('Deferred media handling', () {
+    testWidgets('media attachments are absent for signed-in users', (
+      tester,
+    ) async {
       await tester.pumpWidget(buildWidget(user: _testUser()));
       await tester.pumpAndSettle();
 
-      // Should have media button in bottom toolbar
-      expect(find.byIcon(Icons.image_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.image_outlined), findsNothing);
     });
 
-    testWidgets('media button disabled when not signed in', (tester) async {
+    testWidgets('media attachments are absent for guests', (tester) async {
       await tester.pumpWidget(buildWidget(user: null));
       await tester.pumpAndSettle();
 
-      final iconButton = find.widgetWithIcon(IconButton, Icons.image_outlined);
-      final btn = tester.widget<IconButton>(iconButton);
-      expect(btn.onPressed, isNull);
+      expect(find.byIcon(Icons.image_outlined), findsNothing);
     });
   });
 

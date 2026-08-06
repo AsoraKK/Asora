@@ -19,7 +19,7 @@
 
 set -euo pipefail
 
-SECRETS_URL="https://github.com/AsoraKK/Lythaus/settings/secrets/actions"
+SECRETS_URL="https://github.com/LythausHQ/Lythaus/settings/secrets/actions"
 
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT

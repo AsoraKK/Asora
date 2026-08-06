@@ -5,8 +5,8 @@ const { resolve } = require('node:path');
 
 const workflowPath = resolve(__dirname, '../../.github/workflows/native-workers-deploy.yml');
 const workflow = readFileSync(workflowPath, 'utf8');
-const retiredCloudHost = ['azure', 'websites'].join('');
-const retiredLoginAction = ['azure', '\\/login@'].join('');
+const retiredCloudHost = ['az', 'ure', 'websites'].join('');
+const retiredLoginAction = ['az', 'ure', '\\/login@'].join('');
 const retiredCliTargets = ['az\\s+(?:function', 'app|webapp)'].join('');
 
 test('native release requires the exact current main SHA', () => {

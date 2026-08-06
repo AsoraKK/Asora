@@ -7,7 +7,7 @@ const root = path.resolve(import.meta.dirname, '../..');
 const retiredBrand = ['as', 'ora'].join('');
 const retiredDomain = new RegExp(`${retiredBrand}\\.co\\.za`, 'i');
 const retiredWorkersDev = new RegExp(`${retiredBrand}\\.workers\\.dev`, 'i');
-const retiredCloudHost = new RegExp(`${['azure', 'websites'].join('')}\\.net`, 'i');
+const retiredCloudHost = new RegExp(`${['az', 'ure', 'websites'].join('')}\\.net`, 'i');
 const configs = [
   'apps/lythaus-public-api/wrangler.jsonc',
   'apps/lythaus-admin-api/wrangler.jsonc',
@@ -210,10 +210,12 @@ test('production config reuses existing Workers and disables paid or incomplete 
 
 test('active runtimes have an explicit retired-provider dependency scan', () => {
   const script = fs.readFileSync(path.join(root, 'scripts/validate-no-retired-provider-dependencies.mjs'), 'utf8');
-  assert.match(script, /retiredCloudHost/);
-  assert.match(script, /retiredDocumentClient/);
-  assert.match(script, /retiredTelemetryPackage/);
   assert.match(script, /retiredBrand/);
+  assert.match(script, /retiredProvider/);
+  assert.match(script, /retiredDatabase/);
+  assert.match(script, /retiredClassifier/);
+  assert.match(script, /retired authentication/);
+  assert.match(script, /git', \['ls-files', '-z'\]/);
 });
 
 test('jobs Worker exposes durable privacy and appeal workflows', () => {

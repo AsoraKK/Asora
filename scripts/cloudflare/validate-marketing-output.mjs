@@ -5,7 +5,7 @@ const output = process.argv[2] ?? 'apps/marketing-site/dist';
 const site = 'https://lythaus.co';
 const violations = [];
 const retiredBrand = ['as', 'ora'].join('');
-const retiredCloudHost = ['azure', 'websites'].join('');
+const retiredCloudHost = ['az', 'ure', 'websites'].join('');
 const forbiddenPublicDomain = new RegExp(`(${retiredBrand}\\.co\\.za|pages\\.dev|${retiredCloudHost}\\.net)`, 'i');
 
 function walk(directory) {

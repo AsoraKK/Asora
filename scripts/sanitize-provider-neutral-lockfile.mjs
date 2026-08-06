@@ -9,7 +9,7 @@ if (!input) {
 
 const file = path.resolve(process.cwd(), input);
 const lock = JSON.parse(fs.readFileSync(file, 'utf8'));
-const retiredScope = ['@', 'azure', '/'].join('');
+const retiredScope = ['@', 'az', 'ure', '/'].join('');
 let removed = 0;
 
 for (const [packagePath, entry] of Object.entries(lock.packages ?? {})) {

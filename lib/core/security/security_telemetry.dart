@@ -135,7 +135,7 @@ class SecurityTelemetry {
     // In production, route to central telemetry pipeline
     // Example integration points:
     // - Firebase Analytics
-    // - Azure Application Insights
+    // - Cloudflare observability
     // - Custom telemetry service
     //
     // if (kReleaseMode) {

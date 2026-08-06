@@ -83,12 +83,13 @@ class CreatePostRequest {
   });
 
   Map<String, dynamic> toJson() => {
-    'content': text,
-    if (mediaUrl != null) 'mediaUrls': [mediaUrl],
-    'isNews': isNews,
-    'contentType': contentType,
-    'aiLabel': aiLabel,
-    if (proofSignals.hasAny) 'proofSignals': proofSignals.toJson(),
+    'body': text,
+    'declaredCreationMode': switch (aiLabel) {
+      'assisted' => 'ai_assisted',
+      'generated' => 'ai_generated',
+      _ => 'human',
+    },
+    'geoScope': 'none',
   };
 }
 

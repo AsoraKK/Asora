@@ -246,7 +246,7 @@
       "purpose": "canonical Lythaus PostgreSQL database",
       "workerBinding": "main via Hyperdrive",
       "authoritativeOwner": "Lythaus data owner",
-      "currentStatus": "authoritative; canonical PostgreSQL 17 schema and selected Azure records applied",
+      "currentStatus": "authoritative; canonical PostgreSQL 17 schema and selected legacy records applied",
       "expectedCostClass": "existing configured database usage",
       "temporary": false,
       "deletionAllowed": false,

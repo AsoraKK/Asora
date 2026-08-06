@@ -3798,220 +3798,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /admin/moderation/test/{path}:
-    get:
-      operationId: adminModerationTestGet
-      summary: Proxy GET to Hive AI test endpoint
-      tags:
-        - Admin
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: path
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                type: object
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-    post:
-      operationId: adminModerationTestPost
-      summary: Proxy POST to Hive AI test endpoint
-      tags:
-        - Admin
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: path
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                type: object
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-    put:
-      operationId: adminModerationTestPut
-      summary: Proxy PUT to Hive AI test endpoint
-      tags:
-        - Admin
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: path
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                type: object
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-    delete:
-      operationId: adminModerationTestDelete
-      summary: Proxy DELETE to Hive AI test endpoint
-      tags:
-        - Admin
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: path
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                type: object
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-    patch:
-      operationId: adminModerationTestPatch
-      summary: Proxy PATCH to Hive AI test endpoint
-      tags:
-        - Admin
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: path
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                type: object
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
   /analytics/events:
     post:
       operationId: analyticsEventsCreate
@@ -6175,7 +5961,7 @@ paths:
     get:
       operationId: reputationLedgerGet
       summary: Get my reputation ledger
-      description: Returns user-visible reputation events. Internal reason codes, raw deltas, Hive scores, and anti-abuse scores are excluded.
+      description: Returns user-visible reputation events. Internal reason codes, raw deltas, authenticity scores, and anti-abuse scores are excluded.
       tags: [Reputation]
       security:
         - bearerAuth: []
@@ -6745,45 +6531,32 @@ components:
     CreatePostRequest:
       type: object
       required:
-        - content
-        - contentType
-        - aiLabel
+        - body
+        - declaredCreationMode
+        - geoScope
       properties:
-        content:
+        body:
           type: string
-        contentType:
-          type: string
-          enum:
-            - text
-            - image
-            - video
-            - mixed
-        mediaUrls:
-          type: array
-          items:
-            type: string
-            format: uri
-        topics:
-          type: array
-          items:
-            type: string
-        visibility:
-          type: string
-          enum:
-            - public
-            - followers
-            - private
-        isNews:
-          type: boolean
-        aiLabel:
+          minLength: 1
+          maxLength: 100000
+        declaredCreationMode:
           type: string
           description: Required user authorship disclosure. Public responses use categorical labels only.
           enum:
             - human
-            - assisted
-            - generated
-        proofSignals:
-          $ref: '#/components/schemas/PostProofSignals'
+            - ai_assisted
+            - ai_generated
+        geoScope:
+          type: string
+          enum:
+            - global
+            - country
+            - province
+            - municipality
+            - community
+            - none
+        placeId:
+          type: string
     UpdatePostRequest:
       type: object
       properties:

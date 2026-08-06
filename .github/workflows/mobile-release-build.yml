@@ -151,7 +151,7 @@ jobs:
           set -euo pipefail
           artifact="build/app/outputs/bundle/release/app-release.aab"
           retired_brand='as''ora'
-          retired_cloud_host='azure''websites'
+          retired_cloud_host='az''ure''websites'
           if unzip -p "$artifact" | strings | grep -Eiq "${retired_cloud_host}\\.net|${retired_brand}-function-(dev|prod)|api\\.${retired_brand}\\.co\\.za|admin-api\\.${retired_brand}\\.co\\.za"; then
             echo "Release artifact contains a forbidden direct-origin reference." >&2
             exit 1

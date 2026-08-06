@@ -64,7 +64,7 @@ Name | Type | Description  | Notes
 
 Get my reputation ledger
 
-Returns user-visible reputation events. Internal reason codes, raw deltas, Hive scores, and anti-abuse scores are excluded.
+Returns user-visible reputation events. Internal reason codes, raw deltas, authenticity scores, and anti-abuse scores are excluded.
 
 ### Example
 ```dart
