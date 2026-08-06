@@ -1,8 +1,8 @@
 {
-  "name": "asora-monorepo",
+  "name": "lythaus-monorepo",
   "version": "1.0.0",
   "private": true,
-  "description": "Asora platform - Flutter mobile app with Azure Functions backend",
+  "description": "Lythaus platform - Flutter clients with Cloudflare Workers and PlanetScale PostgreSQL",
   "scripts": {
     "prepare": "if [ \"$CI\" = \"true\" ]; then exit 0; fi; command -v npx >/dev/null 2>&1 && npx husky install || true",
     "format-dart": "node scripts/check-dart-format.mjs",
@@ -45,7 +45,7 @@
     "validate:native-workers:provisioned": "node scripts/validate-native-worker-config.mjs --require-provisioned",
     "validate:native-scope": "node scripts/validate-native-scope.mjs",
     "validate:native-scope:production": "node scripts/validate-native-scope.mjs --production",
-    "validate:native-azure-dependencies": "node scripts/validate-native-azure-dependencies.mjs",
+    "validate:no-retired-provider-dependencies": "node scripts/validate-no-retired-provider-dependencies.mjs",
     "validate:github-azure-disconnection": "node scripts/validate-github-azure-disconnection.mjs",
     "validate:cloudflare-hyperdrive-targets": "node scripts/ci/verify-cloudflare-hyperdrive-targets.mjs",
     "validate:cloudflare-hyperdrive-targets:manifest": "node scripts/ci/verify-cloudflare-hyperdrive-targets.mjs --manifest-only",
@@ -152,6 +152,6 @@
     "typescript",
     "monorepo"
   ],
-  "author": "Asora Team",
+  "author": "Lythaus",
   "license": "MIT"
 }

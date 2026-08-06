@@ -52,6 +52,6 @@ Paid moderation, Workers AI, deep scans, and experiments reserve estimated spend
 3. ADR 003 web and mobile authentication acceptance passes end to end.
 4. The budget exhaustion simulation blocks new paid work.
 5. Active legacy routes, callbacks, credentials, and deployment paths are absent.
-6. Azure deletion is explicitly authorized immediately before irreversible execution; this repository does not authorize that deletion.
+6. Azure was fully deleted on 6 August 2026; rollback and recovery use Cloudflare deployment versions, R2 evidence, and PlanetScale backup procedures.
 
 Historical Azure architecture remains available under `docs/archive/azure-exit/` and the dated evidence tree for audit purposes. Those records are non-authoritative.

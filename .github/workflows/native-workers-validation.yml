@@ -9,7 +9,7 @@ on:
       - 'database/planetscale/**'
       - 'scripts/validate-native-worker-config.mjs'
       - 'scripts/validate-native-scope.mjs'
-      - 'scripts/validate-native-azure-dependencies.mjs'
+      - 'scripts/validate-no-retired-provider-dependencies.mjs'
       - 'scripts/ci/apply-planetscale-production-migrations.mjs'
       - 'scripts/ci/verify-planetscale-production-schema.mjs'
       - 'scripts/validate-production-gates.mjs'
@@ -39,7 +39,7 @@ on:
       - 'packages/**'
       - 'database/planetscale/**'
       - 'scripts/validate-native-worker-config.mjs'
-      - 'scripts/validate-native-azure-dependencies.mjs'
+      - 'scripts/validate-no-retired-provider-dependencies.mjs'
       - 'scripts/ci/apply-planetscale-production-migrations.mjs'
       - 'scripts/ci/verify-planetscale-production-schema.mjs'
       - 'scripts/validate-production-gates.mjs'
@@ -81,7 +81,7 @@ jobs:
       - run: npm run typecheck:native
       - run: npm run validate:native-workers
       - run: npm run validate:native-scope
-      - run: npm run validate:native-azure-dependencies
+      - run: npm run validate:no-retired-provider-dependencies
       - run: npm run validate:planetscale-migrations
       - run: npm run validate:planetscale-extensions
       - run: npm run test:native-architecture
