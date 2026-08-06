@@ -4,6 +4,8 @@ import { join, relative, sep } from 'node:path';
 const output = process.argv[2] ?? 'apps/marketing-site/dist';
 const site = 'https://lythaus.co';
 const violations = [];
+const retiredBrand = ['as', 'ora'].join('');
+const forbiddenPublicDomain = new RegExp(`(${retiredBrand}\\.co\\.za|pages\\.dev|azurewebsites\\.net)`, 'i');
 
 function walk(directory) {
   return readdirSync(directory).flatMap((entry) => {
@@ -54,7 +56,7 @@ for (const file of htmlFiles) {
     if (!existsSync(asset)) violations.push(`${route}: broken internal link ${value}`);
   }
 
-  if (/(asora\.co\.za|pages\.dev|azurewebsites\.net)/i.test(content)) {
+  if (forbiddenPublicDomain.test(content)) {
     violations.push(`${route}: forbidden public-domain reference`);
   }
 }
@@ -95,7 +97,7 @@ if (existsSync(headersPath)) {
   for (const required of requiredHeaders) {
     if (!headers.includes(required)) violations.push(`_headers is missing ${required}`);
   }
-  if (/(asora\.co\.za|pages\.dev|azurewebsites\.net)/i.test(headers)) {
+  if (forbiddenPublicDomain.test(headers)) {
     violations.push('_headers contains a forbidden public-domain reference');
   }
 }

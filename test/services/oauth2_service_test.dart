@@ -5,7 +5,7 @@ import 'package:flutter_appauth/flutter_appauth.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:dio/dio.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:asora/services/oauth2_service.dart';
+import 'package:lythaus/services/oauth2_service.dart';
 
 class MockFlutterAppAuth extends Mock implements FlutterAppAuth {}
 

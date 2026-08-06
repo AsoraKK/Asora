@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// ASORA CONTENT TYPE HELPER
+/// LYTHAUS CONTENT TYPE HELPER
 ///
 /// 🎯 Purpose: Centralized content type utility functions
 /// 🔍 Single Responsibility: Content type mapping only

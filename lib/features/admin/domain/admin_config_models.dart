@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA ADMIN CONFIG MODELS
+/// LYTHAUS ADMIN CONFIG MODELS
 ///
 /// 🎯 Purpose: Typed models for admin configuration API
 /// 📡 Endpoints: GET/PUT /api/admin/config

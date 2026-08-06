@@ -4,10 +4,10 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:asora/core/security/device_integrity_guard.dart';
-import 'package:asora/design_system/components/lyth_button.dart';
-import 'package:asora/design_system/theme/theme_build_context_x.dart';
-import 'package:asora/features/auth/application/auth_controller.dart';
+import 'package:lythaus/core/security/device_integrity_guard.dart';
+import 'package:lythaus/design_system/components/lyth_button.dart';
+import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
+import 'package:lythaus/features/auth/application/auth_controller.dart';
 
 /// Sign-in page with Email and Google sign-in options
 class SignInPage extends ConsumerWidget {

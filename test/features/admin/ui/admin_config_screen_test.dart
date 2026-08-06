@@ -8,10 +8,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/features/admin/api/admin_api_client.dart';
-import 'package:asora/features/admin/domain/admin_config_models.dart';
-import 'package:asora/features/admin/state/admin_config_controller.dart';
-import 'package:asora/features/admin/ui/admin_config_screen.dart';
+import 'package:lythaus/features/admin/api/admin_api_client.dart';
+import 'package:lythaus/features/admin/domain/admin_config_models.dart';
+import 'package:lythaus/features/admin/state/admin_config_controller.dart';
+import 'package:lythaus/features/admin/ui/admin_config_screen.dart';
 
 void main() {
   group('AdminConfigScreen', () {

@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA OAUTH2 SERVICE WITH FLUTTER APPAUTH
+/// LYTHAUS OAUTH2 SERVICE WITH FLUTTER APPAUTH
 ///
 /// 🎯 Purpose: OAuth2 authorization and token management backed by AppAuth
 /// 🏗️ Architecture: Thin wrapper around flutter_appauth + secure storage
@@ -19,11 +19,11 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart' show LaunchMode;
 
-import 'package:asora/core/auth/auth_session_manager.dart';
+import 'package:lythaus/core/auth/auth_session_manager.dart';
 
-import 'package:asora/features/auth/application/web_auth_service.dart';
-import 'package:asora/features/auth/domain/auth_failure.dart';
-import 'package:asora/features/auth/domain/user.dart';
+import 'package:lythaus/features/auth/application/web_auth_service.dart';
+import 'package:lythaus/features/auth/domain/auth_failure.dart';
+import 'package:lythaus/features/auth/domain/user.dart';
 
 /// Centralized configuration for the native Lythaus OAuth2 endpoints used by
 /// the Flutter client.
@@ -50,7 +50,7 @@ class OAuth2Config {
 
   static const String clientId = String.fromEnvironment(
     'OAUTH2_CLIENT_ID',
-    defaultValue: 'asora-mobile-app',
+    defaultValue: 'lythaus-mobile-app',
   );
 
   static const String discoveryUrl = String.fromEnvironment(
@@ -100,15 +100,15 @@ class OAuth2Config {
 
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
-        return 'com.asora.app://oauth/callback';
+        return 'co.lythaus.app://oauth/callback';
       case TargetPlatform.iOS:
       case TargetPlatform.macOS:
-        return 'asora://oauth/callback';
+        return 'lythaus://oauth/callback';
       case TargetPlatform.windows:
       case TargetPlatform.linux:
         return 'http://localhost:8080/oauth/callback';
       default:
-        return 'asora://oauth/callback';
+        return 'lythaus://oauth/callback';
     }
   }
 

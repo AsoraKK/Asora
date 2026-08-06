@@ -12,7 +12,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/features/admin/application/live_test_mode_provider.dart';
+import 'package:lythaus/features/admin/application/live_test_mode_provider.dart';
 
 /// Dio interceptor that injects test mode headers when live test mode is active
 class TestModeInterceptor extends Interceptor {

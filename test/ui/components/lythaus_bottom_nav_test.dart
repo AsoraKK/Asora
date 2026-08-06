@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/data/mock/mock_settings.dart';
-import 'package:asora/state/models/settings.dart';
-import 'package:asora/state/providers/settings_providers.dart';
-import 'package:asora/ui/components/asora_bottom_nav.dart';
+import 'package:lythaus/data/mock/mock_settings.dart';
+import 'package:lythaus/state/models/settings.dart';
+import 'package:lythaus/state/providers/settings_providers.dart';
+import 'package:lythaus/ui/components/lythaus_bottom_nav.dart';
 
 Widget _buildNav({
   required SettingsState settings,
@@ -18,7 +18,7 @@ Widget _buildNav({
     ],
     child: MaterialApp(
       home: Scaffold(
-        bottomNavigationBar: AsoraBottomNav(
+        bottomNavigationBar: LythausBottomNav(
           currentIndex: currentIndex,
           onTap: onTap,
         ),

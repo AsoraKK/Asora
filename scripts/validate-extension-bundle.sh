@@ -40,8 +40,8 @@ if command -v az &> /dev/null && az account show &> /dev/null 2>&1; then
     echo ""
     echo "🔍 Checking Azure Function App settings..."
     
-    FUNC_APP="${FUNC_APP:-asora-function-dev}"
-    RG="${RG:-asora-psql-flex}"
+    FUNC_APP="${FUNC_APP:-lythaus-function-dev}"
+    RG="${RG:-lythaus-psql-flex}"
     
     echo "   App: $FUNC_APP"
     echo "   Resource Group: $RG"

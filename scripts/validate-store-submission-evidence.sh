@@ -121,8 +121,8 @@ echo ""
 
 echo "§2  App Store Connect"
 
-check "ASC §2.1" "App Store Connect app record exists (bundle ID: com.asora.app)" \
-  "Go to ${ASC_URL} → My Apps → + → New App → iOS → bundle ID com.asora.app"
+check "ASC §2.1" "App Store Connect app record exists (bundle ID: co.lythaus.app)" \
+  "Go to ${ASC_URL} → My Apps → + → New App → iOS → bundle ID co.lythaus.app"
 
 check "ASC §2.1" "Age rating questionnaire completed (expected: 17+)" \
   "ASC → App record → App Information → Age Rating → complete questionnaire"

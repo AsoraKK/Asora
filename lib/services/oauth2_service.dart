@@ -123,7 +123,7 @@ class AuthConfig {
       redirectUris: const {
         'android': String.fromEnvironment(
           'OAUTH2_REDIRECT_URI_ANDROID',
-          defaultValue: 'com.asora.app://oauth/callback',
+          defaultValue: 'co.lythaus.app://oauth/callback',
         ),
         'ios': String.fromEnvironment(
           'OAUTH2_REDIRECT_URI_IOS',

@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-import 'package:asora/services/oauth2_service.dart';
+import 'package:lythaus/services/oauth2_service.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';

@@ -10,8 +10,8 @@
 - name: Deploy to Azure Functions
   run: |
     az functionapp deployment source config-zip \
-      -g asora-psql-flex \
-      -n asora-function-dev \
+      -g lythaus-psql-flex \
+      -n lythaus-function-dev \
       --src dist-v4-final.zip \
       --timeout 600
 
@@ -22,8 +22,8 @@
     
     # List functions
     az functionapp function list \
-      -g asora-psql-flex \
-      -n asora-function-dev \
+      -g lythaus-psql-flex \
+      -n lythaus-function-dev \
       --query "[].name" \
       --output tsv
     

@@ -12,14 +12,14 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/features/admin/application/live_test_mode_provider.dart';
-import 'package:asora/features/admin/ui/app_preview_screen.dart';
-import 'package:asora/ui/screens/onboarding/onboarding_intro.dart';
-import 'package:asora/ui/screens/rewards/rewards_dashboard.dart';
-import 'package:asora/ui/components/create_post_modal.dart';
-import 'package:asora/screens/feed_screen.dart';
-import 'package:asora/ui/screens/profile/profile_screen.dart';
-import 'package:asora/ui/screens/profile/settings_screen.dart';
+import 'package:lythaus/features/admin/application/live_test_mode_provider.dart';
+import 'package:lythaus/features/admin/ui/app_preview_screen.dart';
+import 'package:lythaus/ui/screens/onboarding/onboarding_intro.dart';
+import 'package:lythaus/ui/screens/rewards/rewards_dashboard.dart';
+import 'package:lythaus/ui/components/create_post_modal.dart';
+import 'package:lythaus/screens/feed_screen.dart';
+import 'package:lythaus/ui/screens/profile/profile_screen.dart';
+import 'package:lythaus/ui/screens/profile/settings_screen.dart';
 
 /// Provider for mock user posts in preview mode
 final previewUserPostsProvider = StateProvider<List<_MockUserPost>>(

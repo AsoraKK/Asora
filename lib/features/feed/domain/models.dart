@@ -2,7 +2,7 @@
 
 library feed_models;
 
-/// ASORA FEED DOMAIN MODELS
+/// LYTHAUS FEED DOMAIN MODELS
 ///
 /// 🎯 Purpose: Core domain models for social media feed features
 /// 🏗️ Architecture: Domain layer - defines business entities

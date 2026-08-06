@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA ADMIN CONFIG SCREEN
+/// LYTHAUS ADMIN CONFIG SCREEN
 ///
 /// 🎯 Purpose: UI for admin configuration management
 /// 🏗️ Architecture: Presentation layer - displays state and handles user input
@@ -12,12 +12,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import 'package:asora/design_system/components/lyth_button.dart';
-import 'package:asora/design_system/components/lyth_card.dart';
-import 'package:asora/design_system/components/lyth_slider.dart';
-import 'package:asora/design_system/theme/theme_build_context_x.dart';
-import 'package:asora/features/admin/domain/admin_config_models.dart';
-import 'package:asora/features/admin/state/admin_config_controller.dart';
+import 'package:lythaus/design_system/components/lyth_button.dart';
+import 'package:lythaus/design_system/components/lyth_card.dart';
+import 'package:lythaus/design_system/components/lyth_slider.dart';
+import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
+import 'package:lythaus/features/admin/domain/admin_config_models.dart';
+import 'package:lythaus/features/admin/state/admin_config_controller.dart';
 
 /// Admin configuration screen
 class AdminConfigScreen extends ConsumerWidget {

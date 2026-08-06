@@ -66,12 +66,12 @@ const uuidReference = (value, label) => {
 function transformDocument(document) {
   const createdAt = timestamp(document, ['createdAt', 'created_at', '_ts']);
   const { sourceId, id } = idFor(document, createdAt);
-  if (source === 'Cosmos asora/users') {
+  if (source === 'Cosmos lythaus/users') {
     const status = first(document, ['status', 'accountStatus']) ?? 'active';
     if (!['active', 'suspended', 'deleted', 'locked'].includes(status)) throw new Error(`invalid account status: ${status}`);
     return { destinationTable: 'identity.users', sourceId, generatedId: id !== sourceId, record: { id, status, display_name: String(first(document, ['displayName', 'display_name', 'name']) ?? ''), created_at: createdAt, updated_at: timestamp(document, ['updatedAt', 'updated_at'], createdAt) } };
   }
-  if (source === 'Cosmos asora/comments') {
+  if (source === 'Cosmos lythaus/comments') {
     const authorId = first(document, ['authorId', 'author_id', 'userId']);
     const postId = first(document, ['postId', 'post_id']);
     const body = first(document, ['body', 'text', 'content']);
@@ -79,7 +79,7 @@ function transformDocument(document) {
     const parentId = first(document, ['parentId', 'parent_id']);
     return { destinationTable: 'content.comments', sourceId, generatedId: id !== sourceId, record: { id, author_id: uuidReference(authorId, 'comment author'), post_id: uuidReference(postId, 'comment post'), parent_id: parentId === undefined || parentId === null ? null : uuidReference(parentId, 'comment parent'), body, moderation_state: first(document, ['moderationState', 'moderation_state']) ?? 'under_review', created_at: createdAt } };
   }
-  if (source === 'Cosmos asora/likes') {
+  if (source === 'Cosmos lythaus/likes') {
     const userId = first(document, ['userId', 'user_id']);
     const postId = first(document, ['postId', 'post_id']);
     if (!userId || !postId) throw new Error('like requires user and post');

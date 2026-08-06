@@ -269,7 +269,7 @@ function allowedOAuthRedirect(value: string, env: Env): boolean {
       const origins = (env.CORS_ALLOWED_ORIGINS ?? '').split(',').map((origin) => origin.trim()).filter(Boolean);
       return origins.includes(uri.origin);
     }
-    return (uri.protocol === 'asora:' || uri.protocol === 'lythaus:' || uri.protocol === 'com.asora.app:')
+    return (uri.protocol === 'lythaus:' || uri.protocol === 'lythaus:' || uri.protocol === 'co.lythaus.app:')
       && uri.hostname === 'oauth'
       && uri.pathname === '/callback';
   } catch {

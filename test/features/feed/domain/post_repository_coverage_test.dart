@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/features/feed/domain/post_repository.dart';
+import 'package:lythaus/features/feed/domain/post_repository.dart';
 
 void main() {
   group('UpdatePostRequest', () {

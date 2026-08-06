@@ -7,9 +7,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
 
-import 'package:asora/features/admin/api/admin_api_client.dart';
-import 'package:asora/features/admin/domain/admin_config_models.dart';
-import 'package:asora/features/admin/state/admin_config_controller.dart';
+import 'package:lythaus/features/admin/api/admin_api_client.dart';
+import 'package:lythaus/features/admin/domain/admin_config_models.dart';
+import 'package:lythaus/features/admin/state/admin_config_controller.dart';
 
 @GenerateMocks([AdminApiClient])
 import 'admin_config_diff_test.mocks.dart';

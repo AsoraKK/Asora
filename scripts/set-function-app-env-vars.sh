@@ -1,7 +1,7 @@
 #!/bin/bash
 # Set Azure Function App environment variables for notifications
 # Usage: ./set-function-app-env-vars.sh <function-app-name> <environment>
-# Example: ./set-function-app-env-vars.sh asora-function-dev dev
+# Example: ./set-function-app-env-vars.sh lythaus-function-dev dev
 
 set -e
 
@@ -11,7 +11,7 @@ ENVIRONMENT=${2:-dev}
 if [ -z "$FUNCTION_APP_NAME" ]; then
   echo "ERROR: Function app name required"
   echo "Usage: $0 <function-app-name> <environment>"
-  echo "Example: $0 asora-function-dev dev"
+  echo "Example: $0 lythaus-function-dev dev"
   exit 1
 fi
 
@@ -39,7 +39,7 @@ if [ -z "$HUB_CONN" ]; then
   exit 1
 fi
 
-read -p "NOTIFICATION_HUB_NAME (required, e.g., asora-notifications-dev): " HUB_NAME
+read -p "NOTIFICATION_HUB_NAME (required, e.g., lythaus-notifications-dev): " HUB_NAME
 if [ -z "$HUB_NAME" ]; then
   echo "ERROR: NOTIFICATION_HUB_NAME is required"
   exit 1

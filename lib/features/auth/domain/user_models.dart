@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA USER MODELS
+/// LYTHAUS USER MODELS
 ///
 /// 🎯 Purpose: User data models for authentication and profiles
 /// 🔄 Sync: Matches Azure Functions backend response structure
@@ -93,9 +93,9 @@ class UserProfile {
 class UserStats {
   final int postsCount;
   final int
-  followersCount; // NOTE(asora-backlog): populate from social graph service once ready
+  followersCount; // NOTE(lythaus-backlog): populate from social graph service once ready
   final int
-  followingCount; // NOTE(asora-backlog): populate from social graph service once ready
+  followingCount; // NOTE(lythaus-backlog): populate from social graph service once ready
 
   const UserStats({
     required this.postsCount,

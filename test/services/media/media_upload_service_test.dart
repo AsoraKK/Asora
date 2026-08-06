@@ -4,7 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:asora/services/media/media_upload_service.dart';
+import 'package:lythaus/services/media/media_upload_service.dart';
 
 class MockDio extends Mock implements Dio {}
 

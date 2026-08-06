@@ -12,13 +12,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:asora/features/feed/presentation/create_post_screen.dart';
-import 'package:asora/features/feed/application/post_creation_providers.dart';
-import 'package:asora/features/feed/domain/post_repository.dart';
-import 'package:asora/features/feed/domain/models.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/auth/application/oauth2_service.dart';
-import 'package:asora/features/auth/domain/user.dart';
+import 'package:lythaus/features/feed/presentation/create_post_screen.dart';
+import 'package:lythaus/features/feed/application/post_creation_providers.dart';
+import 'package:lythaus/features/feed/domain/post_repository.dart';
+import 'package:lythaus/features/feed/domain/models.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/application/oauth2_service.dart';
+import 'package:lythaus/features/auth/domain/user.dart';
 
 // Mock classes
 class MockPostRepository extends Mock implements PostRepository {}
@@ -89,7 +89,7 @@ void main() {
       id: 'new-post-123',
       authorId: 'test-user-id',
       authorUsername: 'testuser',
-      text: 'My first post on Asora!',
+      text: 'My first post on Lythaus!',
       createdAt: DateTime.now(),
       likeCount: 0,
       dislikeCount: 0,
@@ -156,7 +156,7 @@ void main() {
 
       // Enter post text
       final textField = find.byType(TextField);
-      await tester.enterText(textField, 'My first post on Asora!');
+      await tester.enterText(textField, 'My first post on Lythaus!');
       await tester.pump();
       await chooseHumanAuthorship(tester);
 
@@ -178,7 +178,7 @@ void main() {
           request: any(
             named: 'request',
             that: predicate<CreatePostRequest>(
-              (r) => r.text == 'My first post on Asora!' && r.mediaUrl == null,
+              (r) => r.text == 'My first post on Lythaus!' && r.mediaUrl == null,
             ),
           ),
           token: 'test-jwt-token',
@@ -191,7 +191,7 @@ void main() {
       // Verify the post was returned
       expect(returnedPost, isNotNull);
       expect(returnedPost?.id, 'new-post-123');
-      expect(returnedPost?.text, 'My first post on Asora!');
+      expect(returnedPost?.text, 'My first post on Lythaus!');
     });
 
     testWidgets('content blocked flow - moderation rejection', (tester) async {
@@ -340,7 +340,7 @@ void main() {
 
       // Enter content
       final textField = find.byType(TextField);
-      await tester.enterText(textField, 'My first post on Asora!');
+      await tester.enterText(textField, 'My first post on Lythaus!');
       await tester.pump();
       await chooseHumanAuthorship(tester);
 

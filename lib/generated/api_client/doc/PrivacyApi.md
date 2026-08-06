@@ -1,8 +1,8 @@
-# asora_api_client.api.PrivacyApi
+# lythaus_api_client.api.PrivacyApi
 
 ## Load the API package
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 ```
 
 All URIs are relative to *https://api.lythaus.co/api*
@@ -24,9 +24,9 @@ Legacy Azure Functions compatibility route retained only while source migration 
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getPrivacyApi();
+final api = LythausApiClient().getPrivacyApi();
 final String xConfirmDelete = xConfirmDelete_example; // String | Must be set to \"true\" to confirm deletion
 
 try {
@@ -67,9 +67,9 @@ Legacy Azure Functions compatibility route retained only while source migration 
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getPrivacyApi();
+final api = LythausApiClient().getPrivacyApi();
 
 try {
     final response = api.exportUserData();
@@ -106,9 +106,9 @@ Records an export, account deletion, or rectification request and queues it for 
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getPrivacyApi();
+final api = LythausApiClient().getPrivacyApi();
 final PrivacyRequestCreate privacyRequestCreate = ; // PrivacyRequestCreate |
 final String idempotencyKey = idempotencyKey_example; // String |
 
@@ -151,9 +151,9 @@ Returns the authenticated user's latest matching asynchronous privacy request.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getPrivacyApi();
+final api = LythausApiClient().getPrivacyApi();
 final String requestType = requestType_example; // String |
 
 try {

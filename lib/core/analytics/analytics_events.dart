@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA ANALYTICS EVENT NAMES
+/// LYTHAUS ANALYTICS EVENT NAMES
 ///
 /// 🎯 Purpose: Centralized analytics event catalog
 /// 🔐 Privacy: All events are PII-free, categorical/numeric properties only

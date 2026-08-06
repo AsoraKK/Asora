@@ -4,7 +4,7 @@
 
 // ignore_for_file: unused_element
 import 'package:built_collection/built_collection.dart';
-import 'package:asora_api_client/src/model/dsr_export_response_metadata.dart';
+import 'package:lythaus_api_client/src/model/dsr_export_response_metadata.dart';
 import 'package:built_value/json_object.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';

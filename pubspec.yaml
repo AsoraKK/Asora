@@ -1,4 +1,4 @@
-name: asora
+name: lythaus
 description: "Social media platform for human-authored content"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -91,7 +91,7 @@ flutter:
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
   assets:
-    - assets/brand/asora_mark.svg
+    - assets/brand/lythaus_mark.svg
     - assets/fonts/
 
   # Bundled Manrope fonts for consistent rendering in tests and production

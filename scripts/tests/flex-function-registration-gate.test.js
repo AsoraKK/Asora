@@ -4,7 +4,7 @@ const { test } = require('node:test');
 const { resolve } = require('node:path');
 
 const workflow = readFileSync(
-  resolve(__dirname, '../../.github/workflows/deploy-asora-function-dev.yml'),
+  resolve(__dirname, '../../.github/workflows/deploy-lythaus-function-dev.yml'),
   'utf8',
 );
 

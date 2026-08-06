@@ -3,14 +3,14 @@ set -euo pipefail
 
 # Prereqs: az CLI logged in; resource group exists; Front Door profile exists.
 
-RG=${RG:-asora-psql-flex}
+RG=${RG:-lythaus-psql-flex}
 REGION=${REGION:-northeurope}
-APP=${APP:-asora-function-dev}
-CANARY=${CANARY:-asora-function-dev-canary}
-AI=${AI:-asora-ai-flex}
-FD_PROFILE=${FD_PROFILE:-asora-frontdoor}
-FD_ENDPOINT=${FD_ENDPOINT:-asora-frontdoor-endpoint}
-FD_ORIGIN_GROUP=${FD_ORIGIN_GROUP:-asora-origin-group}
+APP=${APP:-lythaus-function-dev}
+CANARY=${CANARY:-lythaus-function-dev-canary}
+AI=${AI:-lythaus-ai-flex}
+FD_PROFILE=${FD_PROFILE:-lythaus-frontdoor}
+FD_ENDPOINT=${FD_ENDPOINT:-lythaus-frontdoor-endpoint}
+FD_ORIGIN_GROUP=${FD_ORIGIN_GROUP:-lythaus-origin-group}
 
 echo "Creating CANARY Function App (${CANARY}) in ${RG}/${REGION} (Flex)";
 

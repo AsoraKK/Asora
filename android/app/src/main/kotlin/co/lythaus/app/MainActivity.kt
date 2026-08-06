@@ -1,4 +1,4 @@
-package com.asora.app
+package co.lythaus.app
 
 import io.flutter.embedding.android.FlutterActivity
 

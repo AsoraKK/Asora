@@ -277,7 +277,7 @@ for (const records of Object.values(tables)) {
 dsrObjects.sort((left, right) => left.request_id.localeCompare(right.request_id));
 const canonicalImport = {
   formatVersion: 'lythaus-canonical-import-v1',
-  source: 'azure-cosmos-asora',
+  source: 'azure-cosmos-lythaus',
   tables,
   dsrObjects,
 };

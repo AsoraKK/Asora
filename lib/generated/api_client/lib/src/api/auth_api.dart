@@ -7,19 +7,19 @@ import 'dart:async';
 import 'package:built_value/serializer.dart';
 import 'package:dio/dio.dart';
 
-import 'package:asora_api_client/src/api_util.dart';
-import 'package:asora_api_client/src/model/auth_token_request.dart';
-import 'package:asora_api_client/src/model/email_login_request.dart';
-import 'package:asora_api_client/src/model/error.dart';
-import 'package:asora_api_client/src/model/invite_validation_response.dart';
-import 'package:asora_api_client/src/model/o_auth_token_response.dart';
-import 'package:asora_api_client/src/model/rate_limit_error.dart';
-import 'package:asora_api_client/src/model/redeem_invite_request.dart';
-import 'package:asora_api_client/src/model/redeem_invite_response.dart';
-import 'package:asora_api_client/src/model/unauthorized_error.dart';
-import 'package:asora_api_client/src/model/user_info_response.dart';
-import 'package:asora_api_client/src/model/validation_error_response.dart';
 import 'package:built_value/json_object.dart';
+import 'package:lythaus_api_client/src/api_util.dart';
+import 'package:lythaus_api_client/src/model/auth_token_request.dart';
+import 'package:lythaus_api_client/src/model/email_login_request.dart';
+import 'package:lythaus_api_client/src/model/error.dart';
+import 'package:lythaus_api_client/src/model/invite_validation_response.dart';
+import 'package:lythaus_api_client/src/model/o_auth_token_response.dart';
+import 'package:lythaus_api_client/src/model/rate_limit_error.dart';
+import 'package:lythaus_api_client/src/model/redeem_invite_request.dart';
+import 'package:lythaus_api_client/src/model/redeem_invite_response.dart';
+import 'package:lythaus_api_client/src/model/unauthorized_error.dart';
+import 'package:lythaus_api_client/src/model/user_info_response.dart';
+import 'package:lythaus_api_client/src/model/validation_error_response.dart';
 
 class AuthApi {
 

@@ -35,7 +35,7 @@
                     <category android:name="android.intent.category.DEFAULT" />
                     <category android:name="android.intent.category.BROWSABLE" />
                     <data
-                        android:scheme="com.asora.app"
+                        android:scheme="co.lythaus.app"
                         android:host="oauth"
                         android:path="/callback" />
                 </intent-filter>

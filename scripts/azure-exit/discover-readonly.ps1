@@ -3,10 +3,10 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$OutputDirectory,
     [string]$SubscriptionId = '99df7ef7-776a-4235-84a4-c77899b2bb04',
-    [string]$ResourceGroup = 'asora-psql-flex',
-    [string]$CosmosAccount = 'asora-cosmos-dev',
-    [string]$CosmosDatabase = 'asora',
-    [string]$PostgresServer = 'asora-pg-dev-ne',
+    [string]$ResourceGroup = 'lythaus-psql-flex',
+    [string]$CosmosAccount = 'lythaus-cosmos-dev',
+    [string]$CosmosDatabase = 'lythaus',
+    [string]$PostgresServer = 'lythaus-pg-dev-ne',
     [switch]$ProbeDataPlane
 )
 
@@ -58,7 +58,7 @@ function Classify-Container {
     $mappingPath = Join-Path $PSScriptRoot '..\..\infrastructure\azure-exit\migration-mappings.json'
     if (-not (Test-Path $mappingPath)) { return [pscustomobject]@{ classification = 'BLOCKED - CLASSIFICATION REQUIRED'; destination = $null } }
     $mappings = (Get-Content $mappingPath -Raw | ConvertFrom-Json).mappings
-    $match = @($mappings | Where-Object { $_.source -eq "Cosmos asora/$ContainerName" }) | Select-Object -First 1
+    $match = @($mappings | Where-Object { $_.source -eq "Cosmos lythaus/$ContainerName" }) | Select-Object -First 1
     if ($match) { return [pscustomobject]@{ classification = $match.classification; destination = $match.destination } }
     if ($ContainerName -match '(?i)(cache|projection|feed|telemetry|counter|index)') {
         return [pscustomobject]@{ classification = 'DISCARD TEST/DERIVED'; destination = $null }

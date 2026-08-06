@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA ANALYTICS CLIENT
+/// LYTHAUS ANALYTICS CLIENT
 ///
 /// 🎯 Purpose: Privacy-safe analytics abstraction layer
 /// 🔐 Privacy: Explicit opt-in, no PII, pseudonymous IDs only

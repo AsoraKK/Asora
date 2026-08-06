@@ -5,10 +5,10 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:http/http.dart' as http;
 
-import 'package:asora/features/auth/application/auth_service.dart';
-import 'package:asora/features/auth/application/oauth2_service.dart';
-import 'package:asora/features/auth/domain/auth_failure.dart';
-import 'package:asora/features/auth/domain/user.dart';
+import 'package:lythaus/features/auth/application/auth_service.dart';
+import 'package:lythaus/features/auth/application/oauth2_service.dart';
+import 'package:lythaus/features/auth/domain/auth_failure.dart';
+import 'package:lythaus/features/auth/domain/user.dart';
 
 // Mock HTTP Client for testing
 class MockHttpClient implements http.Client {
@@ -227,8 +227,8 @@ void main() {
     late MockLocalAuthentication mockLocalAuth;
     late MockOAuth2Service mockOAuth2Service;
 
-    const testAuthUrl = 'https://test-api.asora.app';
-    const testEmail = 'test@asora.app';
+    const testAuthUrl = 'https://test-api.lythaus.app';
+    const testEmail = 'test@lythaus.app';
     const testPassword = 'password123';
     const testToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test';
 

@@ -304,7 +304,7 @@ skip "11.10 Store listing assets uploaded with Lythaus branding (manual)"
 echo "── 12. Branding ────────────────────────────────────────"
 
 if command -v rg >/dev/null 2>&1; then
-  run_check "12.1 No 'Asora' in user-visible Flutter UI strings" \
+  run_check "12.1 No retired brand in active repository content" \
     bash scripts/check-branding.sh
 else
   skip "12.1 Branding check (rg/ripgrep not installed; runs in CI)"

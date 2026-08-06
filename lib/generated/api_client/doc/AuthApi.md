@@ -1,8 +1,8 @@
-# asora_api_client.api.AuthApi
+# lythaus_api_client.api.AuthApi
 
 ## Load the API package
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 ```
 
 All URIs are relative to *https://api.lythaus.co/api*
@@ -30,9 +30,9 @@ Initiates the OAuth 2.0 Authorization Code flow. On success, issues a 302 redire
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAuthApi();
+final api = LythausApiClient().getAuthApi();
 final String responseType = responseType_example; // String |
 final String clientId = clientId_example; // String |
 final String redirectUri = redirectUri_example; // String |
@@ -85,9 +85,9 @@ Legacy email/password login contract retained for compatibility during the Cloud
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAuthApi();
+final api = LythausApiClient().getAuthApi();
 final EmailLoginRequest emailLoginRequest = ; // EmailLoginRequest |
 
 try {
@@ -128,9 +128,9 @@ Validates an invite code without revealing status details.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAuthApi();
+final api = LythausApiClient().getAuthApi();
 final String code = code_example; // String | Invite code (format XXXX-XXXX)
 
 try {
@@ -169,9 +169,9 @@ Verify authentication token is valid
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAuthApi();
+final api = LythausApiClient().getAuthApi();
 
 try {
     final response = api.authPing();
@@ -208,9 +208,9 @@ Allows an authenticated but inactive user to redeem a valid invite code. On succ
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAuthApi();
+final api = LythausApiClient().getAuthApi();
 final RedeemInviteRequest redeemInviteRequest = {"inviteCode":"ABCD-1234"}; // RedeemInviteRequest |
 
 try {
@@ -249,9 +249,9 @@ Rotate a refresh token
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAuthApi();
+final api = LythausApiClient().getAuthApi();
 final JsonObject body = Object; // JsonObject |
 
 try {
@@ -290,9 +290,9 @@ Revoke an active session
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAuthApi();
+final api = LythausApiClient().getAuthApi();
 final JsonObject body = Object; // JsonObject |
 
 try {
@@ -333,10 +333,10 @@ Exchange an authorization code or refresh token for an access token and refresh 
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAuthApi();
-final AuthTokenRequest authTokenRequest = {"grant_type":"authorization_code","client_id":"asora-mobile","code":"SplxlOBeZQQYbYS6WxSbIA","redirect_uri":"com.asora.app://callback","code_verifier":"dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"}; // AuthTokenRequest |
+final api = LythausApiClient().getAuthApi();
+final AuthTokenRequest authTokenRequest = {"grant_type":"authorization_code","client_id":"lythaus-mobile","code":"SplxlOBeZQQYbYS6WxSbIA","redirect_uri":"co.lythaus.app://callback","code_verifier":"dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"}; // AuthTokenRequest |
 
 try {
     final response = api.authToken(authTokenRequest);
@@ -376,9 +376,9 @@ Returns claims about the authenticated user per OpenID Connect Core 1.0.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAuthApi();
+final api = LythausApiClient().getAuthApi();
 
 try {
     final response = api.authUserInfo();
@@ -415,9 +415,9 @@ POST variant of the UserInfo endpoint for clients that cannot use query strings.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAuthApi();
+final api = LythausApiClient().getAuthApi();
 
 try {
     final response = api.authUserInfoPost();

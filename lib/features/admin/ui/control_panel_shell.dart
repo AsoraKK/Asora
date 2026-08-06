@@ -11,10 +11,10 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/features/admin/ui/admin_config_screen.dart';
-import 'package:asora/features/admin/ui/app_preview_screen.dart';
-import 'package:asora/features/admin/ui/budget_screen.dart';
-import 'package:asora/screens/admin/moderation_weights_screen.dart';
+import 'package:lythaus/features/admin/ui/admin_config_screen.dart';
+import 'package:lythaus/features/admin/ui/app_preview_screen.dart';
+import 'package:lythaus/features/admin/ui/budget_screen.dart';
+import 'package:lythaus/screens/admin/moderation_weights_screen.dart';
 
 /// Navigation tabs available in the control panel
 enum ControlPanelTab {

@@ -1,16 +1,16 @@
 #!/bin/bash
-# Setup Azure Notification Hub for Asora notifications
+# Setup Azure Notification Hub for Lythaus notifications
 # Usage: ./setup-azure-notification-hub.sh <environment> <resource-group> <location>
-# Example: ./setup-azure-notification-hub.sh dev rg-asora-dev eastus
+# Example: ./setup-azure-notification-hub.sh dev rg-lythaus-dev eastus
 
 set -e
 
 ENVIRONMENT=${1:-dev}
-RESOURCE_GROUP=${2:-rg-asora-$ENVIRONMENT}
+RESOURCE_GROUP=${2:-rg-lythaus-$ENVIRONMENT}
 LOCATION=${3:-eastus}
 
-NAMESPACE_NAME="asora-notif-ns-${ENVIRONMENT}"
-HUB_NAME="asora-notifications-${ENVIRONMENT}"
+NAMESPACE_NAME="lythaus-notif-ns-${ENVIRONMENT}"
+HUB_NAME="lythaus-notifications-${ENVIRONMENT}"
 
 echo "========================================"
 echo "Azure Notification Hub Setup"

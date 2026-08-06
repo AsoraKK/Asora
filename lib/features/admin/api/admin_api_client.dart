@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA ADMIN API CLIENT
+/// LYTHAUS ADMIN API CLIENT
 ///
 /// 🎯 Purpose: HTTP client for admin configuration endpoints
 /// 📡 Endpoints: GET/PUT /api/admin/config, GET /api/admin/audit
@@ -11,7 +11,7 @@ library;
 import 'package:dio/dio.dart';
 import 'package:uuid/uuid.dart';
 
-import 'package:asora/features/admin/domain/admin_config_models.dart';
+import 'package:lythaus/features/admin/domain/admin_config_models.dart';
 
 /// Budget configuration returned by the backend
 class BudgetInfo {

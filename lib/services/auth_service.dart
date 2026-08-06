@@ -4,8 +4,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-import 'package:asora/core/config/environment_config.dart';
-import 'package:asora/core/config/web_release_guard.dart';
+import 'package:lythaus/core/config/environment_config.dart';
+import 'package:lythaus/core/config/web_release_guard.dart';
 
 class AuthService {
   final Dio _dio;

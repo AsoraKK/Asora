@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA POST REPOSITORY
+/// LYTHAUS POST REPOSITORY
 ///
 /// 🎯 Purpose: Abstract interface for post CRUD operations
 /// 🏗️ Architecture: Domain layer - defines business contracts
@@ -8,7 +8,7 @@
 /// 📱 Platform: Flutter with Clean Architecture compliance
 library;
 
-import 'package:asora/features/feed/domain/models.dart';
+import 'package:lythaus/features/feed/domain/models.dart';
 
 /// Result of a post creation attempt
 sealed class CreatePostResult {

@@ -1,4 +1,4 @@
-import 'package:asora/features/admin/ui/widgets/device_emulator.dart';
+import 'package:lythaus/features/admin/ui/widgets/device_emulator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

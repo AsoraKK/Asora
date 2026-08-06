@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:asora/core/auth/auth_session_manager.dart';
+import 'package:lythaus/core/auth/auth_session_manager.dart';
 import 'package:flutter/services.dart';
 
 /// In-memory fake for flutter_secure_storage

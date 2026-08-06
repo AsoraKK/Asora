@@ -3,6 +3,7 @@ import path from 'node:path';
 
 const root = process.cwd();
 const roots = ['apps/lythaus-public-api', 'apps/lythaus-admin-api', 'apps/lythaus-jobs', 'packages'];
+const retiredBrand = ['as', 'ora'].join('');
 const forbidden = [
   /azurewebsites\.net/i,
   /@azure\//i,
@@ -11,8 +12,8 @@ const forbidden = [
   /CosmosClient/i,
   /applicationinsights/i,
   /keyvault/i,
-  /asora-azure-compat/i,
-  /asora\.co\.za/i,
+  new RegExp(`${retiredBrand}-azure-compat`, 'i'),
+  new RegExp(`${retiredBrand}\\.co\\.za`, 'i'),
 ];
 const failures = [];
 

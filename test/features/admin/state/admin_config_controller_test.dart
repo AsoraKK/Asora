@@ -2,9 +2,9 @@
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/features/admin/state/admin_config_controller.dart';
-import 'package:asora/features/admin/domain/admin_config_models.dart';
-import 'package:asora/features/admin/api/admin_api_client.dart';
+import 'package:lythaus/features/admin/state/admin_config_controller.dart';
+import 'package:lythaus/features/admin/domain/admin_config_models.dart';
+import 'package:lythaus/features/admin/api/admin_api_client.dart';
 
 void main() {
   // ── AdminConfigStatus enum ────────────────────────────────────────────

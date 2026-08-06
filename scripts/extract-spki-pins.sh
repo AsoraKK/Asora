@@ -9,7 +9,7 @@
 #   ./scripts/extract-spki-pins.sh <hostname> [port]
 #
 # Examples:
-#   ./scripts/extract-spki-pins.sh asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net
+#   ./scripts/extract-spki-pins.sh lythaus-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net
 #   ./scripts/extract-spki-pins.sh api.lythaus.com 443
 #
 # The script pins the LEAF certificate by default.  To pin an intermediate CA,

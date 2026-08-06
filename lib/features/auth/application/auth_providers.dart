@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA OAUTH2 PROVIDERS
+/// LYTHAUS OAUTH2 PROVIDERS
 ///
 /// 🎯 Purpose: Riverpod providers for OAuth2 authentication state management
 /// 🏗️ Architecture: Reactive state management with Riverpod
@@ -14,13 +14,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
-import 'package:asora/features/auth/domain/user.dart';
-import 'package:asora/features/auth/domain/auth_failure.dart';
-import 'package:asora/features/auth/application/oauth2_service.dart';
-import 'package:asora/features/auth/application/auth_service.dart';
-import 'package:asora/features/auth/application/invite_redeem_service.dart';
-import 'package:asora/features/auth/application/web_auth_service.dart';
-import 'package:asora/core/network/dio_client.dart';
+import 'package:lythaus/features/auth/domain/user.dart';
+import 'package:lythaus/features/auth/domain/auth_failure.dart';
+import 'package:lythaus/features/auth/application/oauth2_service.dart';
+import 'package:lythaus/features/auth/application/auth_service.dart';
+import 'package:lythaus/features/auth/application/invite_redeem_service.dart';
+import 'package:lythaus/features/auth/application/web_auth_service.dart';
+import 'package:lythaus/core/network/dio_client.dart';
 
 /// OAuth2Service provider - manages OAuth2 PKCE flow
 final oauth2ServiceProvider = Provider<OAuth2Service>((ref) {

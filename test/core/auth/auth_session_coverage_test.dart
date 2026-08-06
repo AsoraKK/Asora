@@ -1,8 +1,8 @@
 // Additional comprehensive tests to improve coverage for auth session manager
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/core/auth/auth_session_manager.dart';
-import 'package:asora/core/auth/pkce_helper.dart';
+import 'package:lythaus/core/auth/auth_session_manager.dart';
+import 'package:lythaus/core/auth/pkce_helper.dart';
 
 /// In-memory fake for flutter_secure_storage
 class _FakeSecureStore {

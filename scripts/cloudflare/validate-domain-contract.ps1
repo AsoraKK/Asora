@@ -6,9 +6,9 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $violations = [System.Collections.Generic.List[string]]::new()
-$bannedPublicPattern = '(?i)(asora\.co\.za|lythaus-web\.pages\.dev|api\.asora\.co\.za|admin-api\.asora\.co\.za|[a-z0-9.-]*azurewebsites\.net)'
+$bannedPublicPattern = '(?i)(lythaus\.co\.za|lythaus-web\.pages\.dev|api\.lythaus\.co\.za|admin-api\.lythaus\.co\.za|[a-z0-9.-]*azurewebsites\.net)'
 $allowlist = Get-Content -LiteralPath 'scripts/cloudflare/domain-reference-allowlist.json' -Raw | ConvertFrom-Json
-$retiredEnvironmentPattern = '(?i)(?:app|api|admin|admin-api)\.staging\.lythaus\.co|asora-function-(?:staging|prod)'
+$retiredEnvironmentPattern = '(?i)(?:app|api|admin|admin-api)\.staging\.lythaus\.co|lythaus-function-(?:staging|prod)'
 
 function Test-PathForPattern([string]$Path, [string]$Pattern, [string]$Label, [bool]$UseAllowlist = $false) {
   if (-not (Test-Path -LiteralPath $Path)) {
@@ -33,9 +33,9 @@ function Test-PathForPattern([string]$Path, [string]$Pattern, [string]$Label, [b
 }
 
 Test-PathForPattern $FlutterBuildDirectory $bannedPublicPattern 'Flutter production artifact'
-Test-PathForPattern $MarketingBuildDirectory '(?i)(asora\.co\.za|lythaus-web\.pages\.dev|azurewebsites\.net)' 'Marketing production artifact'
-Test-PathForPattern 'api/openapi/dist/openapi.json' '(?i)(asora\.co\.za|pages\.dev|azurewebsites\.net)' 'OpenAPI bundle'
-Test-PathForPattern 'lib/generated/api_client' '(?i)(asora\.co\.za|pages\.dev|azurewebsites\.net)' 'Generated API client'
+Test-PathForPattern $MarketingBuildDirectory '(?i)(lythaus\.co\.za|lythaus-web\.pages\.dev|azurewebsites\.net)' 'Marketing production artifact'
+Test-PathForPattern 'api/openapi/dist/openapi.json' '(?i)(lythaus\.co\.za|pages\.dev|azurewebsites\.net)' 'OpenAPI bundle'
+Test-PathForPattern 'lib/generated/api_client' '(?i)(lythaus\.co\.za|pages\.dev|azurewebsites\.net)' 'Generated API client'
 
 $runtimePaths = @(
   'cloudflare/pages-release.sh',

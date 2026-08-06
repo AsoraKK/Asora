@@ -1,6 +1,6 @@
-import 'package:asora/features/auth/application/auth_controller.dart';
-import 'package:asora/services/oauth2_service.dart';
-import 'package:asora/services/service_providers.dart';
+import 'package:lythaus/features/auth/application/auth_controller.dart';
+import 'package:lythaus/services/oauth2_service.dart';
+import 'package:lythaus/services/service_providers.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';

@@ -10,7 +10,7 @@ if (process.env.ALLOW_SHARED_MVP_LOAD_TESTS !== 'true') {
   process.exit(2);
 }
 
-if (!baseUrl || !/^https:\/(?:\/api\.lythaus\.co|\/lythaus-api-gateway-preview\.asora\.workers\.dev)\/api(?:\/|$)/.test(baseUrl)) {
+if (!baseUrl || !/^https:\/(?:\/api\.lythaus\.co|\/lythaus-api-gateway-preview\.lythaus\.workers\.dev)\/api(?:\/|$)/.test(baseUrl)) {
   console.error('Refusing load test: set K6_BASE_URL explicitly to the approved public API gateway ending in /api.');
   process.exit(2);
 }

@@ -8,7 +8,7 @@ import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:asora/services/oauth2_service.dart';
+import 'package:lythaus/services/oauth2_service.dart';
 
 // Mocks
 class MockDio extends Mock implements Dio {}

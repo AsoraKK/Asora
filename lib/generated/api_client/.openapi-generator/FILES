@@ -167,7 +167,7 @@ doc/ValidationErrorResponse.md
 doc/ValidationErrorResponseError.md
 doc/ValidationErrorResponseErrorFieldsInner.md
 doc/VoteOnAppealV1Request.md
-lib/asora_api_client.dart
+lib/lythaus_api_client.dart
 lib/src/api.dart
 lib/src/api/admin_api.dart
 lib/src/api/analytics_api.dart

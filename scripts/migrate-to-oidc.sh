@@ -18,10 +18,10 @@ NC='\033[0m' # No Color
 TENANT_ID="275643fa-37e0-4f67-b616-85a7da674bea"
 SUBSCRIPTION_ID="99df7ef7-776a-4235-84a4-c77899b2bb04"
 APP_ID="06c8564f-030d-414f-a552-678d756f9ec3"
-LEGACY_SP_NAME="github-actions-asora-deployer"
-RESOURCE_GROUP="asora-psql-flex"
-FUNCTION_APP="asora-function-dev"
-KEY_VAULT="kv-asora-dev"
+LEGACY_SP_NAME="github-actions-lythaus-deployer"
+RESOURCE_GROUP="lythaus-psql-flex"
+FUNCTION_APP="lythaus-function-dev"
+KEY_VAULT="kv-lythaus-dev"
 
 echo -e "${GREEN}╔════════════════════════════════════════════════════════╗${NC}"
 echo -e "${GREEN}║   Azure OIDC Migration for GitHub Actions             ║${NC}"
@@ -39,8 +39,8 @@ echo ""
 echo -e "${YELLOW}[2/6] Creating federated credentials...${NC}"
 
 SUBJECTS=(
-  "repo:AsoraKK/Asora:ref:refs/heads/main"
-  "repo:AsoraKK/Asora:environment:dev"
+  "repo:AsoraKK/Lythaus:ref:refs/heads/main"
+  "repo:AsoraKK/Lythaus:environment:dev"
 )
 
 for SUBJECT in "${SUBJECTS[@]}"; do
