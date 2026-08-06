@@ -11,7 +11,7 @@ This record contains names and scopes only. Secret values were never read or rec
 | Azure candidate patterns | Repository Codespaces secrets | 2026-08-06 | Codex | Verified: zero matching names |
 | Azure candidate patterns | Repository Dependabot secrets | 2026-08-06 | Codex | Verified: zero matching names |
 | Azure deployment hooks and keys | Repository webhooks and deploy keys | 2026-08-06 | Codex | Verified: zero entries |
-| Azure GitHub Apps | Account installation access | — | Kyle | Pending account-level inspection |
+| Azure GitHub Apps | Account installation access | — | Kyle | Blocked: GitHub API returned 403 |
 | Azure candidate patterns | Account Codespaces secrets granting repository access | — | Kyle | Blocked: GitHub API returned 403 |
 | Azure candidate patterns | Organisation Actions, Codespaces, and Dependabot grants | 2026-08-06 | Codex | Not applicable while owner is a personal account |
 
@@ -25,3 +25,15 @@ Organisation Azure grants to Lythaus: 0 (not applicable: personal owner)
 Codespaces Azure secrets accessible to Lythaus: PENDING ACCOUNT VERIFICATION
 Dependabot Azure secrets accessible to Lythaus: 0
 Azure deployment GitHub Apps and webhooks: PENDING APP INSTALLATION VERIFICATION
+
+## Final repository recheck — 7 August 2026
+
+Codex rechecked the repository after the final retirement-cleanup commit. The
+repository Actions, environment, Dependabot, repository Codespaces, deploy-key,
+and webhook scopes contain zero Azure-pattern names or entries. Active
+repository metadata also contains zero retired-brand labels, open milestones,
+release titles, rulesets, or open issue and pull-request titles.
+
+The authenticated token still receives HTTP 403 for personal Codespaces secrets
+and GitHub App installations. Those two account-level scopes remain `UNKNOWN`
+and require Kyle to verify them in the GitHub user interface.
