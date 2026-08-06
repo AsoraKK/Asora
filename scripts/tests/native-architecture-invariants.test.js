@@ -319,8 +319,8 @@ test('production migrations remain explicit while Worker deployment verifies rea
   assert.match(script, /migration checksum mismatch/);
   assert.doesNotMatch(script, /0001_feature_flags/);
   assert.match(verifier, /system\.schema_migrations/);
-  assert.match(verifier, /expectedMigrationBytes = 48_192/);
-  assert.match(verifier, /c8b14a6f418dfa1150cd6933733f2811cae8576246a88662463f712b0a64bf6a/);
+  assert.match(verifier, /expectedMigrationBytes = 51_104/);
+  assert.match(verifier, /da6cd97b29ab5ea26dd0237e413fbe868d696df4c082ede81ed950faa3f34ced/);
   assert.match(verifier, /migration SHA-256 mismatch/);
   assert.match(verifier, /approved applied migration payload mismatch/);
   assert.match(verifier, /searchParams\.get\('sslrootcert'\) === 'system'/);

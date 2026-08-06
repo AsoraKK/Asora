@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Lythaus API",
-    "version": "v3",
+    "version": "v4",
     "description": "HTTP contract for the Lythaus API.",
     "license": {
       "name": "MIT",
