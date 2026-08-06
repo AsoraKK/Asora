@@ -4,8 +4,8 @@
 
 **Status:** Product/architecture specification — draft approved for implementation planning
 **Date:** 26 May 2026
-**Product:** Lythaus, formerly Asora
-**Repository:** AsoraKK/Asora
+**Product:** Lythaus
+**Repository:** AsoraKK/Lythaus
 **Owner:** Product / Platform
 **Related areas:** reputation, rewards, moderation, AI transparency, public feed ranking, subscriptions, Editorial, user profile transparency
 
