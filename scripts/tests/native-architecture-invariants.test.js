@@ -201,11 +201,12 @@ test('production config reuses existing Workers and disables paid or incomplete 
   assert.match(jobsConfig, /"MEDIA_PROCESSING_ENABLED": "false"/);
 });
 
-test('native Workers have an explicit Azure dependency scan', () => {
-  const script = fs.readFileSync(path.join(root, 'scripts/validate-native-azure-dependencies.mjs'), 'utf8');
+test('active runtimes have an explicit retired-provider dependency scan', () => {
+  const script = fs.readFileSync(path.join(root, 'scripts/validate-no-retired-provider-dependencies.mjs'), 'utf8');
   assert.match(script, /azurewebsites/);
   assert.match(script, /CosmosClient/);
   assert.match(script, /applicationinsights/);
+  assert.match(script, /asora\\.co/);
 });
 
 test('jobs Worker exposes durable privacy and appeal workflows', () => {

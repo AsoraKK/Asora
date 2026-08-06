@@ -3,7 +3,7 @@
 - Status: Proposed; launch-blocking acceptance gates pending
 - Date: 2026-08-05
 - Supersedes: ADR-002 Azure sections and ADR-006
-- Scope: Lythaus production runtime, database ingress, budget controls, and Azure exit
+- Scope: Lythaus production runtime, database ingress, budget controls, and retired-provider prohibition
 
 ## Decision
 
@@ -21,7 +21,7 @@
 - The protected database identity probe passes against the current 78-relation `0008_legacy_relink_status.sql` production baseline; the contract is updated to the 82-relation `0009_cost_budget_enforcement.sql` state after that migration is separately approved and applied.
 - ADR 003 Google, session, profile, submission, privacy, deletion, CORS, and mobile/web callback acceptance passes.
 - A simulated US$100 exhaustion test rejects new paid work.
-- The Azure preflight is complete and Kyle separately authorizes irreversible deletion.
+- Azure was fully deleted on 6 August 2026 and cannot be used as a rollback target.
 
 ## Rollback
 
