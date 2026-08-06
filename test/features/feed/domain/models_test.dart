@@ -1,7 +1,7 @@
-import 'package:asora/features/feed/domain/models.dart';
+import 'package:lythaus/features/feed/domain/models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-// ASORA FEED DOMAIN MODELS TESTS
+// LYTHAUS FEED DOMAIN MODELS TESTS
 //
 // 🎯 Purpose: Comprehensive test coverage for feed domain models
 // ✅ Coverage: All classes, constructors, JSON serialization, enums, extensions

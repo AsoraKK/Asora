@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/features/auth/application/auth_controller.dart';
-import 'package:asora/services/oauth2_service.dart';
+import 'package:lythaus/features/auth/application/auth_controller.dart';
+import 'package:lythaus/services/oauth2_service.dart';
 
 /// Minimal fake that avoids platform services
 class FakeOAuth2Service implements OAuth2Service {

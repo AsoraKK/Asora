@@ -3,9 +3,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/design_system/components/lyth_button.dart';
-import 'package:asora/features/auth/application/auth_service.dart'; // ← KEEP
-import 'package:asora/features/auth/domain/auth_failure.dart';
+import 'package:lythaus/design_system/components/lyth_button.dart';
+import 'package:lythaus/features/auth/application/auth_service.dart'; // ← KEEP
+import 'package:lythaus/features/auth/domain/auth_failure.dart';
 
 /// Simple authentication screen with a Google sign-in button.
 class AuthScreen extends ConsumerWidget {

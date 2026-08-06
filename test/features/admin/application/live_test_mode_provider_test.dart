@@ -1,4 +1,4 @@
-import 'package:asora/features/admin/application/live_test_mode_provider.dart';
+import 'package:lythaus/features/admin/application/live_test_mode_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 

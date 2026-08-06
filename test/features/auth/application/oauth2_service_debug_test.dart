@@ -4,10 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart' show LaunchMode;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:asora/core/auth/auth_session_manager.dart';
+import 'package:lythaus/core/auth/auth_session_manager.dart';
 
-import 'package:asora/features/auth/application/oauth2_service.dart';
-import 'package:asora/features/auth/domain/auth_failure.dart';
+import 'package:lythaus/features/auth/application/oauth2_service.dart';
+import 'package:lythaus/features/auth/domain/auth_failure.dart';
 
 void main() {
   test('debugBuildAuthorizationUrl formats expected parameters', () {
@@ -30,7 +30,7 @@ void main() {
     final future = svc.debugStartAndWaitForCode();
     // Simulate valid deep link callback
     svc.debugHandleCallback(
-      Uri.parse('asora://oauth/callback?code=abc&state=st'),
+      Uri.parse('lythaus://oauth/callback?code=abc&state=st'),
     );
     final code = await future;
     expect(code, 'abc');
@@ -44,7 +44,7 @@ void main() {
       // Simulate error callback
       svc.debugHandleCallback(
         Uri.parse(
-          'asora://oauth/callback?error=access_denied&error_description=nope',
+          'lythaus://oauth/callback?error=access_denied&error_description=nope',
         ),
       );
       expect(future, throwsA(isA<AuthFailure>()));

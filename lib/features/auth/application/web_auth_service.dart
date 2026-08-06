@@ -5,12 +5,12 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 
-import 'package:asora/core/auth/pkce_helper.dart';
-import 'package:asora/features/auth/application/oauth2_service.dart';
-import 'package:asora/features/auth/application/web_token_storage.dart';
-import 'package:asora/features/auth/domain/auth_failure.dart';
-import 'package:asora/features/auth/domain/user.dart';
-import 'package:asora/core/config/web_release_guard.dart';
+import 'package:lythaus/core/auth/pkce_helper.dart';
+import 'package:lythaus/features/auth/application/oauth2_service.dart';
+import 'package:lythaus/features/auth/application/web_token_storage.dart';
+import 'package:lythaus/features/auth/domain/auth_failure.dart';
+import 'package:lythaus/features/auth/domain/user.dart';
+import 'package:lythaus/core/config/web_release_guard.dart';
 
 /// Handles the OAuth2 authorization code flow on web using browser redirects
 /// instead of flutter_appauth (which only works on mobile/desktop).

@@ -1,5 +1,5 @@
-import 'package:asora/features/admin/ui/app_preview_screen.dart';
-import 'package:asora/features/admin/ui/control_panel_shell.dart';
+import 'package:lythaus/features/admin/ui/app_preview_screen.dart';
+import 'package:lythaus/features/admin/ui/control_panel_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

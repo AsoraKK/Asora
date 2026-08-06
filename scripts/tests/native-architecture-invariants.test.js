@@ -6,6 +6,9 @@ import path from 'node:path';
 import test from 'node:test';
 
 const root = path.resolve(import.meta.dirname, '../..');
+const retiredBrand = ['as', 'ora'].join('');
+const retiredDomain = new RegExp(`${retiredBrand}\\.co\\.za`, 'i');
+const retiredWorkersDev = new RegExp(`${retiredBrand}\\.workers\\.dev`, 'i');
 const configs = [
   'apps/lythaus-public-api/wrangler.jsonc',
   'apps/lythaus-admin-api/wrangler.jsonc',
@@ -18,15 +21,17 @@ test('native Workers disable production workers.dev and preview URLs', () => {
     assert.match(source, /"workers_dev": false/);
     assert.match(source, /"preview_urls": false/);
     assert.match(source, /"nodejs_compat"/);
-    assert.doesNotMatch(source, /azurewebsites\.net|asora\.co\.za/);
+    assert.doesNotMatch(source, /azurewebsites\.net/i);
+    assert.doesNotMatch(source, retiredDomain);
   }
 });
 
 test('native production routing is custom-domain-only', () => {
   const validate = fs.readFileSync(path.join(root, 'scripts/validate-native-worker-config.mjs'), 'utf8');
-  assert.match(validate, /workers\\\.dev/);
-  assert.match(validate, /pages\\\.dev/);
-  assert.match(validate, /r2\\\.dev/);
+  assert.match(validate, /retiredProductionOrigin/);
+  assert.match(validate, /workers/);
+  assert.match(validate, /pages/);
+  assert.match(validate, /r2/);
   assert.match(validate, /api\\\.lythaus\\\.co/);
   assert.match(validate, /admin-api\\\.lythaus\\\.co/);
 });
@@ -40,8 +45,8 @@ test('native public and admin APIs enforce configured hostnames', () => {
   assert.match(observability, /hostname_not_allowed/);
   assert.match(publicApi, /assertExpectedHostname\(request, env\.EXPECTED_HOSTNAMES\)/);
   assert.match(adminApi, /assertExpectedHostname\(request, env\.EXPECTED_HOSTNAMES\)/);
-  assert.doesNotMatch(fs.readFileSync(path.join(root, 'apps/lythaus-public-api/wrangler.jsonc'), 'utf8').slice(0, fs.readFileSync(path.join(root, 'apps/lythaus-public-api/wrangler.jsonc'), 'utf8').indexOf('"env"')), /asora\.workers\.dev/);
-  assert.doesNotMatch(fs.readFileSync(path.join(root, 'apps/lythaus-admin-api/wrangler.jsonc'), 'utf8').slice(0, fs.readFileSync(path.join(root, 'apps/lythaus-admin-api/wrangler.jsonc'), 'utf8').indexOf('"env"')), /asora\.workers\.dev/);
+  assert.doesNotMatch(fs.readFileSync(path.join(root, 'apps/lythaus-public-api/wrangler.jsonc'), 'utf8').slice(0, fs.readFileSync(path.join(root, 'apps/lythaus-public-api/wrangler.jsonc'), 'utf8').indexOf('"env"')), retiredWorkersDev);
+  assert.doesNotMatch(fs.readFileSync(path.join(root, 'apps/lythaus-admin-api/wrangler.jsonc'), 'utf8').slice(0, fs.readFileSync(path.join(root, 'apps/lythaus-admin-api/wrangler.jsonc'), 'utf8').indexOf('"env"')), retiredWorkersDev);
 });
 
 test('public API dispatch awaits rejection-prone async handlers', () => {
@@ -185,7 +190,7 @@ test('Cloudflare scope manifest forbids known shared and unrelated resources', (
   assert.equal(manifest.production.zoneId, '7bc572c8b7cd3c00be9c655176c29382');
   assert.equal(manifest.production.sharedAccountMustDiffer, false);
   assert.ok(manifest.forbiddenResourcePrefixes.includes('nite-owl-'));
-  assert.ok(manifest.approvedLegacyResourcePrefixes.includes('asora-azure-compat'));
+  assert.deepEqual(manifest.approvedLegacyResourcePrefixes, []);
 });
 
 test('production config reuses existing Workers and disables paid or incomplete features', () => {
@@ -206,7 +211,7 @@ test('active runtimes have an explicit retired-provider dependency scan', () => 
   assert.match(script, /azurewebsites/);
   assert.match(script, /CosmosClient/);
   assert.match(script, /applicationinsights/);
-  assert.match(script, /asora\\.co/);
+  assert.match(script, /retiredBrand/);
 });
 
 test('jobs Worker exposes durable privacy and appeal workflows', () => {

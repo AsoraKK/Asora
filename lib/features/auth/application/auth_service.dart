@@ -10,10 +10,10 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:http/http.dart' as http;
 
-import 'package:asora/features/auth/domain/auth_failure.dart';
-import 'package:asora/features/auth/domain/user.dart';
-import 'package:asora/features/auth/application/oauth2_service.dart';
-import 'package:asora/core/config/web_release_guard.dart';
+import 'package:lythaus/features/auth/domain/auth_failure.dart';
+import 'package:lythaus/features/auth/domain/user.dart';
+import 'package:lythaus/features/auth/application/oauth2_service.dart';
+import 'package:lythaus/core/config/web_release_guard.dart';
 
 class AuthService {
   AuthService({

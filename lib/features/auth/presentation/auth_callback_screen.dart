@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/auth/application/web_auth_service.dart';
-import 'package:asora/features/auth/domain/auth_failure.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/application/web_auth_service.dart';
+import 'package:lythaus/features/auth/domain/auth_failure.dart';
 
 /// Provider for the shared [WebAuthService] instance.
 final webAuthServiceProvider = Provider<WebAuthService>((ref) {

@@ -1,6 +1,6 @@
 {
   "timestamp": "2026-01-08T15-02-59-167Z",
-  "baseUrl": "https://asora-function-dev.azurewebsites.net",
+  "baseUrl": "https://lythaus-function-dev.azurewebsites.net",
   "duration": 31255.914983,
   "metrics": {
     "http_reqs": 496,

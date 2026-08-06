@@ -3,8 +3,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/features/admin/api/admin_api_client.dart';
-import 'package:asora/features/admin/domain/admin_config_models.dart';
+import 'package:lythaus/features/admin/api/admin_api_client.dart';
+import 'package:lythaus/features/admin/domain/admin_config_models.dart';
 
 void main() {
   // ── AdminApiException extended tests ──────────────────────────────────

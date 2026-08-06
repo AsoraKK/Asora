@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA OPENTELEMETRY INSTRUMENTATION
+/// LYTHAUS OPENTELEMETRY INSTRUMENTATION
 ///
 /// 🎯 Purpose: Service method instrumentation for observability
 /// 📊 Metrics: HTTP status codes, response times, error rates
@@ -11,7 +11,7 @@ library;
 import 'dart:developer' as developer;
 
 /// Span for tracking operation lifecycle
-class AsoraSpan {
+class LythausSpan {
   final String operationName;
   final DateTime startTime;
   final Map<String, Object> attributes = {};
@@ -19,7 +19,7 @@ class AsoraSpan {
   String? errorMessage;
   bool _ended = false;
 
-  AsoraSpan._(this.operationName, this.startTime);
+  LythausSpan._(this.operationName, this.startTime);
 
   /// Set span attributes
   void setAttributes(Map<String, Object> attrs) {
@@ -57,7 +57,7 @@ class AsoraSpan {
     // Log span data for observability
     developer.log(
       'Span: $operationName completed',
-      name: 'asora.trace',
+      name: 'lythaus.trace',
       time: DateTime.now(),
       level: status == 'error' ? 1000 : 800, // Error vs Info level
       error: errorMessage,
@@ -67,7 +67,7 @@ class AsoraSpan {
     // Log metrics in structured format
     developer.log(
       'SPAN_METRICS: ${_formatSpanMetrics()}',
-      name: 'asora.metrics',
+      name: 'lythaus.metrics',
     );
   }
 
@@ -85,21 +85,21 @@ class AsoraSpan {
   }
 }
 
-/// OpenTelemetry instrumentation helper for Asora services
-class AsoraTracer {
+/// OpenTelemetry instrumentation helper for Lythaus services
+class LythausTracer {
   /// Start a span for service method tracing
   ///
   /// [operationName] - The name of the operation (e.g., 'ModerationService.getMyAppeals')
   /// [attributes] - Additional span attributes for context
-  static AsoraSpan startSpan(
+  static LythausSpan startSpan(
     String operationName, {
     Map<String, Object>? attributes,
   }) {
-    final span = AsoraSpan._(operationName, DateTime.now());
+    final span = LythausSpan._(operationName, DateTime.now());
 
     // Add default attributes
     span.setAttributes({
-      'service.name': 'asora-mobile',
+      'service.name': 'lythaus-mobile',
       'service.version': '1.0.0',
       'component': 'http-client',
       ...?attributes,
@@ -169,7 +169,7 @@ class AsoraTracer {
 
   /// Add HTTP response specific attributes to span
   static void _addResponseAttributes(
-    AsoraSpan span,
+    LythausSpan span,
     Map<String, dynamic> response,
   ) {
     // Status code from response

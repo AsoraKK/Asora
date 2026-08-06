@@ -3,8 +3,8 @@ library;
 
 import 'dart:async';
 
-import 'package:asora/features/admin/api/admin_api_client.dart';
-import 'package:asora/features/admin/ui/budget_screen.dart';
+import 'package:lythaus/features/admin/api/admin_api_client.dart';
+import 'package:lythaus/features/admin/ui/budget_screen.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

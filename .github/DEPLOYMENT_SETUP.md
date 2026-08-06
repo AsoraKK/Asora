@@ -1,6 +1,6 @@
 # 🚀 GitHub Actions Azure Function App Deployment Setup
 
-This guide explains how to set up automated deployment for your Asora Azure Function App using GitHub Actions with OIDC authentication.
+This guide explains how to set up automated deployment for your Lythaus Azure Function App using GitHub Actions with OIDC authentication.
 
 ## 📋 Prerequisites
 
@@ -15,9 +15,9 @@ This guide explains how to set up automated deployment for your Asora Azure Func
 ```bash
 # Set variables
 SUBSCRIPTION_ID="your-azure-subscription-id"
-RESOURCE_GROUP="asora-psql-flex"
-APP_NAME="asora-github-actions"
-REPO="AsoraKK/Asora"  # Your GitHub repository
+RESOURCE_GROUP="lythaus-psql-flex"
+APP_NAME="lythaus-github-actions"
+REPO="AsoraKK/Lythaus"  # Your GitHub repository
 
 # Create service principal for OIDC
 az ad app create --display-name "$APP_NAME"
@@ -69,14 +69,14 @@ echo "Tenant ID: $TENANT_ID"
 1. **Navigate to Azure Active Directory**
    - Go to Azure Portal → Azure Active Directory → App registrations
    - Click "New registration"
-   - Name: `asora-github-actions`
+   - Name: `lythaus-github-actions`
    - Click "Register"
 
 2. **Configure Federated Credentials**
    - In your app registration → Certificates & secrets → Federated credentials
    - Click "Add credential"
    - Select "GitHub Actions deploying Azure resources"
-   - Repository: `AsoraKK/Asora`
+   - Repository: `AsoraKK/Lythaus`
    - Entity type: "Branch"
    - Branch name: `main`
    - Name: `github-main`
@@ -106,12 +106,12 @@ AZURE_SUBSCRIPTION_ID=your-azure-subscription-id
 
 ```
 # Development environment
-DEV_AZURE_FUNCTION_APP_NAME=asora-function-dev
-DEV_AZURE_RESOURCE_GROUP=asora-psql-flex
+DEV_AZURE_FUNCTION_APP_NAME=lythaus-function-dev
+DEV_AZURE_RESOURCE_GROUP=lythaus-psql-flex
 
 # Production environment (when ready)
-MVP_AZURE_FUNCTION_APP_NAME=asora-function-dev
-PROD_AZURE_RESOURCE_GROUP=asora-prod
+MVP_AZURE_FUNCTION_APP_NAME=lythaus-function-dev
+PROD_AZURE_RESOURCE_GROUP=lythaus-prod
 ```
 
 ## 🌍 Step 3: Create GitHub Environments (Optional)
@@ -125,15 +125,15 @@ For better security and environment-specific deployments:
 2. **Create Development Environment**
    - Name: `dev`
    - Add environment variables:
-     - `AZURE_FUNCTIONAPP_NAME`: `asora-function-dev`
-     - `AZURE_RESOURCE_GROUP`: `asora-psql-flex`
+     - `AZURE_FUNCTIONAPP_NAME`: `lythaus-function-dev`
+     - `AZURE_RESOURCE_GROUP`: `lythaus-psql-flex`
 
 3. **Create Production Environment** (when ready)
    - Name: `production`
    - Enable "Required reviewers" for added security
    - Add environment variables:
-     - `AZURE_FUNCTIONAPP_NAME`: `asora-function-dev` (operationally the Lythaus MVP shared environment)
-     - `AZURE_RESOURCE_GROUP`: `asora-prod`
+     - `AZURE_FUNCTIONAPP_NAME`: `lythaus-function-dev` (operationally the Lythaus MVP shared environment)
+     - `AZURE_RESOURCE_GROUP`: `lythaus-prod`
 
 ## 🧪 Step 4: Test the Deployment
 
@@ -166,21 +166,21 @@ git push origin main
 ```bash
 # Check deployment status
 az functionapp show \
-  --name asora-function-dev \
-  --resource-group asora-psql-flex \
+  --name lythaus-function-dev \
+  --resource-group lythaus-psql-flex \
   --query "{name:name, state:state, hostNames:hostNames[0]}" -o table
 
 # List deployed functions
 az functionapp function list \
-  --name asora-function-dev \
-  --resource-group asora-psql-flex \
+  --name lythaus-function-dev \
+  --resource-group lythaus-psql-flex \
   --query "[].{Name:name, Trigger:config.bindings[0].type}" -o table
 ```
 
 ## 🔧 Workflow Features
 
 ### ✅ What the workflow does:
-- **Single authorised origin**: Deploys only to `asora-function-dev` as the Lythaus MVP shared environment
+- **Single authorised origin**: Deploys only to `lythaus-function-dev` as the Lythaus MVP shared environment
 - **Exact artifact selection**: Requires a validated commit SHA and CI run ID
 - **Health verification**: Tests deployment success
 - **Environment model**: Local, ephemeral Cloudflare preview, and MVP live; no new Azure environments
@@ -210,7 +210,7 @@ az functionapp function list \
 
 3. **Function App Not Found**
    ```
-   Error: Resource 'asora-function-dev' not found
+   Error: Resource 'lythaus-function-dev' not found
    ```
    **Solution**: Verify the function app name and resource group in workflow variables
 
@@ -226,7 +226,7 @@ az functionapp function list \
 az role assignment list --assignee $CLIENT_ID --output table
 
 # Verify function app exists
-az functionapp list --resource-group asora-psql-flex --query "[].name" -o table
+az functionapp list --resource-group lythaus-psql-flex --query "[].name" -o table
 
 # Test OIDC token (locally)
 az login --service-principal -u $CLIENT_ID --federated-token $ACTIONS_ID_TOKEN_REQUEST_TOKEN --tenant $AZURE_TENANT_ID

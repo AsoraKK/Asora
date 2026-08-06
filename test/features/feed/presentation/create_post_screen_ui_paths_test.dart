@@ -7,12 +7,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:asora/features/feed/presentation/create_post_screen.dart';
-import 'package:asora/features/feed/application/post_creation_providers.dart';
-import 'package:asora/features/feed/domain/post_repository.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/auth/application/oauth2_service.dart';
-import 'package:asora/features/auth/domain/user.dart';
+import 'package:lythaus/features/feed/presentation/create_post_screen.dart';
+import 'package:lythaus/features/feed/application/post_creation_providers.dart';
+import 'package:lythaus/features/feed/domain/post_repository.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/application/oauth2_service.dart';
+import 'package:lythaus/features/auth/domain/user.dart';
 
 class MockPostRepository extends Mock implements PostRepository {}
 

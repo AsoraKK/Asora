@@ -82,21 +82,21 @@ function Get-Classification([string]$Path, [string]$Value) {
   if ($normalized -match '^scripts/') { return 'Local-development configuration' }
   if ($normalized -match '^docs/') { return 'Public documentation' }
   if ($Value -match 'azurewebsites\.net') { return 'Azure infrastructure configuration' }
-  return 'Unsafe public Asora reference'
+  return 'Unsafe public Lythaus reference'
 }
 
 function Get-IntendedValue([string]$Value, [string]$Classification, [string]$Path) {
   if ($Classification -in @('Historical evidence', 'Azure infrastructure configuration')) { return 'Retain internal or historical value' }
-  if ($Value -match 'admin-api\.asora\.co\.za') { return 'admin-api.lythaus.co' }
-  if ($Value -match '(?:control|admin)\.asora\.co\.za') { return 'admin.lythaus.co' }
+  if ($Value -match 'admin-api\.lythaus\.co\.za') { return 'admin-api.lythaus.co' }
+  if ($Value -match '(?:control|admin)\.lythaus\.co\.za') { return 'admin.lythaus.co' }
   if ($Value -match 'lythaus-web\.pages\.dev') { return 'app.lythaus.co or an exact ephemeral Pages preview' }
-  if ($Value -match 'lythaus\.asora\.co\.za|(?:www\.)?asora\.co\.za') { return 'lythaus.co or explicit legacy compatibility' }
-  if ($Value -match 'api\.asora\.co\.za|azurewebsites\.net') { return 'api.lythaus.co/api or an exact ephemeral Worker preview' }
+  if ($Value -match 'lythaus\.lythaus\.co\.za|(?:www\.)?lythaus\.co\.za') { return 'lythaus.co or explicit legacy compatibility' }
+  if ($Value -match 'api\.lythaus\.co\.za|azurewebsites\.net') { return 'api.lythaus.co/api or an exact ephemeral Worker preview' }
   return 'Review against ADR-005'
 }
 
 function New-ReferenceInventory {
-  $pattern = '(?i)(?:https?://)?(?:[a-z0-9-]+\.)*(?:asora\.co\.za|lythaus-web\.pages\.dev|[a-z0-9.-]*azurewebsites\.net)'
+  $pattern = '(?i)(?:https?://)?(?:[a-z0-9-]+\.)*(?:lythaus\.co\.za|lythaus-web\.pages\.dev|[a-z0-9.-]*azurewebsites\.net)'
   $arguments = @(
     '--json', '--hidden', '-n',
     '-g', '!**/.git/**', '-g', '!**/node_modules/**', '-g', '!**/.dart_tool/**',
@@ -335,7 +335,7 @@ if ($RecheckPreviouslyUnavailable) {
   $result.mode = 'PREVIOUSLY_UNAVAILABLE_RECHECK'
   $recheckZones = @()
 
-  foreach ($zoneName in @('lythaus.co', 'asora.co.za')) {
+  foreach ($zoneName in @('lythaus.co', 'lythaus.co')) {
     $zoneResponse = Invoke-Cloudflare "/zones?name=$zoneName" "$zoneName-zone.raw.json"
     if (-not $zoneResponse -or @($zoneResponse.result).Count -ne 1) {
       $result.blockers += "$zoneName zone could not be uniquely rechecked."
@@ -421,7 +421,7 @@ $inventory = New-ReferenceInventory
 $result.repositoryReferenceCount = $inventory.Count
 $discoveredAccountIds = [System.Collections.Generic.HashSet[string]]::new()
 
-foreach ($zoneName in @('lythaus.co', 'asora.co.za')) {
+foreach ($zoneName in @('lythaus.co', 'lythaus.co')) {
   $zoneResponse = Invoke-Cloudflare "/zones?name=$zoneName" "$zoneName-zone.raw.json"
   if (-not $zoneResponse -or @($zoneResponse.result).Count -ne 1) {
     $result.blockers += "$zoneName zone could not be uniquely audited."

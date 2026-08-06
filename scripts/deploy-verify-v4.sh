@@ -3,8 +3,8 @@
 
 # Deploy the zip package
 az functionapp deployment source config-zip \
-  -g asora-psql-flex \
-  -n asora-function-dev \
+  -g lythaus-psql-flex \
+  -n lythaus-function-dev \
   --src dist-v4-final.zip \
   --timeout 600
 
@@ -15,8 +15,8 @@ sleep 30
 # Verify deployment - list all functions
 echo "📋 Listing deployed functions:"
 az functionapp function list \
-  -g asora-psql-flex \
-  -n asora-function-dev \
+  -g lythaus-psql-flex \
+  -n lythaus-function-dev \
   --query "[].{Name:name, TriggerType:config.bindings[0].type}" \
   --output table
 
@@ -36,7 +36,7 @@ curl -fsS "${API_BASE_URL%/}/health" | head -5
 # Check function app status
 echo "⚡ Function app status:"
 az functionapp show \
-  -g asora-psql-flex \
-  -n asora-function-dev \
+  -g lythaus-psql-flex \
+  -n lythaus-function-dev \
   --query "{State:state, DefaultHostName:defaultHostName, RuntimeVersion:siteConfig.linuxFxVersion}" \
   --output table

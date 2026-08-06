@@ -11,14 +11,14 @@
  * Usage
  * ─────────────────────────────────────────────────────────────────────────────
  *   # Smoke run (default)
- *   BASE_URL=https://func-asora-dev.azurewebsites.net k6 run scripts/k6/feed-load.js
+ *   BASE_URL=https://func-lythaus-dev.azurewebsites.net k6 run scripts/k6/feed-load.js
  *
  *   # Named scenario
- *   BASE_URL=https://func-asora-dev.azurewebsites.net \
+ *   BASE_URL=https://func-lythaus-dev.azurewebsites.net \
  *     k6 run --env SCENARIO=guest_ramp scripts/k6/feed-load.js
  *
  *   # Authenticated (home feed)
- *   BASE_URL=https://func-asora-dev.azurewebsites.net \
+ *   BASE_URL=https://func-lythaus-dev.azurewebsites.net \
  *   K6_JWT=<bearer-token> \
  *     k6 run --env SCENARIO=auth_home scripts/k6/feed-load.js
  *

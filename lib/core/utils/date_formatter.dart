@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA DATE FORMATTER UTILITY
+/// LYTHAUS DATE FORMATTER UTILITY
 ///
 /// 🎯 Purpose: Centralized date formatting logic
 /// 🔍 Single Responsibility: Date/time formatting only

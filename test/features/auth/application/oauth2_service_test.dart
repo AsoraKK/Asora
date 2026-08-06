@@ -7,9 +7,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:mocktail/mocktail.dart';
 
-import 'package:asora/features/auth/application/oauth2_service.dart';
-import 'package:asora/features/auth/domain/auth_failure.dart';
-import 'package:asora/features/auth/domain/user.dart';
+import 'package:lythaus/features/auth/application/oauth2_service.dart';
+import 'package:lythaus/features/auth/domain/auth_failure.dart';
+import 'package:lythaus/features/auth/domain/user.dart';
 
 class _MockFlutterAppAuth extends Mock implements FlutterAppAuth {}
 

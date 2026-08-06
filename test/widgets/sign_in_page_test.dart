@@ -1,11 +1,11 @@
-import 'package:asora/features/auth/application/auth_controller.dart';
-import 'package:asora/features/auth/presentation/sign_in_page.dart';
+import 'package:lythaus/features/auth/application/auth_controller.dart';
+import 'package:lythaus/features/auth/presentation/sign_in_page.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:asora/services/oauth2_service.dart';
+import 'package:lythaus/services/oauth2_service.dart';
 
 class _DummyService extends OAuth2Service {
   _DummyService()

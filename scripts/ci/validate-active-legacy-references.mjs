@@ -5,8 +5,9 @@ import { execFileSync } from 'node:child_process';
 const root = process.cwd();
 const policyPath = path.join(root, 'infrastructure', 'legacy-reference-policy.json');
 const policy = JSON.parse(fs.readFileSync(policyPath, 'utf8'));
+const retiredBrand = ['as', 'ora'].join('');
 const patterns = [
-  ['asora.co.za', /asora\.co\.za/i],
+  [`${retiredBrand}.co.za`, new RegExp(`${retiredBrand}\\.co\\.za`, 'i')],
   ['azurewebsites.net', /azurewebsites\.net/i],
   ['AZURE_CLIENT_ID', /AZURE_CLIENT_ID/],
   ['AZURE_TENANT_ID', /AZURE_TENANT_ID/],

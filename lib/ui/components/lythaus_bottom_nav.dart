@@ -3,10 +3,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/state/providers/settings_providers.dart';
+import 'package:lythaus/state/providers/settings_providers.dart';
 
-class AsoraBottomNav extends ConsumerWidget {
-  const AsoraBottomNav({
+class LythausBottomNav extends ConsumerWidget {
+  const LythausBottomNav({
     super.key,
     required this.currentIndex,
     required this.onTap,

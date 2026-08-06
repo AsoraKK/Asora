@@ -6,12 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-import 'package:asora/core/network/dio_client.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/services/appeal_provider.dart';
-import 'package:asora/features/auth/application/oauth2_service.dart';
-import 'package:asora/state/models/moderation.dart';
-import 'package:asora/state/providers/moderation_providers.dart';
+import 'package:lythaus/core/network/dio_client.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/services/appeal_provider.dart';
+import 'package:lythaus/features/auth/application/oauth2_service.dart';
+import 'package:lythaus/state/models/moderation.dart';
+import 'package:lythaus/state/providers/moderation_providers.dart';
 
 class _MockDio extends Mock implements Dio {}
 

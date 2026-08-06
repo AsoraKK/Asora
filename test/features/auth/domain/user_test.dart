@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/features/auth/domain/user.dart';
+import 'package:lythaus/features/auth/domain/user.dart';
 
 void main() {
   group('User model', () {

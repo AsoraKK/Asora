@@ -8,7 +8,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/features/auth/presentation/auth_screen.dart';
+import 'package:lythaus/features/auth/presentation/auth_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 void main() {

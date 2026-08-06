@@ -6,9 +6,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:asora/features/feed/presentation/post_insights_panel.dart';
-import 'package:asora/features/feed/application/post_insights_providers.dart';
-import 'package:asora/features/feed/domain/post_insights.dart';
+import 'package:lythaus/features/feed/presentation/post_insights_panel.dart';
+import 'package:lythaus/features/feed/application/post_insights_providers.dart';
+import 'package:lythaus/features/feed/domain/post_insights.dart';
 
 void main() {
   group('PostInsightsPanel', () {

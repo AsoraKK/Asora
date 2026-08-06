@@ -7,15 +7,15 @@ import 'dart:async';
 import 'package:built_value/serializer.dart';
 import 'package:dio/dio.dart';
 
-import 'package:asora_api_client/src/api_util.dart';
-import 'package:asora_api_client/src/model/account_delete_response.dart';
-import 'package:asora_api_client/src/model/dsr_export_response.dart';
-import 'package:asora_api_client/src/model/privacy_request_accepted.dart';
-import 'package:asora_api_client/src/model/privacy_request_create.dart';
-import 'package:asora_api_client/src/model/privacy_request_status_response.dart';
-import 'package:asora_api_client/src/model/rate_limit_error.dart';
-import 'package:asora_api_client/src/model/unauthorized_error.dart';
-import 'package:asora_api_client/src/model/validation_error_response.dart';
+import 'package:lythaus_api_client/src/api_util.dart';
+import 'package:lythaus_api_client/src/model/account_delete_response.dart';
+import 'package:lythaus_api_client/src/model/dsr_export_response.dart';
+import 'package:lythaus_api_client/src/model/privacy_request_accepted.dart';
+import 'package:lythaus_api_client/src/model/privacy_request_create.dart';
+import 'package:lythaus_api_client/src/model/privacy_request_status_response.dart';
+import 'package:lythaus_api_client/src/model/rate_limit_error.dart';
+import 'package:lythaus_api_client/src/model/unauthorized_error.dart';
+import 'package:lythaus_api_client/src/model/validation_error_response.dart';
 
 class PrivacyApi {
 

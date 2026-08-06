@@ -1,5 +1,5 @@
-import 'package:asora/features/admin/api/admin_api_client.dart';
-import 'package:asora/features/admin/domain/admin_config_models.dart';
+import 'package:lythaus/features/admin/api/admin_api_client.dart';
+import 'package:lythaus/features/admin/domain/admin_config_models.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -41,7 +41,7 @@ Map<String, dynamic> _configEnvelopeJson() {
   return {
     'version': 2,
     'updatedAt': '2024-01-01T00:00:00Z',
-    'updatedBy': {'id': 'admin@asora.co.za', 'displayName': 'Admin'},
+    'updatedBy': {'id': 'admin@lythaus.co', 'displayName': 'Admin'},
     'payload': _config().toJson(),
   };
 }

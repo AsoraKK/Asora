@@ -12,10 +12,10 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/design_system/components/lyth_button.dart';
-import 'package:asora/features/admin/application/live_test_mode_provider.dart';
-import 'package:asora/features/admin/ui/widgets/device_emulator.dart';
-import 'package:asora/features/admin/ui/widgets/preview_flow_wrapper.dart';
+import 'package:lythaus/design_system/components/lyth_button.dart';
+import 'package:lythaus/features/admin/application/live_test_mode_provider.dart';
+import 'package:lythaus/features/admin/ui/widgets/device_emulator.dart';
+import 'package:lythaus/features/admin/ui/widgets/preview_flow_wrapper.dart';
 
 /// Available preview flows for testing
 enum PreviewFlow {

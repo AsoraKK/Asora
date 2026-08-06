@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA CREATE POST SCREEN
+/// LYTHAUS CREATE POST SCREEN
 ///
 /// 🎯 Purpose: UI for creating new posts
 /// 🏗️ Architecture: Presentation layer - handles user interaction
@@ -13,16 +13,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:asora/core/security/device_integrity_guard.dart';
-import 'package:asora/core/error/error_codes.dart';
-import 'package:asora/features/feed/application/post_creation_providers.dart';
-import 'package:asora/features/feed/domain/post_repository.dart';
-import 'package:asora/core/analytics/analytics_events.dart';
-import 'package:asora/core/analytics/analytics_providers.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/services/appeal_provider.dart';
-import 'package:asora/services/service_providers.dart';
-import 'package:asora/services/media/media_upload_service.dart';
+import 'package:lythaus/core/security/device_integrity_guard.dart';
+import 'package:lythaus/core/error/error_codes.dart';
+import 'package:lythaus/features/feed/application/post_creation_providers.dart';
+import 'package:lythaus/features/feed/domain/post_repository.dart';
+import 'package:lythaus/core/analytics/analytics_events.dart';
+import 'package:lythaus/core/analytics/analytics_providers.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/services/appeal_provider.dart';
+import 'package:lythaus/services/service_providers.dart';
+import 'package:lythaus/services/media/media_upload_service.dart';
 
 /// Screen for creating a new post
 class CreatePostScreen extends ConsumerStatefulWidget {

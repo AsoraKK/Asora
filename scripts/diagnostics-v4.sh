@@ -3,34 +3,34 @@
 
 # Stream live application logs
 az webapp log tail \
-  -g asora-psql-flex \
-  -n asora-function-dev \
+  -g lythaus-psql-flex \
+  -n lythaus-function-dev \
   --provider application
 
 # Alternative: Kudu log stream (paste in browser)
-# https://asora-function-dev.scm.azurewebsites.net/api/logstream
+# https://lythaus-function-dev.scm.azurewebsites.net/api/logstream
 
 # Get recent application logs (last 100 lines)
 az webapp log download \
-  -g asora-psql-flex \
-  -n asora-function-dev \
+  -g lythaus-psql-flex \
+  -n lythaus-function-dev \
   --log-file recent-logs.zip
 
 # Check function app configuration
 az functionapp config appsettings list \
-  -g asora-psql-flex \
-  -n asora-function-dev \
+  -g lythaus-psql-flex \
+  -n lythaus-function-dev \
   --output table
 
 echo "🔧 Flex runtime snapshot (if configured):"
-az rest --method get --uri "https://management.azure.com/subscriptions/99df7ef7-776a-4235-84a4-c77899b2bb04/resourceGroups/asora-psql-flex/providers/Microsoft.Web/sites/asora-function-dev?api-version=2023-01-01" \
+az rest --method get --uri "https://management.azure.com/subscriptions/99df7ef7-776a-4235-84a4-c77899b2bb04/resourceGroups/lythaus-psql-flex/providers/Microsoft.Web/sites/lythaus-function-dev?api-version=2023-01-01" \
   --query "properties.functionAppConfig.runtime" -o json
 
 # Function host status endpoint
 echo "🔍 Function host status:"
 az functionapp show \
-  -g asora-psql-flex \
-  -n asora-function-dev \
+  -g lythaus-psql-flex \
+  -n lythaus-function-dev \
   --query "{state:state,httpsOnly:httpsOnly,defaultHostName:defaultHostName}" -o json
 
 # Check function keys (if admin access needed)

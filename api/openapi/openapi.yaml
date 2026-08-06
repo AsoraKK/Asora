@@ -1993,15 +1993,15 @@ paths:
                 summary: Authorization code grant
                 value:
                   grant_type: authorization_code
-                  client_id: asora-mobile
+                  client_id: lythaus-mobile
                   code: SplxlOBeZQQYbYS6WxSbIA
-                  redirect_uri: 'com.asora.app://callback'
+                  redirect_uri: 'co.lythaus.app://callback'
                   code_verifier: dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk
               refreshToken:
                 summary: Refresh token grant
                 value:
                   grant_type: refresh_token
-                  client_id: asora-mobile
+                  client_id: lythaus-mobile
                   refresh_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
       responses:
         '200':
@@ -8723,7 +8723,7 @@ components:
         client_id:
           type: string
           description: Registered client identifier
-          example: asora-mobile
+          example: lythaus-mobile
         code:
           type: string
           description: Authorization code (required for authorization_code grant)

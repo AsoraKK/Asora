@@ -7,15 +7,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/scheduler.dart';
 
-import 'package:asora/core/analytics/analytics_client.dart';
-import 'package:asora/core/analytics/analytics_events.dart';
-import 'package:asora/core/analytics/analytics_providers.dart';
-import 'package:asora/core/security/device_integrity_guard.dart';
-import 'package:asora/design_system/components/lyth_button.dart';
-import 'package:asora/screens/security_debug_screen.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/auth/application/oauth2_service.dart';
-import 'package:asora/features/auth/presentation/invite_redeem_screen.dart';
+import 'package:lythaus/core/analytics/analytics_client.dart';
+import 'package:lythaus/core/analytics/analytics_events.dart';
+import 'package:lythaus/core/analytics/analytics_providers.dart';
+import 'package:lythaus/core/security/device_integrity_guard.dart';
+import 'package:lythaus/design_system/components/lyth_button.dart';
+import 'package:lythaus/screens/security_debug_screen.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/application/oauth2_service.dart';
+import 'package:lythaus/features/auth/presentation/invite_redeem_screen.dart';
 
 class _AuthProviderOption {
   const _AuthProviderOption({

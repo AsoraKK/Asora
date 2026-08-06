@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/features/auth/presentation/auth_screen.dart';
-import 'package:asora/features/auth/application/auth_service.dart';
-import 'package:asora/features/auth/domain/auth_failure.dart';
-import 'package:asora/features/auth/domain/user.dart';
+import 'package:lythaus/features/auth/presentation/auth_screen.dart';
+import 'package:lythaus/features/auth/application/auth_service.dart';
+import 'package:lythaus/features/auth/domain/auth_failure.dart';
+import 'package:lythaus/features/auth/domain/user.dart';
 
 class _FakeAuthService extends AuthService {
   bool shouldThrow = false;

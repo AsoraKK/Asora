@@ -2,11 +2,11 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/moderation/domain/appeal.dart';
-import 'package:asora/features/moderation/application/moderation_providers.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/moderation/domain/appeal.dart';
+import 'package:lythaus/features/moderation/application/moderation_providers.dart';
 
-/// ASORA APPEAL HISTORY PAGE
+/// LYTHAUS APPEAL HISTORY PAGE
 ///
 /// 🎯 Purpose: Personal dashboard for tracking user's appeal submissions
 /// ✅ Features: Appeal timeline, status tracking, outcome history

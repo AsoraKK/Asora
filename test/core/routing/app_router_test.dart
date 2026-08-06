@@ -1,25 +1,25 @@
-import 'package:asora/core/routing/app_router.dart';
-import 'package:asora/design_system/components/lyth_button.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/auth/application/invite_redeem_service.dart';
-import 'package:asora/features/auth/application/oauth2_service.dart';
-import 'package:asora/features/auth/domain/user.dart';
-import 'package:asora/features/auth/presentation/invite_redeem_screen.dart';
-import 'package:asora/features/auth/presentation/auth_callback_screen.dart';
-import 'package:asora/features/auth/presentation/auth_choice_screen.dart';
-import 'package:asora/features/moderation/presentation/moderation_console/moderation_console_screen.dart';
-import 'package:asora/features/moderation/presentation/screens/appeal_history_screen.dart';
-import 'package:asora/features/notifications/presentation/notifications_settings_screen.dart';
-import 'package:asora/core/analytics/analytics_client.dart';
-import 'package:asora/core/analytics/analytics_providers.dart';
+import 'package:lythaus/core/routing/app_router.dart';
+import 'package:lythaus/design_system/components/lyth_button.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/application/invite_redeem_service.dart';
+import 'package:lythaus/features/auth/application/oauth2_service.dart';
+import 'package:lythaus/features/auth/domain/user.dart';
+import 'package:lythaus/features/auth/presentation/invite_redeem_screen.dart';
+import 'package:lythaus/features/auth/presentation/auth_callback_screen.dart';
+import 'package:lythaus/features/auth/presentation/auth_choice_screen.dart';
+import 'package:lythaus/features/moderation/presentation/moderation_console/moderation_console_screen.dart';
+import 'package:lythaus/features/moderation/presentation/screens/appeal_history_screen.dart';
+import 'package:lythaus/features/notifications/presentation/notifications_settings_screen.dart';
+import 'package:lythaus/core/analytics/analytics_client.dart';
+import 'package:lythaus/core/analytics/analytics_providers.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:asora/features/feed/presentation/post_detail_screen.dart';
-import 'package:asora/ui/screens/adaptive_shell.dart';
-import 'package:asora/ui/screens/profile/profile_screen.dart';
+import 'package:lythaus/features/feed/presentation/post_detail_screen.dart';
+import 'package:lythaus/ui/screens/adaptive_shell.dart';
+import 'package:lythaus/ui/screens/profile/profile_screen.dart';
 
 class _MockAuthStateNotifier extends StateNotifier<AsyncValue<User?>>
     implements AuthStateNotifier {

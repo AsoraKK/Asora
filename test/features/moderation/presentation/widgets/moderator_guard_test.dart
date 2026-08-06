@@ -5,10 +5,10 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:asora/features/moderation/presentation/widgets/moderator_guard.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/auth/application/oauth2_service.dart';
-import 'package:asora/features/auth/domain/user.dart';
+import 'package:lythaus/features/moderation/presentation/widgets/moderator_guard.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/application/oauth2_service.dart';
+import 'package:lythaus/features/auth/domain/user.dart';
 
 class _MockAuthStateNotifier extends StateNotifier<AsyncValue<User?>>
     implements AuthStateNotifier {

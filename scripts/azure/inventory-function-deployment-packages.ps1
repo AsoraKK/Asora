@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
-    [string]$ResourceGroup = 'asora-psql-flex',
-    [string]$FunctionApp = 'asora-function-dev',
+    [string]$ResourceGroup = 'lythaus-psql-flex',
+    [string]$FunctionApp = 'lythaus-function-dev',
     [int]$MinimumRetentionDays = 60,
     [int]$MinimumRollbackPackages = 10
 )

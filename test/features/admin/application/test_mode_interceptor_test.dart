@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
-import 'package:asora/features/admin/application/live_test_mode_provider.dart';
-import 'package:asora/features/admin/application/test_mode_interceptor.dart';
+import 'package:lythaus/features/admin/application/live_test_mode_provider.dart';
+import 'package:lythaus/features/admin/application/test_mode_interceptor.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

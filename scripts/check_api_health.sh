@@ -9,13 +9,13 @@
 #
 # Examples:
 #   ./scripts/check_api_health.sh                                    # Uses default
-#   ./scripts/check_api_health.sh https://control.asora.co.za        # Custom URL
-#   BASE_URL=https://staging.asora.co.za ./scripts/check_api_health.sh
+#   ./scripts/check_api_health.sh https://control.lythaus.co        # Custom URL
+#   BASE_URL=https://staging.lythaus.co ./scripts/check_api_health.sh
 
 set -euo pipefail
 
 # Default to production control panel URL
-BASE_URL="${1:-${BASE_URL:-https://control.asora.co.za}}"
+BASE_URL="${1:-${BASE_URL:-https://control.lythaus.co}}"
 HEALTH_ENDPOINT="${BASE_URL}/api/health"
 
 echo "=================================================="
@@ -28,7 +28,7 @@ echo ""
 # Fetch with verbose headers, following redirects but capturing the final URL
 RESPONSE=$(curl -sSL -w '\n__STATUS_CODE__:%{http_code}\n__REDIRECT_URL__:%{url_effective}\n__CONTENT_TYPE__:%{content_type}' \
   -H "Accept: application/json" \
-  -H "User-Agent: asora-health-check/1.0" \
+  -H "User-Agent: lythaus-health-check/1.0" \
   --connect-timeout 10 \
   --max-time 30 \
   "${HEALTH_ENDPOINT}" 2>&1) || {

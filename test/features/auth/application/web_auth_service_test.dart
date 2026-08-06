@@ -4,10 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart' as http_testing;
 
-import 'package:asora/features/auth/application/web_auth_service.dart';
-import 'package:asora/features/auth/application/web_token_storage.dart';
-import 'package:asora/features/auth/domain/auth_failure.dart';
-import 'package:asora/features/auth/domain/user.dart';
+import 'package:lythaus/features/auth/application/web_auth_service.dart';
+import 'package:lythaus/features/auth/application/web_token_storage.dart';
+import 'package:lythaus/features/auth/domain/auth_failure.dart';
+import 'package:lythaus/features/auth/domain/user.dart';
 
 // ---------------------------------------------------------------------------
 // In-memory storage for testing (replaces the stub that always returns null)

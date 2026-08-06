@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/features/auth/application/web_token_storage.dart';
+import 'package:lythaus/features/auth/application/web_token_storage.dart';
 
 void main() {
   group('WebTokenStorage (stub)', () {

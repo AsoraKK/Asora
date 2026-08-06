@@ -1,7 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/core/auth/auth_session_manager.dart';
+import 'package:lythaus/core/auth/auth_session_manager.dart';
 
 class _FakeSecureStoreChannel {
   final Map<String, String> _data = {};

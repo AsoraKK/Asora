@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA SECURITY TELEMETRY
+/// LYTHAUS SECURITY TELEMETRY
 ///
 /// 🎯 Purpose: Structured logging for security events
 /// 🚨 Monitoring: Emits security decisions without PII
@@ -9,7 +9,7 @@ library;
 
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:asora/core/config/environment_config.dart';
+import 'package:lythaus/core/config/environment_config.dart';
 
 /// Security event types
 enum SecurityEventType {

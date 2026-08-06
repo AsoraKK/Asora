@@ -5,8 +5,8 @@
 set -e
 
 BASE_URL="${K6_API_BASE_URL:-${K6_BASE_URL:-https://api.lythaus.co/api}}"
-FUNCTION_APP="${FUNC_APP:-asora-function-dev}"
-RESOURCE_GROUP="${RG:-asora-psql-flex}"
+FUNCTION_APP="${FUNC_APP:-lythaus-function-dev}"
+RESOURCE_GROUP="${RG:-lythaus-psql-flex}"
 
 echo "🔍 Diagnosing k6 smoke test failures"
 echo "===================================="
@@ -57,7 +57,7 @@ if [ "$HTTP_CODE" = "404" ]; then
   echo "   ✅ Solution: Deploy functions using:"
   echo "      ./deploy-functions-manual.sh"
   echo "      OR"
-  echo "      Trigger the GitHub workflow: .github/workflows/deploy-asora-function-dev.yml"
+  echo "      Trigger the GitHub workflow: .github/workflows/deploy-lythaus-function-dev.yml"
 elif [ "$HTTP_CODE" = "200" ]; then
   echo "✅ Health endpoint is responding correctly"
   echo "   The k6 test failure may be due to:"

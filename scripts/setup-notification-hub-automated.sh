@@ -11,11 +11,11 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Configuration
-RESOURCE_GROUP="asora-psql-flex"
+RESOURCE_GROUP="lythaus-psql-flex"
 LOCATION="northeurope"
-NAMESPACE_NAME="asora-ns-dev"
-HUB_NAME="asora-dev-hub"
-FUNCTION_APP="asora-function-dev"
+NAMESPACE_NAME="lythaus-ns-dev"
+HUB_NAME="lythaus-dev-hub"
+FUNCTION_APP="lythaus-function-dev"
 
 echo -e "${GREEN}=== Azure Notification Hub Automated Setup ===${NC}"
 echo ""
@@ -128,11 +128,11 @@ echo "2. Navigate: Notification Hubs → $HUB_NAME"
 echo "3. Settings → Google (FCM v1)"
 echo "4. Paste the following values:"
 echo ""
-echo "   Project ID: asora-dev"
-echo "   Client Email: asora-fcm-notifications@asora-dev.iam.gserviceaccount.com"
+echo "   Project ID: lythaus-dev"
+echo "   Client Email: lythaus-fcm-notifications@lythaus-dev.iam.gserviceaccount.com"
 echo "   Private Key: (run below command to view)"
 echo ""
-echo "   jq -r '.private_key' ~/asora/secrets/fcm-dev.json"
+echo "   jq -r '.private_key' ~/lythaus/secrets/fcm-dev.json"
 echo ""
 echo "5. Click Save"
 echo ""
@@ -144,7 +144,7 @@ echo -e "${GREEN}Expected: HTTP 200 with notification hub status${NC}"
 echo ""
 
 # Save connection string to temp file for reference
-echo "$CONNECTION_STRING" > ~/asora/secrets/notification-hub-connection-string.txt
-chmod 600 ~/asora/secrets/notification-hub-connection-string.txt
-echo -e "${YELLOW}Connection string saved to: ~/asora/secrets/notification-hub-connection-string.txt${NC}"
+echo "$CONNECTION_STRING" > ~/lythaus/secrets/notification-hub-connection-string.txt
+chmod 600 ~/lythaus/secrets/notification-hub-connection-string.txt
+echo -e "${YELLOW}Connection string saved to: ~/lythaus/secrets/notification-hub-connection-string.txt${NC}"
 echo ""

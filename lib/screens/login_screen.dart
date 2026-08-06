@@ -1,9 +1,9 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:flutter/material.dart';
-import 'package:asora/features/auth/application/auth_service.dart';
-import 'package:asora/features/auth/domain/user.dart';
-import 'package:asora/features/auth/domain/auth_failure.dart';
+import 'package:lythaus/features/auth/application/auth_service.dart';
+import 'package:lythaus/features/auth/domain/user.dart';
+import 'package:lythaus/features/auth/domain/auth_failure.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});

@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA ADMIN CONFIG STATE CONTROLLER
+/// LYTHAUS ADMIN CONFIG STATE CONTROLLER
 ///
 /// 🎯 Purpose: Riverpod state management for admin configuration
 /// 🏗️ Architecture: Application layer - orchestrates UI and API
@@ -10,9 +10,9 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/features/admin/api/admin_api_client.dart';
-import 'package:asora/features/admin/domain/admin_config_models.dart';
-import 'package:asora/core/network/dio_client.dart';
+import 'package:lythaus/features/admin/api/admin_api_client.dart';
+import 'package:lythaus/features/admin/domain/admin_config_models.dart';
+import 'package:lythaus/core/network/dio_client.dart';
 
 /// Status of the admin config editor
 enum AdminConfigStatus {

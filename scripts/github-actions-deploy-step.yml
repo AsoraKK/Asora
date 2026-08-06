@@ -10,7 +10,7 @@
         run: |
           echo "🚀 Deploying to Azure Functions..."
           az functionapp deployment source config-zip \
-            -g asora-psql-flex -n asora-function-dev \
+            -g lythaus-psql-flex -n lythaus-function-dev \
             --src dist-v4-final.zip
           
           echo "⏳ Waiting for deployment to stabilize..."
@@ -20,7 +20,7 @@
         run: |
           echo "🔍 Verifying function endpoints..."
           az functionapp function list \
-            -g asora-psql-flex -n asora-function-dev \
+            -g lythaus-psql-flex -n lythaus-function-dev \
             --query "[].name" --output tsv
           
           echo "🏥 Testing health endpoint..."

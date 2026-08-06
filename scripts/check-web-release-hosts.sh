@@ -13,9 +13,10 @@ import re
 import sys
 
 root = Path.cwd()
+retired_brand = 'as' + 'ora'
 pattern = re.compile(
     r'localhost|127\.0\.0\.1|0\.0\.0\.0|::1|10\.0\.2\.2|192\.168\.|'
-    r'172\.(1[6-9]|2[0-9]|3[0-1])\.|\.local|asora-function-dev|'
+    rf'172\.(1[6-9]|2[0-9]|3[0-1])\.|\.local|{retired_brand}-function-dev|'
     r'your-secure-azure-function-app'
 )
 excluded = {

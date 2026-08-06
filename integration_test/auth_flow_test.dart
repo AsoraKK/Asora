@@ -1,7 +1,7 @@
-import 'package:asora/features/auth/application/auth_controller.dart';
-import 'package:asora/features/auth/presentation/auth_gate.dart';
-import 'package:asora/features/auth/presentation/sign_in_page.dart';
-import 'package:asora/main.dart' as app;
+import 'package:lythaus/features/auth/application/auth_controller.dart';
+import 'package:lythaus/features/auth/presentation/auth_gate.dart';
+import 'package:lythaus/features/auth/presentation/sign_in_page.dart';
+import 'package:lythaus/main.dart' as app;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

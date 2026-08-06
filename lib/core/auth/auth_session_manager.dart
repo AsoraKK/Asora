@@ -2,7 +2,7 @@
 
 library;
 
-/// ASORA AUTH SESSION MANAGER
+/// LYTHAUS AUTH SESSION MANAGER
 ///
 /// 🎯 Purpose: Manages user authentication sessions and state
 /// 🔐 Security: Handles secure storage of auth tokens and session data
@@ -123,12 +123,12 @@ class AuthSessionManager {
   static const _storage = FlutterSecureStorage(
     aOptions: AndroidOptions(
       encryptedSharedPreferences: true,
-      sharedPreferencesName: 'asora_secure_prefs',
-      preferencesKeyPrefix: 'asora_',
+      sharedPreferencesName: 'lythaus_secure_prefs',
+      preferencesKeyPrefix: 'lythaus_',
     ),
     iOptions: IOSOptions(
-      groupId: 'group.com.asora.app',
-      accountName: 'asora_keychain',
+      groupId: 'group.co.lythaus.app',
+      accountName: 'lythaus_keychain',
     ),
   );
 

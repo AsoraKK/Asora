@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/services/oauth2_service.dart';
+import 'package:lythaus/services/oauth2_service.dart';
 
 void main() {
   group('AuthConfig', () {

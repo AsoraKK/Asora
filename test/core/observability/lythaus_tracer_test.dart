@@ -1,12 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/core/observability/asora_tracer.dart';
+import 'package:lythaus/core/observability/lythaus_tracer.dart';
 
 void main() {
-  group('AsoraSpan', () {
-    late AsoraSpan span;
+  group('LythausSpan', () {
+    late LythausSpan span;
 
     setUp(() {
-      span = AsoraTracer.startSpan('test_operation');
+      span = LythausTracer.startSpan('test_operation');
     });
 
     test('initializes with correct values', () {
@@ -57,28 +57,28 @@ void main() {
     });
   });
 
-  group('AsoraTracer', () {
+  group('LythausTracer', () {
     test('startSpan creates span with default attributes', () {
-      final span = AsoraTracer.startSpan('test_operation');
+      final span = LythausTracer.startSpan('test_operation');
 
       expect(span.operationName, 'test_operation');
-      expect(span.attributes['service.name'], 'asora-mobile');
+      expect(span.attributes['service.name'], 'lythaus-mobile');
       expect(span.attributes['service.version'], '1.0.0');
       expect(span.attributes['component'], 'http-client');
     });
 
     test('startSpan with custom attributes', () {
-      final span = AsoraTracer.startSpan(
+      final span = LythausTracer.startSpan(
         'test_operation',
         attributes: {'custom': 'value'},
       );
 
       expect(span.attributes['custom'], 'value');
-      expect(span.attributes['service.name'], 'asora-mobile');
+      expect(span.attributes['service.name'], 'lythaus-mobile');
     });
 
     test('traceOperation success case', () async {
-      final result = await AsoraTracer.traceOperation(
+      final result = await LythausTracer.traceOperation(
         'test_operation',
         () async => 'success',
       );
@@ -87,7 +87,7 @@ void main() {
     });
 
     test('traceOperation with list result adds item count', () async {
-      final result = await AsoraTracer.traceOperation(
+      final result = await LythausTracer.traceOperation(
         'test_operation',
         () async => [1, 2, 3],
       );
@@ -98,7 +98,7 @@ void main() {
     test(
       'traceOperation with map result calls _addResponseAttributes',
       () async {
-        final result = await AsoraTracer.traceOperation(
+        final result = await LythausTracer.traceOperation(
           'test_operation',
           () async => {
             'statusCode': 200,
@@ -117,7 +117,7 @@ void main() {
 
     test('traceOperation error case rethrows and records error', () async {
       expect(
-        () => AsoraTracer.traceOperation(
+        () => LythausTracer.traceOperation(
           'test_operation',
           () async => throw Exception('test error'),
         ),
@@ -126,7 +126,7 @@ void main() {
     });
 
     test('traceOperation with onError handler', () async {
-      final result = await AsoraTracer.traceOperation(
+      final result = await LythausTracer.traceOperation(
         'test_operation',
         () async => throw Exception('test error'),
         onError: (error) => 'handled',
@@ -136,7 +136,7 @@ void main() {
     });
 
     test('httpRequestAttributes creates correct map', () {
-      final attrs = AsoraTracer.httpRequestAttributes(
+      final attrs = LythausTracer.httpRequestAttributes(
         method: 'GET',
         url: 'https://example.com',
         statusCode: 200,

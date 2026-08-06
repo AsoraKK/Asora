@@ -3,12 +3,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import 'package:asora/design_system/components/lyth_icon_button.dart';
-import 'package:asora/design_system/theme/theme_build_context_x.dart';
-import 'package:asora/design_system/widgets/lyth_wordmark.dart';
+import 'package:lythaus/design_system/components/lyth_icon_button.dart';
+import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
+import 'package:lythaus/design_system/widgets/lyth_wordmark.dart';
 
-class AsoraTopBar extends StatelessWidget implements PreferredSizeWidget {
-  const AsoraTopBar({
+class LythausTopBar extends StatelessWidget implements PreferredSizeWidget {
+  const LythausTopBar({
     super.key,
     required this.title,
     this.onLogoTap,
@@ -55,7 +55,7 @@ class AsoraTopBar extends StatelessWidget implements PreferredSizeWidget {
                 borderRadius: BorderRadius.circular(context.radius.md),
               ),
               child: SvgPicture.asset(
-                'assets/brand/asora_mark.svg',
+                'assets/brand/lythaus_mark.svg',
                 height: 20,
                 width: 20,
                 colorFilter: ColorFilter.mode(

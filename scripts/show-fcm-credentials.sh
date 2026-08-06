@@ -3,7 +3,7 @@
 
 set -e
 
-FCM_KEY_FILE="$HOME/asora/secrets/fcm-dev.json"
+FCM_KEY_FILE="$HOME/lythaus/secrets/fcm-dev.json"
 
 if [ ! -f "$FCM_KEY_FILE" ]; then
     echo "ERROR: FCM key file not found at $FCM_KEY_FILE"
@@ -16,7 +16,7 @@ echo "=========================================="
 echo ""
 echo "📋 PASTE THESE VALUES INTO AZURE PORTAL:"
 echo ""
-echo "Azure Portal → Notification Hubs → asora-dev-hub → Settings → Google (FCM v1)"
+echo "Azure Portal → Notification Hubs → lythaus-dev-hub → Settings → Google (FCM v1)"
 echo ""
 echo "----------------------------------------"
 echo "Project ID:"

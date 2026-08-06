@@ -5,7 +5,7 @@ const { resolve } = require('node:path');
 
 const verifierPath = resolve(__dirname, '../../infra/scripts/verify-cosmos-private-endpoint.sh');
 const verifier = readFileSync(verifierPath, 'utf8');
-const workflowPath = resolve(__dirname, '../../.github/workflows/deploy-asora-function-dev.yml');
+const workflowPath = resolve(__dirname, '../../.github/workflows/deploy-lythaus-function-dev.yml');
 const jobsConfigPath = resolve(__dirname, '../../apps/lythaus-jobs/wrangler.jsonc');
 const jobsConfig = readFileSync(jobsConfigPath, 'utf8');
 

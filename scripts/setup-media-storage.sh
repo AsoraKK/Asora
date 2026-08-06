@@ -14,18 +14,18 @@
 # Override defaults via environment variables:
 #   MEDIA_STORAGE_ACCOUNT  (default: asoramediadev)
 #   MEDIA_CONTAINER        (default: user-media)
-#   RESOURCE_GROUP         (default: asora-rg-dev)
+#   RESOURCE_GROUP         (default: lythaus-rg-dev)
 #   LOCATION               (default: southafricanorth)
-#   FUNC_APP               (default: asora-function-dev)
+#   FUNC_APP               (default: lythaus-function-dev)
 
 set -euo pipefail
 
 # ─── Configuration ─────────────────────────────────────────────────────────────
 MEDIA_SA="${MEDIA_STORAGE_ACCOUNT:-asoramediadev}"
 CONTAINER="${MEDIA_CONTAINER:-user-media}"
-RG="${RESOURCE_GROUP:-asora-rg-dev}"
+RG="${RESOURCE_GROUP:-lythaus-rg-dev}"
 LOCATION="${LOCATION:-southafricanorth}"
-FUNC_APP="${FUNC_APP:-asora-function-dev}"
+FUNC_APP="${FUNC_APP:-lythaus-function-dev}"
 
 echo "╔══════════════════════════════════════════════════════════════╗"
 echo "║  Lythaus Media Storage Setup                                ║"
