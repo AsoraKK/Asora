@@ -38,6 +38,33 @@ console.log(
 );
 
 if (counts.high > 0 || counts.critical > 0) {
+  const blockers = Object.entries(report.vulnerabilities || {})
+    .filter(([, finding]) => finding?.severity === 'high' || finding?.severity === 'critical')
+    .sort(([left], [right]) => left.localeCompare(right));
+
+  for (const [name, finding] of blockers) {
+    const sources = Array.isArray(finding.via)
+      ? finding.via
+          .map((source) =>
+            typeof source === 'string'
+              ? source
+              : [source.source, source.title, source.url].filter(Boolean).join(' | ')
+          )
+          .join('; ')
+      : String(finding.via || 'unknown');
+    const fix = finding.fixAvailable
+      ? typeof finding.fixAvailable === 'object'
+        ? `${finding.fixAvailable.name || name}@${finding.fixAvailable.version || 'unknown'}${
+            finding.fixAvailable.isSemVerMajor ? ' (semver-major)' : ''
+          }`
+        : String(finding.fixAvailable)
+      : 'none';
+
+    console.error(
+      `- ${name}: severity=${finding.severity} range=${finding.range || 'unknown'} fix=${fix} via=${sources}`
+    );
+  }
+
   console.error(`Blocking dependency findings remain in ${target}.`);
   process.exit(1);
 }
