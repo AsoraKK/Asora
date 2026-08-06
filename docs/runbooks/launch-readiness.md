@@ -21,13 +21,13 @@ Each item is tagged:
 
 | Workflow | Badge |
 |---|---|
-| CI | `![CI](https://github.com/AsoraKK/Asora/actions/workflows/ci.yml/badge.svg?branch=main)` |
-| Flutter CI | `![Flutter CI](https://github.com/AsoraKK/Asora/actions/workflows/flutter-ci.yml/badge.svg?branch=main)` |
-| OpenAPI | `![OpenAPI](https://github.com/AsoraKK/Asora/actions/workflows/openapi.yml/badge.svg?branch=main)` |
-| Mobile Release | `![Mobile Release](https://github.com/AsoraKK/Asora/actions/workflows/mobile-release-build.yml/badge.svg?branch=main)` |
-| Launch Readiness Gate | `![Launch Gate](https://github.com/AsoraKK/Asora/actions/workflows/launch-readiness-gate.yml/badge.svg)` |
-| Canary SLO | `![Canary SLO](https://github.com/AsoraKK/Asora/actions/workflows/canary-k6.yml/badge.svg)` |
-| Infra | `![Infra](https://github.com/AsoraKK/Asora/actions/workflows/infra.yml/badge.svg?branch=main)` |
+| CI | `![CI](https://github.com/AsoraKK/Lythaus/actions/workflows/ci.yml/badge.svg?branch=main)` |
+| Flutter CI | `![Flutter CI](https://github.com/AsoraKK/Lythaus/actions/workflows/flutter-ci.yml/badge.svg?branch=main)` |
+| OpenAPI | `![OpenAPI](https://github.com/AsoraKK/Lythaus/actions/workflows/openapi.yml/badge.svg?branch=main)` |
+| Mobile Release | `![Mobile Release](https://github.com/AsoraKK/Lythaus/actions/workflows/mobile-release-build.yml/badge.svg?branch=main)` |
+| Launch Readiness Gate | `![Launch Gate](https://github.com/AsoraKK/Lythaus/actions/workflows/launch-readiness-gate.yml/badge.svg)` |
+| Canary SLO | `![Canary SLO](https://github.com/AsoraKK/Lythaus/actions/workflows/canary-k6.yml/badge.svg)` |
+| Native Workers | `![Native Workers](https://github.com/AsoraKK/Lythaus/actions/workflows/native-workers-validation.yml/badge.svg?branch=main)` |
 
 ---
 

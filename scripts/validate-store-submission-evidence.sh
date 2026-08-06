@@ -16,7 +16,7 @@ set -euo pipefail
 EVIDENCE_FILE="docs/runbooks/store-submission-evidence.md"
 CONSOLE_URL="https://play.google.com/console"
 ASC_URL="https://appstoreconnect.apple.com"
-SECRETS_URL="https://github.com/AsoraKK/Asora/settings/secrets/actions"
+SECRETS_URL="https://github.com/AsoraKK/Lythaus/settings/secrets/actions"
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
