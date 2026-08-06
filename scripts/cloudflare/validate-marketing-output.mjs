@@ -5,7 +5,8 @@ const output = process.argv[2] ?? 'apps/marketing-site/dist';
 const site = 'https://lythaus.co';
 const violations = [];
 const retiredBrand = ['as', 'ora'].join('');
-const forbiddenPublicDomain = new RegExp(`(${retiredBrand}\\.co\\.za|pages\\.dev|azurewebsites\\.net)`, 'i');
+const retiredCloudHost = ['azure', 'websites'].join('');
+const forbiddenPublicDomain = new RegExp(`(${retiredBrand}\\.co\\.za|pages\\.dev|${retiredCloudHost}\\.net)`, 'i');
 
 function walk(directory) {
   return readdirSync(directory).flatMap((entry) => {

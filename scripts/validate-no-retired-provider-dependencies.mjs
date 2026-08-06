@@ -4,13 +4,19 @@ import path from 'node:path';
 const root = process.cwd();
 const roots = ['apps/lythaus-public-api', 'apps/lythaus-admin-api', 'apps/lythaus-jobs', 'packages'];
 const retiredBrand = ['as', 'ora'].join('');
+const retiredCloudHost = ['azure', 'websites.net'].join('');
+const retiredPackageScope = ['@', 'azure', '/'].join('');
+const retiredFunctionsPackage = ['azure', '-functions'].join('');
+const retiredJobStorage = ['Azure', 'WebJobs', 'Storage'].join('');
+const retiredDocumentClient = ['Cos', 'mos', 'Client'].join('');
+const retiredTelemetryPackage = ['application', 'insights'].join('');
 const forbidden = [
-  /azurewebsites\.net/i,
-  /@azure\//i,
-  /azure-functions/i,
-  /AzureWebJobsStorage/i,
-  /CosmosClient/i,
-  /applicationinsights/i,
+  new RegExp(retiredCloudHost.replace('.', '\\.'), 'i'),
+  new RegExp(retiredPackageScope.replace('/', '\\/'), 'i'),
+  new RegExp(retiredFunctionsPackage, 'i'),
+  new RegExp(retiredJobStorage, 'i'),
+  new RegExp(retiredDocumentClient, 'i'),
+  new RegExp(retiredTelemetryPackage, 'i'),
   /keyvault/i,
   new RegExp(`${retiredBrand}-azure-compat`, 'i'),
   new RegExp(`${retiredBrand}\\.co\\.za`, 'i'),

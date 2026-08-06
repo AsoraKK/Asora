@@ -181,8 +181,6 @@ Class | Method | HTTP request | Description
 [*PostsApi*](doc/PostsApi.md) | [**postsReceipt**](doc/PostsApi.md#postsreceipt) | **GET** /posts/{id}/receipt | Get read receipt for a post
 [*PostsApi*](doc/PostsApi.md) | [**postsUpdate**](doc/PostsApi.md#postsupdate) | **PATCH** /posts/{id} | Update a post with moderation and AI authenticity checks
 [*PostsApi*](doc/PostsApi.md) | [**postsView**](doc/PostsApi.md#postsview) | **POST** /posts/{id}/view | Record a post view event
-[*PrivacyApi*](doc/PrivacyApi.md) | [**deleteUserAccount**](doc/PrivacyApi.md#deleteuseraccount) | **DELETE** /user/delete | Legacy synchronous account deletion
-[*PrivacyApi*](doc/PrivacyApi.md) | [**exportUserData**](doc/PrivacyApi.md#exportuserdata) | **GET** /user/export | Legacy synchronous personal-data export
 [*PrivacyApi*](doc/PrivacyApi.md) | [**privacyRequestCreate**](doc/PrivacyApi.md#privacyrequestcreate) | **POST** /privacy/requests | Submit an asynchronous privacy request
 [*PrivacyApi*](doc/PrivacyApi.md) | [**privacyRequestStatus**](doc/PrivacyApi.md#privacyrequeststatus) | **GET** /privacy/requests | Get the latest privacy request status
 [*PrivacyAdminApi*](doc/PrivacyAdminApi.md) | [**clearLegalHold**](doc/PrivacyAdminApi.md#clearlegalhold) | **POST** /admin/legal-hold/clear | Clear an existing legal hold
@@ -210,7 +208,6 @@ Class | Method | HTTP request | Description
 ## Documentation For Models
 
  - [AcceptedResponse](doc/AcceptedResponse.md)
- - [AccountDeleteResponse](doc/AccountDeleteResponse.md)
  - [AdminAppealAuditSummary](doc/AdminAppealAuditSummary.md)
  - [AdminAppealContent](doc/AdminAppealContent.md)
  - [AdminAppealDecisionRequest](doc/AdminAppealDecisionRequest.md)
@@ -283,8 +280,6 @@ Class | Method | HTTP request | Description
  - [CursorPaginatedPostView](doc/CursorPaginatedPostView.md)
  - [CustomFeedDefinition](doc/CustomFeedDefinition.md)
  - [CustomFeedListResponse](doc/CustomFeedListResponse.md)
- - [DSRExportResponse](doc/DSRExportResponse.md)
- - [DSRExportResponseMetadata](doc/DSRExportResponseMetadata.md)
  - [DsrRequestInput](doc/DsrRequestInput.md)
  - [DsrRequestSummary](doc/DsrRequestSummary.md)
  - [EmailLoginRequest](doc/EmailLoginRequest.md)

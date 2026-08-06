@@ -58,7 +58,7 @@ void main() {
     test('should create client from environment config', () {
       const envConfig = EnvironmentConfig(
         environment: Environment.development,
-        apiBaseUrl: 'https://lythaus-function-dev.azurewebsites.net/api',
+        apiBaseUrl: 'https://api.lythaus.co/api',
         security: MobileSecurityConfig(
           tlsPins: TlsPinConfig(
             enabled: true,
@@ -81,7 +81,7 @@ void main() {
     test('should extract hostname from API base URL', () {
       const envConfig = EnvironmentConfig(
         environment: Environment.preview,
-        apiBaseUrl: 'https://lythaus-function-dev.azurewebsites.net/api',
+        apiBaseUrl: 'https://api.lythaus.co/api',
         security: MobileSecurityConfig(
           tlsPins: TlsPinConfig(
             enabled: true,
@@ -96,7 +96,7 @@ void main() {
 
       // Test URI parsing
       final uri = Uri.parse(envConfig.apiBaseUrl);
-      expect(uri.host, equals('lythaus-function-dev.azurewebsites.net'));
+      expect(uri.host, equals('api.lythaus.co'));
     });
   });
 }

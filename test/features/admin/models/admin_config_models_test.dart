@@ -250,7 +250,7 @@ void main() {
       final goldenJson = {
         'version': 42,
         'updatedAt': '2025-12-27T08:30:00.000Z',
-        'updatedBy': 'kyle.kern@asora.co.za',
+        'updatedBy': 'admin@lythaus.co',
         'payload': {
           'schemaVersion': 1,
           'moderation': {
@@ -277,7 +277,7 @@ void main() {
         result.lastUpdatedAt.toUtc().toIso8601String(),
         '2025-12-27T08:30:00.000Z',
       );
-      expect(result.lastUpdatedBy.id, 'kyle.kern@asora.co.za');
+      expect(result.lastUpdatedBy.id, 'admin@lythaus.co');
       expect(result.config.schemaVersion, 1);
       expect(result.config.moderation.temperature, 0.2);
       // Legacy fields map to new names

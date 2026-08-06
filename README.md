@@ -74,7 +74,6 @@ Frontend deployments are separate and must target Lythaus Pages projects and `ly
 
 ## References
 
-- [Runtime ADR](docs/adr/ADR-007-cloudflare-planetscale-runtime.md)
-- [Current architecture](docs/architecture/lythaus-domain-architecture.md)
+- [Current architecture](docs/architecture/runtime.md)
 - [Azure retirement history](docs/history/azure-retirement-2026-08-06.md)
 - [GitHub secret-removal record](docs/security/azure-github-secret-removal-2026-08-06.md)

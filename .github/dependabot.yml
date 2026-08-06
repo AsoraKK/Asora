@@ -13,9 +13,9 @@ updates:
     reviewers:
       - "AsoraKK"
 
-  # Azure Functions Node.js dependencies
+  # Native Workers and shared packages
   - package-ecosystem: "npm"
-    directory: "/functions"
+    directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"

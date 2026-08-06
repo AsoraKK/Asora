@@ -1,8 +1,8 @@
 .gitignore
+.openapi-generator-ignore
 README.md
 analysis_options.yaml
 doc/AcceptedResponse.md
-doc/AccountDeleteResponse.md
 doc/AdminApi.md
 doc/AdminAppealAuditSummary.md
 doc/AdminAppealContent.md
@@ -80,8 +80,6 @@ doc/CursorPaginatedPostView.md
 doc/CustomFeedDefinition.md
 doc/CustomFeedListResponse.md
 doc/CustomFeedsApi.md
-doc/DSRExportResponse.md
-doc/DSRExportResponseMetadata.md
 doc/DsrRequestInput.md
 doc/DsrRequestSummary.md
 doc/EmailLoginRequest.md
@@ -191,10 +189,8 @@ lib/src/auth/api_key_auth.dart
 lib/src/auth/auth.dart
 lib/src/auth/basic_auth.dart
 lib/src/auth/bearer_auth.dart
-lib/src/auth/oauth.dart
 lib/src/date_serializer.dart
 lib/src/model/accepted_response.dart
-lib/src/model/account_delete_response.dart
 lib/src/model/admin_appeal_audit_summary.dart
 lib/src/model/admin_appeal_content.dart
 lib/src/model/admin_appeal_decision_request.dart
@@ -268,8 +264,6 @@ lib/src/model/cursor_paginated_post_view.dart
 lib/src/model/custom_feed_definition.dart
 lib/src/model/custom_feed_list_response.dart
 lib/src/model/date.dart
-lib/src/model/dsr_export_response.dart
-lib/src/model/dsr_export_response_metadata.dart
 lib/src/model/dsr_request_input.dart
 lib/src/model/dsr_request_summary.dart
 lib/src/model/email_login_request.dart
@@ -344,7 +338,6 @@ lib/src/model/vote_on_appeal_v1_request.dart
 lib/src/serializers.dart
 pubspec.yaml
 test/accepted_response_test.dart
-test/account_delete_response_test.dart
 test/admin_api_test.dart
 test/admin_appeal_audit_summary_test.dart
 test/admin_appeal_content_test.dart
@@ -422,8 +415,6 @@ test/cursor_paginated_post_view_test.dart
 test/custom_feed_definition_test.dart
 test/custom_feed_list_response_test.dart
 test/custom_feeds_api_test.dart
-test/dsr_export_response_metadata_test.dart
-test/dsr_export_response_test.dart
 test/dsr_request_input_test.dart
 test/dsr_request_summary_test.dart
 test/email_login_request_test.dart

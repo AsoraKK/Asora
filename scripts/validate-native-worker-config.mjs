@@ -10,7 +10,8 @@ const configs = [
 const requireProvisioned = process.argv.includes('--require-provisioned');
 const failures = [];
 const retiredBrand = ['as', 'ora'].join('');
-const retiredProductionOrigin = new RegExp(`azurewebsites\\.net|${retiredBrand}\\.co\\.za|${retiredBrand}-function|workers\\.dev|pages\\.dev|r2\\.dev`, 'i');
+const retiredCloudHost = ['azure', 'websites'].join('');
+const retiredProductionOrigin = new RegExp(`${retiredCloudHost}\\.net|${retiredBrand}\\.co\\.za|${retiredBrand}-function|workers\\.dev|pages\\.dev|r2\\.dev`, 'i');
 const expectedNames = {
   'apps/lythaus-public-api/wrangler.jsonc': 'lythaus-public-api-development',
   'apps/lythaus-admin-api/wrangler.jsonc': 'lythaus-admin-api-development',

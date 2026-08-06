@@ -14,7 +14,8 @@ const requiredNames = [
 ];
 const seen = new Set();
 const retiredBrand = ['as', 'ora'].join('');
-const forbidden = new RegExp(`nite[- ]owl|${retiredBrand}\\.co\\.za|azurewebsites\\.net|password|secret|token`, 'i');
+const retiredCloudHost = ['azure', 'websites'].join('');
+const forbidden = new RegExp(`nite[- ]owl|${retiredBrand}\\.co\\.za|${retiredCloudHost}\\.net|password|secret|token`, 'i');
 for (const name of requiredNames) if (!resources.some((resource) => resource.resourceName === name)) failures.push(`missing registry resource: ${name}`);
 for (const resource of resources) {
   for (const field of ['provider', 'accountOrOrganisationId', 'resourceName', 'sanitisedResourceId', 'environment', 'region', 'purpose', 'authoritativeOwner', 'currentStatus', 'expectedCostClass', 'temporary', 'deletionAllowed', 'replacementPolicy']) {

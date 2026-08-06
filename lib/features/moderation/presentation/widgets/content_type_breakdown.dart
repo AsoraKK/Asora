@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:lythaus/features/moderation/domain/appeal.dart';
-import 'package:lythaus/core/utils/content_type_helper.dart';
+import 'package:lythaus/features/core/utils/content_type_helper.dart';
 
 /// LYTHAUS CONTENT TYPE BREAKDOWN WIDGET
 ///

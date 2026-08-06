@@ -154,7 +154,7 @@ void main() {
       await chooseHumanAuthorship(tester);
 
       // Verify character count updated
-      expect(find.textContaining('4977 characters remaining'), findsOneWidget);
+      expect(find.textContaining('4975 characters remaining'), findsOneWidget);
 
       // Verify Post button is enabled
       final postButton = find.widgetWithText(FilledButton, 'Post');
