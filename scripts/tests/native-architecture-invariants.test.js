@@ -455,3 +455,24 @@ test('privacy workflows reconcile the subject-data locator before export or dele
   assert.match(grants, /GRANT EXECUTE ON FUNCTION privacy\.reconcile_subject_data_locations\(uuid\) TO lythaus_privacy/);
   assert.equal((jobs.match(/privacy\.reconcile_subject_data_locations/g) ?? []).length, 2);
 });
+
+test('native APIs cover the provider-neutral Functions capability set', () => {
+  const publicApi = fs.readFileSync(path.join(root, 'apps/lythaus-public-api/src/index.ts'), 'utf8');
+  const adminApi = fs.readFileSync(path.join(root, 'apps/lythaus-admin-api/src/index.ts'), 'utf8');
+  const migration = fs.readFileSync(path.join(root, 'database/planetscale/migrations/0010_native_runtime_parity.sql'), 'utf8');
+  for (const route of [
+    '/api/custom-feeds', '/api/feed/news', '/api/subscription/status',
+    '/api/reputation/me', '/api/rewards/me', '/api/notifications',
+  ]) assert.match(publicApi, new RegExp(route.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  for (const route of [
+    '/api/admin/moderation/cases', '/api/admin/audit', '/api/admin/users/search',
+    '/api/admin/privacy/legal-holds', '/api/admin/editorial/publications',
+  ]) assert.match(adminApi, new RegExp(route.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  assert.match(publicApi, /enforceDailyAction/);
+  assert.match(publicApi, /enforceRateLimit/);
+  assert.match(adminApi, /enforceAdminRateLimit/);
+  assert.match(migration, /identity\.user_entitlements/);
+  assert.match(migration, /system\.rate_limit_windows/);
+  assert.match(migration, /feed\.notification_devices/);
+  assert.match(migration, /trust\.reward_redemptions/);
+});
