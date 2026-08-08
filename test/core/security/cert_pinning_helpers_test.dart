@@ -65,7 +65,7 @@ void main() {
     test('returns false for connectionError while pinning is disabled', () {
       final err = DioException(
         requestOptions: RequestOptions(
-          path: 'https://lythaus-function-dev.azurewebsites.net/api/test',
+          path: 'https://api.lythaus.co/api/test',
         ),
         type: DioExceptionType.connectionError,
       );
@@ -75,7 +75,7 @@ void main() {
     test('returns false for badCertificate while pinning is disabled', () {
       final err = DioException(
         requestOptions: RequestOptions(
-          path: 'https://lythaus-function-dev.azurewebsites.net/api/test',
+          path: 'https://api.lythaus.co/api/test',
         ),
         type: DioExceptionType.badCertificate,
       );
@@ -85,7 +85,7 @@ void main() {
     test('returns false for unknown errors while pinning is disabled', () {
       final err = DioException(
         requestOptions: RequestOptions(
-          path: 'https://lythaus-function-dev.azurewebsites.net/api/test',
+          path: 'https://api.lythaus.co/api/test',
         ),
         type: DioExceptionType.unknown,
       );
@@ -105,7 +105,7 @@ void main() {
     test('false for non-connection error types', () {
       final err = DioException(
         requestOptions: RequestOptions(
-          path: 'https://lythaus-function-dev.azurewebsites.net/api/test',
+          path: 'https://api.lythaus.co/api/test',
         ),
         type: DioExceptionType.receiveTimeout,
       );
@@ -115,7 +115,7 @@ void main() {
     test('false for cancel type', () {
       final err = DioException(
         requestOptions: RequestOptions(
-          path: 'https://lythaus-function-dev.azurewebsites.net/api/test',
+          path: 'https://api.lythaus.co/api/test',
         ),
         type: DioExceptionType.cancel,
       );

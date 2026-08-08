@@ -286,41 +286,6 @@ void main() {
       // TODO
     });
 
-    // Proxy DELETE to Hive AI test endpoint
-    //
-    //Future<JsonObject> adminModerationTestDelete(String path) async
-    test('test adminModerationTestDelete', () async {
-      // TODO
-    });
-
-    // Proxy GET to Hive AI test endpoint
-    //
-    //Future<JsonObject> adminModerationTestGet(String path) async
-    test('test adminModerationTestGet', () async {
-      // TODO
-    });
-
-    // Proxy PATCH to Hive AI test endpoint
-    //
-    //Future<JsonObject> adminModerationTestPatch(String path, JsonObject body) async
-    test('test adminModerationTestPatch', () async {
-      // TODO
-    });
-
-    // Proxy POST to Hive AI test endpoint
-    //
-    //Future<JsonObject> adminModerationTestPost(String path, JsonObject body) async
-    test('test adminModerationTestPost', () async {
-      // TODO
-    });
-
-    // Proxy PUT to Hive AI test endpoint
-    //
-    //Future<JsonObject> adminModerationTestPut(String path, JsonObject body) async
-    test('test adminModerationTestPut', () async {
-      // TODO
-    });
-
     // Bulk-update moderation class weights
     //
     //Future<JsonObject> adminModerationWeightsUpdate(JsonObject body) async

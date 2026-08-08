@@ -4,7 +4,12 @@ import { resolve, sep } from 'node:path';
 const repositoryRoot = process.cwd();
 const generatedRoot = resolve(repositoryRoot, 'lib/generated/api_client');
 const generatedDirectories = ['doc', 'lib', 'test'];
-const generatedSupportingFiles = ['pubspec.yaml'];
+const generatedSupportingFiles = [
+  '.gitignore',
+  'README.md',
+  'analysis_options.yaml',
+  'pubspec.yaml',
+];
 
 if (!generatedRoot.startsWith(`${resolve(repositoryRoot)}${sep}`)) {
   throw new Error('Generated client path escaped the repository root.');

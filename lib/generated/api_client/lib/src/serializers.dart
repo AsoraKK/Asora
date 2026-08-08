@@ -15,7 +15,6 @@ import 'package:lythaus_api_client/src/date_serializer.dart';
 import 'package:lythaus_api_client/src/model/date.dart';
 
 import 'package:lythaus_api_client/src/model/accepted_response.dart';
-import 'package:lythaus_api_client/src/model/account_delete_response.dart';
 import 'package:lythaus_api_client/src/model/admin_appeal_audit_summary.dart';
 import 'package:lythaus_api_client/src/model/admin_appeal_content.dart';
 import 'package:lythaus_api_client/src/model/admin_appeal_decision_request.dart';
@@ -88,8 +87,6 @@ import 'package:lythaus_api_client/src/model/create_post_request.dart';
 import 'package:lythaus_api_client/src/model/cursor_paginated_post_view.dart';
 import 'package:lythaus_api_client/src/model/custom_feed_definition.dart';
 import 'package:lythaus_api_client/src/model/custom_feed_list_response.dart';
-import 'package:lythaus_api_client/src/model/dsr_export_response.dart';
-import 'package:lythaus_api_client/src/model/dsr_export_response_metadata.dart';
 import 'package:lythaus_api_client/src/model/dsr_request_input.dart';
 import 'package:lythaus_api_client/src/model/dsr_request_summary.dart';
 import 'package:lythaus_api_client/src/model/email_login_request.dart';
@@ -166,7 +163,6 @@ part 'serializers.g.dart';
 
 @SerializersFor([
   AcceptedResponse,
-  AccountDeleteResponse,
   AdminAppealAuditSummary,
   AdminAppealContent,
   AdminAppealDecisionRequest,
@@ -239,8 +235,6 @@ part 'serializers.g.dart';
   CursorPaginatedPostView,$CursorPaginatedPostView,
   CustomFeedDefinition,
   CustomFeedListResponse,
-  DSRExportResponse,
-  DSRExportResponseMetadata,
   DsrRequestInput,
   DsrRequestSummary,
   EmailLoginRequest,

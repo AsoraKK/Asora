@@ -182,7 +182,7 @@ const _devConfig = EnvironmentConfig(
 );
 
 // Preview security posture. Cloudflare preview builds must supply API_BASE_URL
-// explicitly; there is no permanent preview API or separate Azure backend.
+// explicitly; there is no permanent preview API or secondary backend.
 const _previewMobileSecurity = MobileSecurityConfig(
   tlsPins: TlsPinConfig(
     enabled: false,

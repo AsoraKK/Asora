@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Lythaus API",
-    "version": "v3",
+    "version": "v4",
     "description": "HTTP contract for the Lythaus API.",
     "license": {
       "name": "MIT",
@@ -3116,6 +3116,16 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/EmailLoginRequest"
+              },
+              "examples": {
+                "login": {
+                  "summary": "Verified email sign-in",
+                  "value": {
+                    "mode": "login",
+                    "email": "alice@example.com",
+                    "password": "correct-horse-battery-staple"
+                  }
+                }
               }
             }
           }
@@ -3127,6 +3137,21 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/EmailSessionResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "Email session created",
+                    "value": {
+                      "success": true,
+                      "data": {
+                        "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example",
+                        "refreshToken": "refresh_example_01K1LYTHAUS",
+                        "tokenType": "Bearer",
+                        "expiresIn": 900
+                      },
+                      "timestamp": "2026-08-06T12:00:00Z"
+                    }
+                  }
                 }
               }
             }
@@ -4335,154 +4360,6 @@
               },
               "X-Correlation-ID": {
                 "$ref": "#/components/headers/XCorrelationID"
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/user/export": {
-      "get": {
-        "operationId": "exportUserData",
-        "summary": "Legacy synchronous personal-data export",
-        "description": "Legacy Azure Functions compatibility route retained only while source\nmigration evidence is collected. The Lythaus production runtime uses\nthe asynchronous `/privacy/requests` contract.\n",
-        "deprecated": true,
-        "x-lythaus-runtime-status": "migration-only-legacy",
-        "tags": [
-          "Privacy"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "User data export payload",
-            "headers": {
-              "X-Correlation-ID": {
-                "$ref": "#/components/headers/XCorrelationID"
-              },
-              "X-Export-ID": {
-                "description": "Unique identifier for this export job",
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DSRExportResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Missing or invalid authentication",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UnauthorizedError"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit or export cooldown active",
-            "headers": {
-              "Retry-After": {
-                "$ref": "#/components/headers/RetryAfter"
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/user/delete": {
-      "delete": {
-        "operationId": "deleteUserAccount",
-        "summary": "Legacy synchronous account deletion",
-        "description": "Legacy Azure Functions compatibility route retained only while source\nmigration evidence is collected. The Lythaus production runtime uses\nthe asynchronous `/privacy/requests` contract.\n",
-        "deprecated": true,
-        "x-lythaus-runtime-status": "migration-only-legacy",
-        "tags": [
-          "Privacy"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "X-Confirm-Delete",
-            "in": "header",
-            "required": true,
-            "description": "Must be set to \"true\" to confirm deletion",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "true"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Account deleted",
-            "headers": {
-              "X-Correlation-ID": {
-                "$ref": "#/components/headers/XCorrelationID"
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AccountDeleteResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Missing confirmation header or invalid request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Missing or invalid authentication",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UnauthorizedError"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit enforced",
-            "headers": {
-              "Retry-After": {
-                "$ref": "#/components/headers/RetryAfter"
               }
             },
             "content": {
@@ -6269,358 +6146,6 @@
           },
           "403": {
             "description": "Forbidden or unavailable in production",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/admin/moderation/test/{path}": {
-      "get": {
-        "operationId": "adminModerationTestGet",
-        "summary": "Proxy GET to Hive AI test endpoint",
-        "tags": [
-          "Admin"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "operationId": "adminModerationTestPost",
-        "summary": "Proxy POST to Hive AI test endpoint",
-        "tags": [
-          "Admin"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "operationId": "adminModerationTestPut",
-        "summary": "Proxy PUT to Hive AI test endpoint",
-        "tags": [
-          "Admin"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "operationId": "adminModerationTestDelete",
-        "summary": "Proxy DELETE to Hive AI test endpoint",
-        "tags": [
-          "Admin"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      },
-      "patch": {
-        "operationId": "adminModerationTestPatch",
-        "summary": "Proxy PATCH to Hive AI test endpoint",
-        "tags": [
-          "Admin"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -10178,7 +9703,7 @@
       "get": {
         "operationId": "reputationLedgerGet",
         "summary": "Get my reputation ledger",
-        "description": "Returns user-visible reputation events. Internal reason codes, raw deltas, Hive scores, and anti-abuse scores are excluded.",
+        "description": "Returns user-visible reputation events. Internal reason codes, raw deltas, authenticity scores, and anti-abuse scores are excluded.",
         "tags": [
           "Reputation"
         ],
@@ -11127,58 +10652,38 @@
       "CreatePostRequest": {
         "type": "object",
         "required": [
-          "content",
-          "contentType",
-          "aiLabel"
+          "body",
+          "declaredCreationMode",
+          "geoScope"
         ],
         "properties": {
-          "content": {
-            "type": "string"
-          },
-          "contentType": {
+          "body": {
             "type": "string",
-            "enum": [
-              "text",
-              "image",
-              "video",
-              "mixed"
-            ]
+            "minLength": 1,
+            "maxLength": 100000
           },
-          "mediaUrls": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uri"
-            }
-          },
-          "topics": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "visibility": {
-            "type": "string",
-            "enum": [
-              "public",
-              "followers",
-              "private"
-            ]
-          },
-          "isNews": {
-            "type": "boolean"
-          },
-          "aiLabel": {
+          "declaredCreationMode": {
             "type": "string",
             "description": "Required user authorship disclosure. Public responses use categorical labels only.",
             "enum": [
               "human",
-              "assisted",
-              "generated"
+              "ai_assisted",
+              "ai_generated"
             ]
           },
-          "proofSignals": {
-            "$ref": "#/components/schemas/PostProofSignals"
+          "geoScope": {
+            "type": "string",
+            "enum": [
+              "global",
+              "country",
+              "province",
+              "municipality",
+              "community",
+              "none"
+            ]
+          },
+          "placeId": {
+            "type": "string"
           }
         }
       },
@@ -13658,100 +13163,6 @@
                 "format": "date-time"
               }
             }
-          }
-        }
-      },
-      "DSRExportResponse": {
-        "description": "Legacy GDPR Article 20 data portability export payload.",
-        "type": "object",
-        "required": [
-          "metadata",
-          "userProfile",
-          "content",
-          "interactions",
-          "moderation",
-          "reputation",
-          "privacy"
-        ],
-        "properties": {
-          "metadata": {
-            "type": "object",
-            "required": [
-              "exportId",
-              "exportedAt",
-              "exportedBy",
-              "dataVersion"
-            ],
-            "properties": {
-              "exportId": {
-                "type": "string"
-              },
-              "exportedAt": {
-                "type": "string",
-                "format": "date-time"
-              },
-              "exportedBy": {
-                "type": "string"
-              },
-              "dataVersion": {
-                "type": "string"
-              },
-              "retentionPeriod": {
-                "type": "string"
-              }
-            }
-          },
-          "userProfile": {
-            "type": "object",
-            "additionalProperties": true
-          },
-          "content": {
-            "type": "object",
-            "additionalProperties": true
-          },
-          "interactions": {
-            "type": "object",
-            "additionalProperties": true
-          },
-          "moderation": {
-            "type": "object",
-            "additionalProperties": true
-          },
-          "reputation": {
-            "type": "object",
-            "additionalProperties": true
-          },
-          "privacy": {
-            "type": "object",
-            "additionalProperties": true
-          }
-        }
-      },
-      "AccountDeleteResponse": {
-        "description": "Legacy confirmation of account deletion.",
-        "type": "object",
-        "required": [
-          "message",
-          "userId",
-          "deletedAt"
-        ],
-        "properties": {
-          "message": {
-            "type": "string",
-            "example": "Account deletion completed"
-          },
-          "userId": {
-            "type": "string",
-            "example": "usr_01HZPQ2B3C4D5E6F7G8H9JABCD"
-          },
-          "deletedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "alreadyDeleted": {
-            "type": "boolean",
-            "description": "True when the account was already in a deleted state",
-            "default": false
           }
         }
       },

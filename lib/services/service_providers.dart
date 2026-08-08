@@ -7,7 +7,6 @@
 library;
 
 import 'package:lythaus/core/network/dio_client.dart';
-import 'package:lythaus/services/media/media_upload_service.dart';
 import 'package:lythaus/services/moderation_service.dart';
 import 'package:lythaus/services/post_service.dart';
 import 'package:lythaus/services/push/device_token_service.dart';
@@ -51,12 +50,6 @@ final deviceTokenServiceProvider = Provider<DeviceTokenService>((ref) {
     pushService: pushService,
     storage: storage,
   );
-});
-
-/// Media upload service provider.
-final mediaUploadServiceProvider = Provider<MediaUploadService>((ref) {
-  final dio = ref.watch(secureDioProvider);
-  return MediaUploadService(apiDio: dio);
 });
 
 /// Subscription service provider (backend-only until IAP is wired).

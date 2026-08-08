@@ -28,8 +28,6 @@
     "admin-api.lythaus.co"
   ],
   "forbiddenHostFragments": [
-    "azurewebsites.net",
-    "asora.co.za",
     "workers.dev",
     "pages.dev",
     "r2.dev"

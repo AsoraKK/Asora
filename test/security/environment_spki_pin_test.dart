@@ -17,7 +17,7 @@ import 'package:lythaus/core/config/environment_config.dart';
 ///   SPKI_GATE=true flutter test test/security/environment_spki_pin_test.dart
 ///
 /// To populate the pins:
-///   1. Ensure the target Azure Function App is deployed and reachable.
+///   1. Ensure the target Lythaus Worker is deployed and reachable.
 ///   2. Run the extraction script for each environment:
 ///
 ///        ./scripts/extract-spki-pins.sh \

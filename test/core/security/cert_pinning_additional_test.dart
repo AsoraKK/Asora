@@ -40,7 +40,7 @@ void main() {
 
     test('isPinValidationError handles all DioException types', () {
       final pinnedOptions = RequestOptions(
-        path: 'https://lythaus-function-dev.azurewebsites.net/api',
+        path: 'https://api.lythaus.co/api',
       );
       final unpinnedOptions = RequestOptions(path: 'https://example.com/api');
 

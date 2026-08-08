@@ -200,8 +200,10 @@ void main() {
     });
   });
 
-  group('Media URL chip', () {
-    testWidgets('shows media URL chip when mediaUrl is set', (tester) async {
+  group('Deferred media UI', () {
+    testWidgets('does not expose media attachments in the launch UI', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(1200, 3000);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() {
@@ -221,13 +223,12 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.image_outlined), findsAtLeastNWidgets(1));
-      // The text may be ellipsized in a SizedBox, so check by widget type
+      expect(find.byIcon(Icons.image_outlined), findsNothing);
       expect(
         find.byWidgetPredicate(
           (w) => w is Text && (w.data ?? '').contains('example.com'),
         ),
-        findsAtLeastNWidgets(1),
+        findsNothing,
       );
     });
   });

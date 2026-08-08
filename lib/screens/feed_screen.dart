@@ -16,6 +16,8 @@ import 'package:lythaus/features/privacy/privacy_settings_screen.dart';
 import 'package:lythaus/features/feed/presentation/create_post_screen.dart';
 import 'package:lythaus/features/moderation/presentation/moderation_console/moderation_console_screen.dart';
 
+export 'package:lythaus/design_system/theme/lyth_theme.dart' show LythausTheme;
+
 /// ---------------------------------------------------------------------------
 ///  Lythaus Feed – Perplexity‑inspired wireframe (dark‑mode default)
 /// ---------------------------------------------------------------------------
@@ -25,16 +27,6 @@ import 'package:lythaus/features/moderation/presentation/moderation_console/mode
 ///  • Bottom search field à la Perplexity + 4‑icon nav bar
 ///  • Sora font everywhere
 /// ---------------------------------------------------------------------------
-
-class LythausTheme {
-  static ThemeData dark() {
-    return LythausTheme.dark();
-  }
-
-  static ThemeData light() {
-    return LythausTheme.light();
-  }
-}
 
 // ---- Main screen -----------------------------------------------------------
 class FeedScreen extends ConsumerWidget {

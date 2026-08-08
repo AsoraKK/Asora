@@ -436,11 +436,12 @@ async function createPost(request: Request, env: Env, user: Principal): Promise<
   }
   const postId = uuidv7();
   const eventId = uuidv7();
+  const createdAt = new Date().toISOString();
   await transaction(env.DB_APP_FRESH, async (client) => {
     await client.query(
-      `INSERT INTO content.posts (id, author_id, body, declared_creation_mode, geo_scope, place_id, moderation_state)
-       VALUES ($1, $2, $3, $4, $5, $6, 'under_review')`,
-      [postId, user.userId, input.body.trim(), input.declaredCreationMode, input.geoScope, input.placeId ?? null]
+      `INSERT INTO content.posts (id, author_id, body, declared_creation_mode, geo_scope, place_id, moderation_state, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, 'under_review', $7, $7)`,
+      [postId, user.userId, input.body.trim(), input.declaredCreationMode, input.geoScope, input.placeId ?? null, createdAt]
     );
     if (input.placeId && input.geoScope !== 'none' && input.geoScope !== 'global') {
       const precision = input.geoScope === 'country' ? 'country'
@@ -458,7 +459,29 @@ async function createPost(request: Request, env: Env, user: Principal): Promise<
       [eventId, postId, user.userId, JSON.stringify({ postId, declaredCreationMode: input.declaredCreationMode })]
     );
   });
-  return privateResponse(request, env, { postId, eventId }, { status: 201 });
+  const declaredAuthorship = input.declaredCreationMode === 'ai_assisted'
+    ? 'assisted'
+    : input.declaredCreationMode === 'ai_generated' ? 'generated' : 'human';
+  return privateResponse(request, env, {
+    id: postId,
+    authorId: user.userId,
+    content: input.body.trim(),
+    contentType: 'text',
+    visibility: 'public',
+    isNews: false,
+    authorship: {
+      authorshipLabel: 'Under review',
+      declaredAuthorship,
+      classificationSource: 'user_disclosure',
+      classificationState: 'unavailable',
+      reviewState: 'pending',
+      appealState: 'none',
+      labelVersion: 'lythaus-authenticity-v1',
+    },
+    createdAt,
+    updatedAt: createdAt,
+    eventId,
+  }, { status: 201 });
 }
 
 async function createUploadSession(request: Request, env: Env, user: Principal): Promise<Response> {

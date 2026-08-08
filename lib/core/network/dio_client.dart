@@ -18,7 +18,6 @@ import 'package:lythaus/core/security/device_integrity.dart';
 import 'package:lythaus/core/security/security_overrides.dart';
 import 'package:lythaus/core/security/security_telemetry.dart';
 import 'package:lythaus/core/error/error_codes.dart';
-import 'package:lythaus/features/admin/application/test_mode_interceptor.dart';
 import 'package:lythaus/core/network/dio_client_adapter_stub.dart'
     if (dart.library.io) 'dio_client_adapter_io.dart'
     if (dart.library.html) 'dio_client_adapter_web.dart';
@@ -47,10 +46,6 @@ final secureDioProvider = Provider<Dio>((ref) {
 
   // Add device integrity interceptor
   dio.interceptors.add(_DeviceIntegrityInterceptor(ref));
-
-  // Add test mode interceptor for Live Test Mode header injection
-  // This MUST be added AFTER auth interceptors but BEFORE logging
-  dio.interceptors.add(TestModeInterceptor(ref));
 
   // Add logging in debug mode
   if (kDebugMode) {

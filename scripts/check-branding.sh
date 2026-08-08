@@ -14,7 +14,7 @@ fi
 
 content_matches="$({
   rg -n -i --hidden --glob '!.git/**' --glob '!docs/history/**' --glob '!docs/archive/**' \
-    --glob '!functions/**' --glob '!node_modules/**' --glob '!build/**' --glob '!.dart_tool/**' \
+    --glob '!node_modules/**' --glob '!build/**' --glob '!.dart_tool/**' \
     --glob '!.codex-*/**' -- "$RETIRED_BRAND" \
     "$ROOT/lib" "$ROOT/test" "$ROOT/integration_test" "$ROOT/android" "$ROOT/ios" \
     "$ROOT/macos" "$ROOT/linux" "$ROOT/windows" "$ROOT/web" "$ROOT/apps" "$ROOT/api" \

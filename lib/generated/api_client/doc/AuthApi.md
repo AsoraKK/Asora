@@ -31,7 +31,7 @@ Creates a Lythaus access and refresh session for a verified email account.
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getAuthApi();
-final EmailLoginRequest emailLoginRequest = ; // EmailLoginRequest |
+final EmailLoginRequest emailLoginRequest = {"mode":"login","email":"alice@example.com","password":"correct-horse-battery-staple"}; // EmailLoginRequest |
 
 try {
     final response = api.authEmailLogin(emailLoginRequest);

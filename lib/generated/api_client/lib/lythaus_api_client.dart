@@ -5,7 +5,6 @@
 export 'package:lythaus_api_client/src/api.dart';
 export 'package:lythaus_api_client/src/auth/api_key_auth.dart';
 export 'package:lythaus_api_client/src/auth/basic_auth.dart';
-export 'package:lythaus_api_client/src/auth/oauth.dart';
 export 'package:lythaus_api_client/src/serializers.dart';
 export 'package:lythaus_api_client/src/model/date.dart';
 
@@ -29,7 +28,6 @@ export 'package:lythaus_api_client/src/api/subscription_api.dart';
 export 'package:lythaus_api_client/src/api/users_api.dart';
 
 export 'package:lythaus_api_client/src/model/accepted_response.dart';
-export 'package:lythaus_api_client/src/model/account_delete_response.dart';
 export 'package:lythaus_api_client/src/model/admin_appeal_audit_summary.dart';
 export 'package:lythaus_api_client/src/model/admin_appeal_content.dart';
 export 'package:lythaus_api_client/src/model/admin_appeal_decision_request.dart';
@@ -102,8 +100,6 @@ export 'package:lythaus_api_client/src/model/create_post_request.dart';
 export 'package:lythaus_api_client/src/model/cursor_paginated_post_view.dart';
 export 'package:lythaus_api_client/src/model/custom_feed_definition.dart';
 export 'package:lythaus_api_client/src/model/custom_feed_list_response.dart';
-export 'package:lythaus_api_client/src/model/dsr_export_response.dart';
-export 'package:lythaus_api_client/src/model/dsr_export_response_metadata.dart';
 export 'package:lythaus_api_client/src/model/dsr_request_input.dart';
 export 'package:lythaus_api_client/src/model/dsr_request_summary.dart';
 export 'package:lythaus_api_client/src/model/email_login_request.dart';
