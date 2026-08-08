@@ -7,6 +7,8 @@ const retiredBrand = ['as', 'ora'].join('');
 const retiredProvider = ['az', 'ure'].join('');
 const retiredDatabase = ['cos', 'mos'].join('');
 const retiredClassifier = ['hi', 've'].join('');
+const retiredVault = ['key', 'vault'].join('');
+const retiredInsights = ['application', 'insights'].join('');
 const trackedFiles = execFileSync('git', ['ls-files', '-z'], {
   cwd: root,
   encoding: 'utf8',
@@ -24,7 +26,7 @@ const excludedPaths = [
 
 const forbidden = [
   { name: 'retired brand', pattern: new RegExp(`\\b${retiredBrand}\\b|${retiredBrand}_|_${retiredBrand}|package:${retiredBrand}|com\\.${retiredBrand}|${retiredBrand}\\.co\\.za|${retiredBrand}:\\/\\/`, 'i') },
-  { name: 'retired provider', pattern: new RegExp(`\\b${retiredProvider}\\b|${retiredProvider}_|${retiredProvider}websites|@${retiredProvider}\\/|${retiredProvider}-functions|${retiredProvider}webjobsstorage|keyvault|applicationinsights`, 'i') },
+  { name: 'retired provider', pattern: new RegExp(`\\b${retiredProvider}\\b|${retiredProvider}_|${retiredProvider}websites|@${retiredProvider}\\/|${retiredProvider}-functions|${retiredProvider}webjobsstorage|${retiredVault}|${retiredInsights}`, 'i') },
   { name: 'retired database', pattern: new RegExp(`\\b${retiredDatabase}\\b|${retiredDatabase}client`, 'i') },
   { name: 'retired classifier', pattern: new RegExp(`\\b${retiredClassifier}\\b|${retiredClassifier}-client|the${retiredClassifier}`, 'i') },
   { name: 'retired authentication', pattern: /flutter_appauth|google_sign_in|signinwithgoogle|signinwithapple|world.?id|google_auth_enabled|apple_auth_enabled|world_id_auth_enabled/i },
